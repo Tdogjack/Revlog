@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { photoPathsFor, removePhotoFiles } from "@/lib/gallery";
 import {
   createMod,
   deleteMod,
@@ -82,6 +83,8 @@ export async function changeModStatus(vehicleId: string, modId: string, formData
 
 export async function removeMod(vehicleId: string, modId: string) {
   const user = await requireUser();
+  const paths = await photoPathsFor(user.id, { kind: "mod", id: modId });
   await deleteMod(user.id, modId);
+  await removePhotoFiles(paths);
   revalidatePath(`/garage/${vehicleId}`);
 }

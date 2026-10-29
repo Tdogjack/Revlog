@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { emailConfigured, sendEmail } from "@/lib/email";
-import { setReminderEmails } from "@/lib/email-settings";
+import { setReminderEmails, setReminderPercent } from "@/lib/email-settings";
 import { testEmail } from "@/lib/email-templates";
 import { deleteAllPhotos } from "@/lib/photos";
 import { siteUrl } from "@/lib/site";
@@ -19,8 +19,17 @@ export async function saveEmailSettings(
   formData: FormData,
 ): Promise<SettingsState> {
   const user = await requireUser();
+  const rawPercent = String(formData.get("reminderPercent") ?? "").trim();
+  let percent: number | null = null;
+  if (rawPercent) {
+    percent = Number(rawPercent);
+    if (!Number.isInteger(percent) || percent < 50 || percent > 99) {
+      return { error: "Use a whole percent from 50 to 99, or leave it blank." };
+    }
+  }
   await setReminderEmails(user.id, formData.get("reminderEmails") === "on");
-  revalidatePath("/garage/settings");
+  await setReminderPercent(user.id, percent);
+  revalidatePath("/garage", "layout");
   return { message: "Saved." };
 }
 
@@ -57,7 +66,7 @@ export async function deleteAccount(
   try {
     await deleteAllPhotos(user.id);
   } catch {
-    return { error: "Couldn't remove your car photos. Try again." };
+    return { error: "Couldn't remove your photos. Try again." };
   }
   // Every table references auth.users with ON DELETE CASCADE, so this removes
   // all of the user's cars, records, mods, reminders, parts, and settings.

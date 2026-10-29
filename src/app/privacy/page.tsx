@@ -17,13 +17,16 @@ export default function PrivacyPage() {
       <h2>What Revlog collects</h2>
       <ul>
         <li>
-          <strong>Account details:</strong> your email address and password. Passwords are stored as
-          a secure hash by our sign-in provider; nobody at Revlog can see them.
+          <strong>Account details:</strong> your username, email address, and password. Passwords
+          are stored as a secure hash by our sign-in provider; nobody at Revlog can see them.
         </li>
         <li>
           <strong>What you add:</strong> your cars (year, make, model, trim, nickname, VIN if you
-          enter one, mileage, and photo), service records, mods, reminders, custom service types,
-          and parts with their links and prices.
+          enter one, mileage, and photos), service records and receipt photos, mods and their
+          photos, reminders, custom service types, and parts with their links and prices.
+        </li>
+        <li>
+          <strong>Community posts:</strong> the title, text, and photos you choose to share.
         </li>
         <li>
           <strong>Price history:</strong> for parts with price tracking on, the prices Revlog reads
@@ -46,8 +49,22 @@ export default function PrivacyPage() {
           To check part prices. Revlog&apos;s servers visit the part links you add, so stores see a
           request from Revlog, not from you.
         </li>
+        <li>
+          To look up a VIN when you ask. The VIN is sent to the U.S. National Highway Traffic Safety
+          Administration&apos;s free decoding service.
+        </li>
       </ul>
       <p>Revlog doesn&apos;t sell or rent your information, and doesn&apos;t show ads.</p>
+
+      <h2>What&apos;s public</h2>
+      <p>
+        Your garage is private. Only what you post to the community is public: your username, the
+        post&apos;s title and text, the photos you pick for it, the car&apos;s year, make, model,
+        trim, and nickname, and (for build posts) its list of installed mods, plus their parts,
+        links, and prices if you choose to include them. Shared photos are copied to a public
+        folder; the originals and your receipts stay private. Deleting a post removes it and its
+        shared photos.
+      </p>
 
       <h2>Who else handles it</h2>
       <p>Revlog uses a few service providers that process data on its behalf:</p>

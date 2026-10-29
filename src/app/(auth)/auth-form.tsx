@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Check, Circle, Gauge } from "lucide-react";
 import { PASSWORD_RULES } from "@/lib/password-rules";
+import { USERNAME_HINT } from "@/lib/username-rules";
 import type { AuthState } from "./actions";
 
 type Action = (prev: AuthState, formData: FormData) => Promise<AuthState>;
@@ -73,7 +74,7 @@ function SubmitButton({ pending, label }: { pending: boolean; label: string }) {
   );
 }
 
-function EmailField() {
+function EmailField({ defaultValue }: { defaultValue?: string }) {
   return (
     <label className="block text-sm">
       <span className="text-steel">Email</span>
@@ -83,8 +84,38 @@ function EmailField() {
         autoComplete="email"
         required
         placeholder="you@example.com"
+        defaultValue={defaultValue}
         className={inputClass}
       />
+    </label>
+  );
+}
+
+export function UsernameField({ defaultValue }: { defaultValue?: string }) {
+  return (
+    <label className="block text-sm">
+      <span className="text-steel">Username</span>
+      <div className="mt-1 flex items-center rounded-md border border-graphite bg-carbon focus-within:border-redline">
+        <span className="pl-3 text-steel" aria-hidden>
+          @
+        </span>
+        <input
+          name="username"
+          required
+          minLength={3}
+          maxLength={20}
+          pattern="@?[A-Za-z0-9_]{3,20}"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          placeholder="redline_rob"
+          defaultValue={defaultValue}
+          className="w-full bg-transparent py-2 pr-3 pl-1 outline-none"
+        />
+      </div>
+      <span className="mt-1 block text-xs text-steel">
+        Shown on your community posts. {USERNAME_HINT}
+      </span>
     </label>
   );
 }
@@ -207,7 +238,8 @@ export function SignupForm({ action }: { action: Action }) {
         <Notice>{state.message}</Notice>
       ) : (
         <form action={formAction} className="mt-5 space-y-4">
-          <EmailField />
+          <UsernameField defaultValue={state?.values?.username} />
+          <EmailField defaultValue={state?.values?.email} />
           <NewPasswordField />
           <ErrorText error={state?.error} />
           <SubmitButton pending={pending} label="Create account" />
@@ -292,6 +324,24 @@ export function ResetPasswordForm({ action, email }: { action: Action; email: st
           <SubmitButton pending={pending} label="Update password" />
         </form>
       )}
+    </AuthShell>
+  );
+}
+
+export function ChooseUsernameForm({ action, next }: { action: Action; next?: string }) {
+  const [state, formAction, pending] = useActionState(action, undefined);
+  return (
+    <AuthShell>
+      <h1 className="text-lg font-semibold">Pick a username</h1>
+      <p className="mt-2 text-sm text-steel">
+        Revlog now has a community. Your username is how others see your posts.
+      </p>
+      <form action={formAction} className="mt-5 space-y-4">
+        {next && <input type="hidden" name="next" value={next} />}
+        <UsernameField defaultValue={state?.values?.username} />
+        <ErrorText error={state?.error} />
+        <SubmitButton pending={pending} label="Save username" />
+      </form>
     </AuthShell>
   );
 }

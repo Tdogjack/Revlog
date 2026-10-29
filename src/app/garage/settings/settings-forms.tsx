@@ -21,10 +21,12 @@ export function EmailSettingsForm({
   action,
   testAction,
   reminderEmails,
+  reminderPercent,
 }: {
   action: Action;
   testAction: (prev: SettingsState) => Promise<SettingsState>;
   reminderEmails: boolean;
+  reminderPercent: number | null;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [testState, testFormAction, testPending] = useActionState(testAction, undefined);
@@ -42,9 +44,25 @@ export function EmailSettingsForm({
           <span>
             <span className="font-medium">Reminder emails</span>
             <span className="block text-steel">
-              Get an email when a service is due within 500 miles or 14 days, and again weekly while
-              it&apos;s overdue.
+              Get an email when a service is due soon, and again weekly while it&apos;s overdue.
             </span>
+          </span>
+        </label>
+        <label className="block text-sm">
+          <span className="font-medium">Due soon at</span>
+          <span className="mt-1 flex items-center gap-2">
+            <input
+              name="reminderPercent"
+              inputMode="numeric"
+              placeholder="e.g. 80"
+              defaultValue={reminderPercent ?? ""}
+              className="w-24 rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline"
+            />
+            <span className="text-steel">% of the miles driven</span>
+          </span>
+          <span className="mt-1 block text-xs text-steel">
+            With 80%, a 5,000 mi oil change turns due soon (and emails you) at 4,000 mi. Leave blank
+            for the default: 500 mi or 14 days before it&apos;s due.
           </span>
         </label>
         <div className="flex items-center gap-3">

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { photoPathsFor, removePhotoFiles } from "@/lib/gallery";
 import { parsePartRows, settlePartsCost, syncParts } from "@/lib/parts";
 import { categoryLabel } from "@/lib/service-categories";
 import {
@@ -83,6 +84,8 @@ export async function editServiceRecord(
 
 export async function removeServiceRecord(vehicleId: string, recordId: string) {
   const user = await requireUser();
+  const paths = await photoPathsFor(user.id, { kind: "record", id: recordId });
   await deleteServiceRecord(user.id, recordId);
+  await removePhotoFiles(paths);
   revalidatePath(`/garage/${vehicleId}`);
 }
