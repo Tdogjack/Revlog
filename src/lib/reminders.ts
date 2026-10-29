@@ -14,6 +14,8 @@ export type ReminderResult = {
   status: ReminderStatus;
   milesLeft: number | null;
   daysLeft: number | null;
+  // Nothing to count from: no record of this service and no starting point.
+  neverDone?: boolean;
 };
 
 export type ServiceDate = {
@@ -70,7 +72,8 @@ function formatDays(days: number) {
 }
 
 // Plain-language summary, like "Due in 412 mi or 3 months" or "Overdue by 210 mi".
-export function describeDue({ status, milesLeft, daysLeft }: ReminderResult) {
+export function describeDue({ status, milesLeft, daysLeft, neverDone }: ReminderResult) {
+  if (neverDone) return "Never done";
   const parts: string[] = [];
   if (status === "overdue") {
     if (milesLeft != null && milesLeft < 0)
@@ -80,7 +83,7 @@ export function describeDue({ status, milesLeft, daysLeft }: ReminderResult) {
   }
   if (milesLeft != null) parts.push(`${milesLeft.toLocaleString("en-US")} mi`);
   if (daysLeft != null) parts.push(formatDays(daysLeft));
-  return `Due in ${parts.join(" or ")}`;
+  return parts.length ? `Due in ${parts.join(" or ")}` : "Log the mileage to track this";
 }
 
 export function evaluateReminder(
@@ -98,6 +101,12 @@ export function evaluateReminder(
   if (reminder.intervalMonths != null && reminder.lastDoneOn != null) {
     const dueDate = addMonths(reminder.lastDoneOn, reminder.intervalMonths);
     daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / DAY_MS);
+  }
+
+  // A time-only reminder that's never been done has nothing to count from,
+  // so it's due now.
+  if (milesLeft == null && daysLeft == null && reminder.lastDoneOn == null) {
+    return { status: "overdue", milesLeft, daysLeft, neverDone: true };
   }
 
   // Whichever limit comes first wins, like "every 5,000 miles or 6 months".

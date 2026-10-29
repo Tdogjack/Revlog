@@ -51,7 +51,6 @@ export async function addReminder(
     serviceCategory: type.key,
     intervalMiles: r.intervalMiles,
     intervalMonths: r.intervalMonths,
-    startOn: r.today,
   });
   if (!reminder) return { error: "That car wasn't found.", values: raw };
 

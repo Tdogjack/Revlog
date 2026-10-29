@@ -283,13 +283,17 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                     >
                       {describeDue(result)}
                     </p>
-                    {r.lastDoneOn && (
-                      <p className="mt-0.5 text-xs text-steel">
-                        Last done {formatDate(r.lastDoneOn)}
-                        {r.lastDoneMileage != null &&
-                          ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
-                      </p>
-                    )}
+                    <p className="mt-0.5 text-xs text-steel">
+                      {r.lastDoneOn ? (
+                        <>
+                          Last done {formatDate(r.lastDoneOn)}
+                          {r.lastDoneMileage != null &&
+                            ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
+                        </>
+                      ) : (
+                        "Last done: never"
+                      )}
+                    </p>
                     <p className="mt-0.5 text-xs text-steel">
                       Every{" "}
                       {[
