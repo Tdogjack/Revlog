@@ -4,7 +4,16 @@ import { Suspense } from "react";
 import { Car, Plus } from "lucide-react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
+import { StatusBadge } from "@/components/status-badge";
 import { signedPhotoUrls } from "@/lib/photos";
+import { listAllReminders } from "@/lib/reminder-store";
+import {
+  evaluateReminder,
+  STATUS_RANK,
+  withLastService,
+  type ReminderStatus,
+} from "@/lib/reminders";
+import { listServiceDates } from "@/lib/service-records";
 import { listVehicles, vehicleName } from "@/lib/vehicles";
 
 export const metadata: Metadata = { title: "Your garage · Revlog" };
@@ -32,7 +41,25 @@ export default function GaragePage() {
 async function VehicleList() {
   const user = await requireUser();
   const cars = await listVehicles(user.id);
-  const photos = await signedPhotoUrls(cars.map((c) => c.photoPath));
+  const [photos, allReminders, serviceDates] = await Promise.all([
+    signedPhotoUrls(cars.map((c) => c.photoPath)),
+    listAllReminders(user.id),
+    listServiceDates(user.id),
+  ]);
+
+  // The most urgent reminder status for each car, and how many share it.
+  const urgency = new Map<string, { status: ReminderStatus; count: number }>();
+  for (const car of cars) {
+    for (const r of allReminders.filter((r) => r.vehicleId === car.id)) {
+      const { status } = evaluateReminder(withLastService(r, serviceDates), car.currentMileage);
+      const current = urgency.get(car.id);
+      if (!current || STATUS_RANK[status] < STATUS_RANK[current.status]) {
+        urgency.set(car.id, { status, count: 1 });
+      } else if (status === current.status) {
+        current.count++;
+      }
+    }
+  }
 
   if (cars.length === 0) {
     return (
@@ -66,12 +93,23 @@ async function VehicleList() {
               />
               <div className="min-w-0">
                 <p className="truncate font-medium">{car.nickname ?? vehicleName(car)}</p>
-                {car.nickname && <p className="mt-0.5 truncate text-sm text-steel">{vehicleName(car)}</p>}
+                {car.nickname && (
+                  <p className="mt-0.5 truncate text-sm text-steel">{vehicleName(car)}</p>
+                )}
               </div>
             </div>
-            <p className="mt-4 font-mono text-xs text-steel">
-              {car.currentMileage.toLocaleString("en-US")} mi
-            </p>
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <p className="font-mono text-xs text-steel">
+                {car.currentMileage.toLocaleString("en-US")} mi
+              </p>
+              {(() => {
+                const u = urgency.get(car.id);
+                if (!u) return null;
+                if (u.status === "ok") return <StatusBadge status="ok" label="All caught up" />;
+                const label = u.status === "overdue" ? "overdue" : "due soon";
+                return <StatusBadge status={u.status} label={`${u.count} ${label}`} />;
+              })()}
+            </div>
           </Link>
         </li>
       ))}

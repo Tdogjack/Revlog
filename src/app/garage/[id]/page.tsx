@@ -7,12 +7,17 @@ import { requireUser } from "@/lib/auth";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { listMods } from "@/lib/mods";
 import { signedPhotoUrls } from "@/lib/photos";
+import { listReminders } from "@/lib/reminder-store";
+import { describeDue, evaluateReminder, STATUS_RANK, withLastService } from "@/lib/reminders";
 import { categoryLabel } from "@/lib/service-categories";
 import { listServiceRecords } from "@/lib/service-records";
+import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
 import { DeleteRecordButton } from "./delete-record-button";
 import { ModControls } from "./mod-controls";
 import { PhotoControls } from "./photo-controls";
+import { MileageEditor, ReminderControls } from "./reminder-controls";
+import { StatusBadge } from "@/components/status-badge";
 
 export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
   return (
@@ -45,11 +50,18 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
 
-  const [records, carMods, photos] = await Promise.all([
+  const [records, carMods, reminderRows, customTypes, photos] = await Promise.all([
     listServiceRecords(user.id, car.id),
     listMods(user.id, car.id),
+    listReminders(user.id, car.id),
+    listServiceTypes(user.id),
     signedPhotoUrls([car.photoPath]),
   ]);
+  // Each reminder counts from its latest matching service record; most urgent first.
+  const carReminders = reminderRows
+    .map((row) => withLastService(row, records))
+    .map((reminder) => ({ reminder, result: evaluateReminder(reminder, car.currentMileage) }))
+    .sort((a, b) => STATUS_RANK[a.result.status] - STATUS_RANK[b.result.status]);
   const photoUrl = car.photoPath ? photos.get(car.photoPath) : null;
   const sumCost = (items: { cost: string | null }[]) =>
     items.reduce((sum, i) => sum + (i.cost ? Number(i.cost) : 0), 0);
@@ -72,9 +84,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
               <h1 className="text-2xl font-semibold">{car.nickname ?? vehicleName(car)}</h1>
               {car.nickname && <p className="mt-1 text-steel">{vehicleName(car)}</p>}
             </div>
-            <p className="font-mono text-sm text-steel">
-              {car.currentMileage.toLocaleString("en-US")} mi
-            </p>
+            <MileageEditor vehicleId={car.id} currentMileage={car.currentMileage} />
           </div>
           {car.vin && <p className="mt-3 font-mono text-xs text-steel">VIN {car.vin}</p>}
         </div>
@@ -117,7 +127,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium">{r.title}</p>
                           <span className="rounded bg-graphite px-2 py-0.5 text-xs">
-                            {categoryLabel(r.category)}
+                            {categoryLabel(r.category, customTypes)}
                           </span>
                         </div>
                         <p className="mt-1 text-sm text-steel">
@@ -202,11 +212,61 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
 
         <div className="space-y-4">
           <section className="rounded-xl border border-graphite bg-panel p-5">
-            <h2 className="flex items-center gap-2 font-medium">
-              <Bell className="h-4 w-4 text-redline" aria-hidden />
-              Reminders
-            </h2>
-            <p className="mt-3 text-sm text-steel">No reminders set.</p>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 font-medium">
+                <Bell className="h-4 w-4 text-redline" aria-hidden />
+                Reminders
+              </h2>
+              <Link
+                href={`/garage/${car.id}/reminders/new`}
+                className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                Add
+              </Link>
+            </div>
+
+            {carReminders.length === 0 ? (
+              <p className="mt-4 text-sm text-steel">
+                No reminders set. Add one for oil changes, rotations, or anything on a schedule.
+              </p>
+            ) : (
+              <ul className="mt-4">
+                {carReminders.map(({ reminder: r, result }) => (
+                  <li key={r.id} className="border-t border-graphite py-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium">{r.task}</p>
+                      <StatusBadge status={result.status} />
+                    </div>
+                    <p className="mt-1 text-sm text-steel">{describeDue(result)}</p>
+                    {r.lastDoneOn && (
+                      <p className="mt-0.5 text-xs text-steel">
+                        Last done {formatDate(r.lastDoneOn)}
+                        {r.lastDoneMileage != null &&
+                          ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
+                      </p>
+                    )}
+                    <p className="mt-0.5 text-xs text-steel">
+                      Every{" "}
+                      {[
+                        r.intervalMiles && `${r.intervalMiles.toLocaleString("en-US")} mi`,
+                        r.intervalMonths &&
+                          `${r.intervalMonths} ${r.intervalMonths === 1 ? "month" : "months"}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" or ")}
+                    </p>
+                    <div className="mt-3">
+                      <ReminderControls
+                        vehicleId={car.id}
+                        reminderId={r.id}
+                        currentMileage={car.currentMileage}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </div>
       </div>

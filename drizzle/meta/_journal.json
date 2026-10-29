@@ -15,6 +15,20 @@
       "when": 1793249134590,
       "tag": "0001_vehicle_photos_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793249875834,
+      "tag": "0002_reminder_service_category",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793250478233,
+      "tag": "0003_service_types",
+      "breakpoints": true
     }
   ]
 }

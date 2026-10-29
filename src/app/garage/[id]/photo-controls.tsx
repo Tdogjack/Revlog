@@ -43,14 +43,14 @@ export function PhotoControls({ vehicleId, hasPhoto }: { vehicleId: string; hasP
         </form>
         {hasPhoto && !pending && (
           <form action={removeVehiclePhoto.bind(null, vehicleId)}>
-            <button type="submit" className="text-steel hover:text-due">
+            <button type="submit" className="text-steel hover:text-overdue">
               Remove
             </button>
           </form>
         )}
       </div>
       {error && (
-        <p role="alert" className="mt-1 text-due">
+        <p role="alert" className="mt-1 text-overdue">
           {error}
         </p>
       )}
