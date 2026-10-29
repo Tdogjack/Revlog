@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
+import { PartsFieldset } from "@/components/parts-fieldset";
+import type { PartRow } from "@/lib/part-rows";
 import { ServiceTypeSelect } from "@/components/service-type-select";
 import { localToday } from "@/lib/local-date";
 import type { CustomType } from "@/lib/service-categories";
@@ -15,12 +17,14 @@ export function ServiceForm({
   currentMileage,
   customTypes,
   initial = {},
+  initialParts = [],
   submitLabel = "Save record",
 }: {
   action: (prev: ServiceFormState, formData: FormData) => Promise<ServiceFormState>;
   currentMileage: number;
   customTypes: CustomType[];
   initial?: Record<string, string>;
+  initialParts?: PartRow[];
   submitLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -106,6 +110,8 @@ export function ServiceForm({
         <span className="text-steel">Notes (optional)</span>
         <textarea name="notes" rows={3} defaultValue={v.notes} className={inputClass} />
       </label>
+
+      <PartsFieldset initial={initialParts} label="Parts used (optional)" />
 
       {state?.error && (
         <p role="alert" className="text-sm text-overdue">

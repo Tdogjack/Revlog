@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { PartsFieldset } from "@/components/parts-fieldset";
+import type { PartRow } from "@/lib/part-rows";
 import { localToday } from "@/lib/local-date";
 import { MOD_CATEGORIES, MOD_STATUSES } from "@/lib/mod-categories";
 import type { ModFormState } from "../actions";
@@ -13,11 +15,13 @@ export function ModForm({
   action,
   currentMileage,
   initial,
+  initialParts = [],
   submitLabel = "Save mod",
 }: {
   action: (prev: ModFormState, formData: FormData) => Promise<ModFormState>;
   currentMileage: number;
   initial?: Record<string, string>;
+  initialParts?: PartRow[];
   submitLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -135,6 +139,11 @@ export function ModForm({
           className={inputClass}
         />
       </label>
+
+      <PartsFieldset
+        initial={initialParts}
+        label={status === "planned" ? "Parts wanted (optional)" : "Parts used (optional)"}
+      />
 
       {state?.error && (
         <p role="alert" className="text-sm text-overdue">

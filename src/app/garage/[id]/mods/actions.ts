@@ -11,6 +11,7 @@ import {
   setModStatus,
   updateMod,
 } from "@/lib/mods";
+import { checkPricesLater, parsePartRows, syncParts } from "@/lib/parts";
 
 export type ModFormState = { error?: string; values?: Record<string, string> } | undefined;
 
@@ -23,6 +24,7 @@ const FIELDS = [
   "installedOn",
   "installedMileage",
   "notes",
+  "parts",
 ];
 
 export async function addMod(
@@ -35,9 +37,12 @@ export async function addMod(
 
   const parsed = modInput.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0].message, values: raw };
+  const partRows = parsePartRows(raw.parts);
+  if ("error" in partRows) return { error: partRows.error, values: raw };
 
   const mod = await createMod(user.id, vehicleId, parsed.data);
   if (!mod) return { error: "That car wasn't found.", values: raw };
+  checkPricesLater(await syncParts(user.id, vehicleId, { modId: mod.id }, partRows.rows));
 
   redirect(`/garage/${vehicleId}`);
 }
@@ -53,9 +58,12 @@ export async function editMod(
 
   const parsed = modInput.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0].message, values: raw };
+  const partRows = parsePartRows(raw.parts);
+  if ("error" in partRows) return { error: partRows.error, values: raw };
 
   const mod = await updateMod(user.id, vehicleId, modId, parsed.data);
   if (!mod) return { error: "That mod wasn't found.", values: raw };
+  checkPricesLater(await syncParts(user.id, vehicleId, { modId: mod.id }, partRows.rows));
 
   redirect(`/garage/${vehicleId}`);
 }
