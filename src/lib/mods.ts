@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { mods, vehicles } from "@/db/schema";
 import { MOD_CATEGORIES, MOD_STATUSES, type ModStatus } from "@/lib/mod-categories";
+import { isUuid } from "@/lib/vehicles";
 
 const categoryValues = MOD_CATEGORIES.map((c) => c.value) as [string, ...string[]];
 const statusValues = MOD_STATUSES.map((s) => s.value) as [ModStatus, ...ModStatus[]];
@@ -84,6 +85,25 @@ export async function createMod(userId: string, vehicleId: string, input: ModInp
     .values({ ...input, userId, vehicleId })
     .returning({ id: mods.id });
   return mod;
+}
+
+export async function getMod(userId: string, vehicleId: string, modId: string) {
+  if (!isUuid(modId)) return null;
+  const [mod] = await db
+    .select()
+    .from(mods)
+    .where(and(eq(mods.id, modId), eq(mods.vehicleId, vehicleId), eq(mods.userId, userId)))
+    .limit(1);
+  return mod ?? null;
+}
+
+export async function updateMod(userId: string, vehicleId: string, modId: string, input: ModInput) {
+  const [updated] = await db
+    .update(mods)
+    .set(input)
+    .where(and(eq(mods.id, modId), eq(mods.vehicleId, vehicleId), eq(mods.userId, userId)))
+    .returning({ id: mods.id });
+  return updated ?? null;
 }
 
 export async function setModStatus(userId: string, modId: string, status: ModStatus) {

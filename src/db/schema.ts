@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
+  check,
   date,
   integer,
   numeric,
@@ -125,6 +127,52 @@ export const reminders = pgTable(
   () => [ownerPolicy("reminders")],
 ).enableRLS();
 
+// Parts used for a service or wanted/used for a mod. Each part belongs to
+// exactly one mod or one service record. With trackPrice on, a daily job
+// reads the price from the link and records it in part_prices.
+export const parts = pgTable(
+  "parts",
+  {
+    ...ownerColumns,
+    vehicleId: uuid("vehicle_id")
+      .notNull()
+      .references(() => vehicles.id, { onDelete: "cascade" }),
+    modId: uuid("mod_id").references(() => mods.id, { onDelete: "cascade" }),
+    serviceRecordId: uuid("service_record_id").references(() => serviceRecords.id, {
+      onDelete: "cascade",
+    }),
+    name: text("name").notNull(),
+    url: text("url"),
+    quantity: integer("quantity").notNull().default(1),
+    // The price the user entered, or the latest one found at the link.
+    price: numeric("price", { precision: 10, scale: 2 }),
+    currency: text("currency"),
+    trackPrice: boolean("track_price").notNull().default(false),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    lastCheckError: text("last_check_error"),
+  },
+  (t) => [
+    check(
+      "parts_one_parent",
+      sql`(${t.modId} is not null)::int + (${t.serviceRecordId} is not null)::int = 1`,
+    ),
+    ownerPolicy("parts"),
+  ],
+).enableRLS();
+
+export const partPrices = pgTable(
+  "part_prices",
+  {
+    ...ownerColumns,
+    partId: uuid("part_id")
+      .notNull()
+      .references(() => parts.id, { onDelete: "cascade" }),
+    price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+    currency: text("currency"),
+  },
+  () => [ownerPolicy("part_prices")],
+).enableRLS();
+
 // Receipts and photos live in Supabase Storage; this table points at them.
 export const attachments = pgTable(
   "attachments",
@@ -146,4 +194,6 @@ export type ServiceRecord = typeof serviceRecords.$inferSelect;
 export type Mod = typeof mods.$inferSelect;
 export type Reminder = typeof reminders.$inferSelect;
 export type ServiceType = typeof serviceTypes.$inferSelect;
+export type Part = typeof parts.$inferSelect;
+export type PartPrice = typeof partPrices.$inferSelect;
 export type Attachment = typeof attachments.$inferSelect;

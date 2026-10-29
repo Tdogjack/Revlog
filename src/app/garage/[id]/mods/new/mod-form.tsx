@@ -1,33 +1,36 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { localToday } from "@/lib/local-date";
 import { MOD_CATEGORIES, MOD_STATUSES } from "@/lib/mod-categories";
-import { addMod } from "../actions";
+import type { ModFormState } from "../actions";
 
 const inputClass =
   "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
 
-function today() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
+// Used for both adding and editing; `initial` holds an existing mod's values.
 export function ModForm({
-  vehicleId,
+  action,
   currentMileage,
+  initial,
+  submitLabel = "Save mod",
 }: {
-  vehicleId: string;
+  action: (prev: ModFormState, formData: FormData) => Promise<ModFormState>;
   currentMileage: number;
+  initial?: Record<string, string>;
+  submitLabel?: string;
 }) {
-  const [state, formAction, pending] = useActionState(addMod.bind(null, vehicleId), undefined);
-  const v = state?.values ?? {};
+  const [state, formAction, pending] = useActionState(action, undefined);
+  const v = state?.values ?? initial ?? {};
   const [status, setStatus] = useState(v.status || "installed");
   const dateRef = useRef<HTMLInputElement>(null);
 
-  // Fill in today's install date after load, in the user's own time zone.
+  // New mods default the install date to today, in the user's own time zone.
   useEffect(() => {
-    if (dateRef.current && !dateRef.current.value) dateRef.current.value = today();
-  }, [state, status]);
+    if (!initial && dateRef.current && !dateRef.current.value) {
+      dateRef.current.value = localToday();
+    }
+  }, [initial, state, status]);
 
   return (
     <form
@@ -144,7 +147,7 @@ export function ModForm({
         disabled={pending}
         className="w-full rounded-md bg-redline py-2.5 font-medium text-white hover:bg-redline-hover disabled:opacity-60"
       >
-        {pending ? "Saving…" : "Save mod"}
+        {pending ? "Saving…" : submitLabel}
       </button>
     </form>
   );

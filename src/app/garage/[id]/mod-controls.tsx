@@ -1,6 +1,7 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Trash2 } from "lucide-react";
 import { MOD_STATUSES, type ModStatus } from "@/lib/mod-categories";
 import { changeModStatus, removeMod } from "./mods/actions";
 
@@ -38,6 +39,13 @@ export function ModControls({
           ))}
         </select>
       </form>
+      <Link
+        href={`/garage/${vehicleId}/mods/${modId}/edit`}
+        aria-label="Edit mod"
+        className="text-steel hover:text-chalk"
+      >
+        <Pencil className="h-4 w-4" aria-hidden />
+      </Link>
       <form
         action={removeMod.bind(null, vehicleId, modId)}
         onSubmit={(e) => {
