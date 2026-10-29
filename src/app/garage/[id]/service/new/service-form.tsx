@@ -4,25 +4,27 @@ import { useActionState, useEffect, useRef } from "react";
 import { ServiceTypeSelect } from "@/components/service-type-select";
 import { localToday } from "@/lib/local-date";
 import type { CustomType } from "@/lib/service-categories";
-import { addServiceRecord } from "../actions";
+import type { ServiceFormState } from "../actions";
 
 const inputClass =
   "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
 
+// Used for both logging and editing; `initial` holds an existing record's values.
 export function ServiceForm({
-  vehicleId,
+  action,
   currentMileage,
   customTypes,
+  initial = {},
+  submitLabel = "Save record",
 }: {
-  vehicleId: string;
+  action: (prev: ServiceFormState, formData: FormData) => Promise<ServiceFormState>;
   currentMileage: number;
   customTypes: CustomType[];
+  initial?: Record<string, string>;
+  submitLabel?: string;
 }) {
-  const [state, formAction, pending] = useActionState(
-    addServiceRecord.bind(null, vehicleId),
-    undefined,
-  );
-  const v = state?.values ?? {};
+  const [state, formAction, pending] = useActionState(action, undefined);
+  const v = state?.values ?? initial;
   const dateRef = useRef<HTMLInputElement>(null);
 
   // Fill in today's date after load, in the user's own time zone.
@@ -116,7 +118,7 @@ export function ServiceForm({
         disabled={pending}
         className="w-full rounded-md bg-redline py-2.5 font-medium text-white hover:bg-redline-hover disabled:opacity-60"
       >
-        {pending ? "Saving…" : "Save record"}
+        {pending ? "Saving…" : submitLabel}
       </button>
     </form>
   );

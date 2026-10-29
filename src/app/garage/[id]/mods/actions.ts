@@ -7,7 +7,16 @@ import { createMod, deleteMod, modInput, modStatusInput, setModStatus } from "@/
 
 export type ModFormState = { error?: string; values?: Record<string, string> } | undefined;
 
-const FIELDS = ["part", "brand", "category", "status", "cost", "installedOn", "installedMileage", "notes"];
+const FIELDS = [
+  "part",
+  "brand",
+  "category",
+  "status",
+  "cost",
+  "installedOn",
+  "installedMileage",
+  "notes",
+];
 
 export async function addMod(
   vehicleId: string,

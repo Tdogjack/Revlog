@@ -29,7 +29,10 @@ export const modInput = z
     ),
     installedOn: z
       .string()
-      .refine((d) => d === "" || (/^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d))), "Pick a valid install date."),
+      .refine(
+        (d) => d === "" || (/^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d))),
+        "Pick a valid install date.",
+      ),
     installedMileage: z.preprocess(
       (v) => blankToUndefined(stripNumber(v)),
       z.coerce

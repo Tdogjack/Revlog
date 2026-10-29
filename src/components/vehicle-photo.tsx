@@ -6,7 +6,9 @@ type Props = { src?: string | null; alt: string; className?: string };
 export function VehiclePhoto({ src, alt, className = "h-14 w-14" }: Props) {
   if (!src) {
     return (
-      <div className={`flex shrink-0 items-center justify-center rounded-lg bg-graphite ${className}`}>
+      <div
+        className={`flex shrink-0 items-center justify-center rounded-lg bg-graphite ${className}`}
+      >
         <Car className="h-1/2 w-1/2 text-steel" aria-hidden />
       </div>
     );

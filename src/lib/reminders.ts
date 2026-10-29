@@ -73,7 +73,8 @@ function formatDays(days: number) {
 export function describeDue({ status, milesLeft, daysLeft }: ReminderResult) {
   const parts: string[] = [];
   if (status === "overdue") {
-    if (milesLeft != null && milesLeft < 0) parts.push(`${(-milesLeft).toLocaleString("en-US")} mi`);
+    if (milesLeft != null && milesLeft < 0)
+      parts.push(`${(-milesLeft).toLocaleString("en-US")} mi`);
     if (daysLeft != null && daysLeft < 0) parts.push(formatDays(-daysLeft));
     return parts.length ? `Overdue by ${parts.join(" and ")}` : "Due now";
   }

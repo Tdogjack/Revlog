@@ -3,6 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { reminders, vehicles } from "@/db/schema";
+import { isUuid } from "@/lib/vehicles";
 
 const stripNumber = (v: unknown) => (typeof v === "string" ? v.replace(/[,\s]/g, "") : v);
 const blankToUndefined = (v: unknown) => (v === "" ? undefined : v);
@@ -66,6 +67,7 @@ export function listAllReminders(userId: string) {
 }
 
 export async function getReminder(userId: string, vehicleId: string, reminderId: string) {
+  if (!isUuid(reminderId)) return null;
   const [reminder] = await db
     .select()
     .from(reminders)
@@ -116,6 +118,31 @@ export async function createReminder(
   return reminder;
 }
 
+export async function updateReminder(
+  userId: string,
+  vehicleId: string,
+  reminderId: string,
+  input: {
+    task: string;
+    serviceCategory: string;
+    intervalMiles: number | null;
+    intervalMonths: number | null;
+  },
+) {
+  const [updated] = await db
+    .update(reminders)
+    .set({ ...input, lastNotifiedAt: null })
+    .where(
+      and(
+        eq(reminders.id, reminderId),
+        eq(reminders.vehicleId, vehicleId),
+        eq(reminders.userId, userId),
+      ),
+    )
+    .returning({ id: reminders.id });
+  return updated ?? null;
+}
+
 // Only for older reminders that aren't linked to a service type.
 export async function setReminderStart(
   userId: string,
@@ -130,7 +157,5 @@ export async function setReminderStart(
 }
 
 export async function deleteReminder(userId: string, reminderId: string) {
-  await db
-    .delete(reminders)
-    .where(and(eq(reminders.id, reminderId), eq(reminders.userId, userId)));
+  await db.delete(reminders).where(and(eq(reminders.id, reminderId), eq(reminders.userId, userId)));
 }

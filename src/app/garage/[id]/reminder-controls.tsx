@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Check, Pencil, Trash2 } from "lucide-react";
 import { useActionState, useState } from "react";
 import { localToday } from "@/lib/local-date";
@@ -88,6 +89,13 @@ export function ReminderControls({
         <Check className="h-3.5 w-3.5" aria-hidden />
         Mark done
       </button>
+      <Link
+        href={`/garage/${vehicleId}/reminders/${reminderId}/edit`}
+        aria-label="Edit reminder"
+        className="text-steel hover:text-chalk"
+      >
+        <Pencil className="h-4 w-4" aria-hidden />
+      </Link>
       <form
         action={removeReminder.bind(null, vehicleId, reminderId)}
         onSubmit={(e) => {

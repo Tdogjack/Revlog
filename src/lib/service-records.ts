@@ -3,6 +3,7 @@ import { and, desc, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { serviceRecords, vehicles } from "@/db/schema";
+import { isUuid } from "@/lib/vehicles";
 
 const stripNumber = (v: unknown) => (typeof v === "string" ? v.replace(/[$,\s]/g, "") : v);
 const blankToUndefined = (v: unknown) => (v === "" ? undefined : v);
@@ -103,6 +104,59 @@ export async function createServiceRecord(
     }
 
     return record;
+  });
+}
+
+export async function getServiceRecord(userId: string, vehicleId: string, recordId: string) {
+  if (!isUuid(recordId)) return null;
+  const [record] = await db
+    .select()
+    .from(serviceRecords)
+    .where(
+      and(
+        eq(serviceRecords.id, recordId),
+        eq(serviceRecords.vehicleId, vehicleId),
+        eq(serviceRecords.userId, userId),
+      ),
+    )
+    .limit(1);
+  return record ?? null;
+}
+
+// Updates a record; like creating one, a higher mileage advances the car's odometer.
+export async function updateServiceRecord(
+  userId: string,
+  vehicleId: string,
+  recordId: string,
+  input: ServiceRecordInput,
+) {
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(serviceRecords)
+      .set(input)
+      .where(
+        and(
+          eq(serviceRecords.id, recordId),
+          eq(serviceRecords.vehicleId, vehicleId),
+          eq(serviceRecords.userId, userId),
+        ),
+      )
+      .returning({ id: serviceRecords.id });
+    if (!updated) return null;
+
+    if (input.mileage != null) {
+      await tx
+        .update(vehicles)
+        .set({ currentMileage: input.mileage })
+        .where(
+          and(
+            eq(vehicles.id, vehicleId),
+            eq(vehicles.userId, userId),
+            lt(vehicles.currentMileage, input.mileage),
+          ),
+        );
+    }
+    return updated;
   });
 }
 
