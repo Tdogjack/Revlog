@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
 import { ServiceForm } from "./service-form";
 
@@ -21,7 +22,10 @@ export default function NewServicePage({ params }: PageProps<"/garage/[id]/servi
 async function NewService({ params }: Pick<PageProps<"/garage/[id]/service/new">, "params">) {
   const { id } = await params;
   const user = await requireUser();
-  const car = await getVehicle(user.id, id);
+  const [car, customTypes] = await Promise.all([
+    getVehicle(user.id, id),
+    listServiceTypes(user.id),
+  ]);
   if (!car) notFound();
 
   return (
@@ -30,7 +34,11 @@ async function NewService({ params }: Pick<PageProps<"/garage/[id]/service/new">
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
       <h1 className="mt-4 text-2xl font-semibold">Log service</h1>
-      <ServiceForm vehicleId={car.id} currentMileage={car.currentMileage} />
+      <ServiceForm
+        vehicleId={car.id}
+        currentMileage={car.currentMileage}
+        customTypes={customTypes}
+      />
     </>
   );
 }

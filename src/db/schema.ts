@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { authenticatedRole, authUid, authUsers } from "drizzle-orm/supabase";
@@ -70,6 +71,20 @@ export const serviceRecords = pgTable(
   () => [ownerPolicy("service_records")],
 ).enableRLS();
 
+// User-created service types, like "Transmission fluid". Service records and
+// reminders refer to a type by key: a built-in slug ("oil") or one of these ids.
+export const serviceTypes = pgTable(
+  "service_types",
+  {
+    ...ownerColumns,
+    name: text("name").notNull(),
+  },
+  (t) => [
+    uniqueIndex("service_types_user_name_idx").on(t.userId, sql`lower(${t.name})`),
+    ownerPolicy("service_types"),
+  ],
+).enableRLS();
+
 export const modStatus = pgEnum("mod_status", ["planned", "installed", "removed"]);
 
 export const mods = pgTable(
@@ -99,6 +114,8 @@ export const reminders = pgTable(
       .notNull()
       .references(() => vehicles.id, { onDelete: "cascade" }),
     task: text("task").notNull(),
+    // When set, logging a service record of this category resets the reminder.
+    serviceCategory: text("service_category"),
     intervalMiles: integer("interval_miles"),
     intervalMonths: integer("interval_months"),
     lastDoneOn: date("last_done_on"),
@@ -128,4 +145,5 @@ export type Vehicle = typeof vehicles.$inferSelect;
 export type ServiceRecord = typeof serviceRecords.$inferSelect;
 export type Mod = typeof mods.$inferSelect;
 export type Reminder = typeof reminders.$inferSelect;
+export type ServiceType = typeof serviceTypes.$inferSelect;
 export type Attachment = typeof attachments.$inferSelect;

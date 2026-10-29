@@ -59,7 +59,7 @@ export function AuthForm({ mode, action, next }: Props) {
               </label>
 
               {state?.error && (
-                <p role="alert" className="text-sm text-due">
+                <p role="alert" className="text-sm text-overdue">
                   {state.error}
                 </p>
               )}

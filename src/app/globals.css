@@ -11,8 +11,10 @@
   --color-chalk: #f4f1ec;
 
   /* Status colors, kept distinct from the brand red */
-  --color-due: #ff8a93;
-  --color-due-bg: #3a1a1d;
+  --color-due: #f2b950;
+  --color-due-bg: #3a2c0f;
+  --color-overdue: #ff8a93;
+  --color-overdue-bg: #3a1a1d;
   --color-done: #7fd99a;
   --color-done-bg: #16301f;
 

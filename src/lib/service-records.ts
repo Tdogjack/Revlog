@@ -3,16 +3,15 @@ import { and, desc, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { serviceRecords, vehicles } from "@/db/schema";
-import { categoryLabel, SERVICE_CATEGORIES } from "@/lib/service-categories";
-
-const categoryValues = SERVICE_CATEGORIES.map((c) => c.value) as [string, ...string[]];
 
 const stripNumber = (v: unknown) => (typeof v === "string" ? v.replace(/[$,\s]/g, "") : v);
 const blankToUndefined = (v: unknown) => (v === "" ? undefined : v);
 
+// `category` is a service type key, already resolved by resolveServiceType.
+// A blank title falls back to the type's name, which the caller supplies.
 export const serviceRecordInput = z
   .object({
-    category: z.enum(categoryValues, { message: "Pick what kind of service this was." }),
+    category: z.string().min(1, "Pick what kind of service this was."),
     title: z.string().trim().max(100),
     servicedOn: z
       .string()
@@ -40,7 +39,7 @@ export const serviceRecordInput = z
   })
   .transform((r) => ({
     category: r.category,
-    title: r.title || categoryLabel(r.category),
+    title: r.title,
     servicedOn: r.servicedOn,
     mileage: r.mileage ?? null,
     cost: r.cost == null ? null : r.cost.toFixed(2),
@@ -56,6 +55,19 @@ export function listServiceRecords(userId: string, vehicleId: string) {
     .from(serviceRecords)
     .where(and(eq(serviceRecords.vehicleId, vehicleId), eq(serviceRecords.userId, userId)))
     .orderBy(desc(serviceRecords.servicedOn), desc(serviceRecords.createdAt));
+}
+
+// Just what reminders need, across all of a user's cars.
+export function listServiceDates(userId: string) {
+  return db
+    .select({
+      vehicleId: serviceRecords.vehicleId,
+      category: serviceRecords.category,
+      servicedOn: serviceRecords.servicedOn,
+      mileage: serviceRecords.mileage,
+    })
+    .from(serviceRecords)
+    .where(eq(serviceRecords.userId, userId));
 }
 
 // Saves the record and bumps the car's odometer if this record is newer.
@@ -89,6 +101,7 @@ export async function createServiceRecord(
           ),
         );
     }
+
     return record;
   });
 }

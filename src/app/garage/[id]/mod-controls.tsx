@@ -44,7 +44,7 @@ export function ModControls({
           if (!confirm("Delete this mod?")) e.preventDefault();
         }}
       >
-        <button type="submit" aria-label="Delete mod" className="text-steel hover:text-due">
+        <button type="submit" aria-label="Delete mod" className="text-steel hover:text-overdue">
           <Trash2 className="h-4 w-4" aria-hidden />
         </button>
       </form>

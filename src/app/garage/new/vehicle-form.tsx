@@ -71,7 +71,7 @@ export function VehicleForm() {
       />
 
       {error && (
-        <p role="alert" className="text-sm text-due">
+        <p role="alert" className="text-sm text-overdue">
           {error}
         </p>
       )}

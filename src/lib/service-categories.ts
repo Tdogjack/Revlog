@@ -1,16 +1,41 @@
-// Shared by the server (validation) and the browser (the form's dropdown).
+// Shared by the server (validation) and the browser (the forms' dropdowns).
+// A service type key is either one of these built-in slugs or the id of a
+// type the user created themselves.
 export const SERVICE_CATEGORIES = [
   { value: "oil", label: "Oil change" },
+  { value: "rotation", label: "Tire rotation" },
   { value: "tires", label: "Tires" },
   { value: "brakes", label: "Brakes" },
-  { value: "fluids", label: "Fluids" },
-  { value: "filters", label: "Filters" },
+  { value: "brake-fluid", label: "Brake fluid" },
+  { value: "air-filter", label: "Engine air filter" },
+  { value: "cabin-filter", label: "Cabin air filter" },
+  { value: "coolant", label: "Coolant" },
+  { value: "transmission", label: "Transmission fluid" },
+  { value: "spark-plugs", label: "Spark plugs" },
   { value: "battery", label: "Battery" },
+  { value: "wipers", label: "Wiper blades" },
+  { value: "alignment", label: "Alignment" },
   { value: "inspection", label: "Inspection" },
+  { value: "fluids", label: "Other fluids" },
+  { value: "filters", label: "Other filters" },
   { value: "repair", label: "Repair" },
   { value: "other", label: "Other" },
 ] as const;
 
-export function categoryLabel(value: string) {
-  return SERVICE_CATEGORIES.find((c) => c.value === value)?.label ?? "Service";
+// Dropdown value that reveals the "name your new type" field.
+export const NEW_TYPE = "__new";
+
+export type CustomType = { id: string; name: string };
+
+export function isBuiltInType(key: string) {
+  return SERVICE_CATEGORIES.some((c) => c.value === key);
+}
+
+export function categoryLabel(key: string | null, customTypes: CustomType[] = []) {
+  if (!key) return "Service";
+  return (
+    SERVICE_CATEGORIES.find((c) => c.value === key)?.label ??
+    customTypes.find((t) => t.id === key)?.name ??
+    "Service"
+  );
 }

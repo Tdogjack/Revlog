@@ -72,6 +72,15 @@ export async function createVehicle(userId: string, input: VehicleInput) {
   return vehicle;
 }
 
+export const mileageInput = wholeNumber("mileage", 0, 2_000_000);
+
+export async function setVehicleMileage(userId: string, id: string, currentMileage: number) {
+  await db
+    .update(vehicles)
+    .set({ currentMileage })
+    .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)));
+}
+
 // Returns the previous photo path so the caller can delete the old file.
 export async function setVehiclePhoto(userId: string, id: string, photoPath: string | null) {
   const [existing] = await db
