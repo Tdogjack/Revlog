@@ -173,6 +173,24 @@ export const partPrices = pgTable(
   () => [ownerPolicy("part_prices")],
 ).enableRLS();
 
+// One row per user who has changed their email preferences; no row means
+// the defaults (reminder emails on).
+export const emailSettings = pgTable(
+  "email_settings",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .default(sql`auth.uid()`)
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    reminderEmails: boolean("reminder_emails").notNull().default(true),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  () => [ownerPolicy("email_settings")],
+).enableRLS();
+
 // Receipts and photos live in Supabase Storage; this table points at them.
 export const attachments = pgTable(
   "attachments",
