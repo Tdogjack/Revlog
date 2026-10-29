@@ -70,7 +70,8 @@ async function NewService({ params, searchParams }: Pick<Props, "params" | "sear
             ? {
                 category: source.category,
                 title: source.title,
-                cost: source.cost ?? "",
+                // With parts, leave cost blank so it re-totals at today's prices.
+                cost: sourceParts.length > 0 ? "" : (source.cost ?? ""),
                 shop: source.shop ?? "",
                 notes: source.notes ?? "",
               }

@@ -127,6 +127,7 @@ export function ModForm({
           defaultValue={v.cost}
           className={inputClass}
         />
+        <span className="mt-1 block text-xs text-steel">Leave blank to use the parts total.</span>
       </label>
 
       <label className="block text-sm">

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { checkPricesLater, parsePartRows, syncParts } from "@/lib/parts";
+import { parsePartRows, settlePartsCost, syncParts } from "@/lib/parts";
 import { categoryLabel } from "@/lib/service-categories";
 import {
   createServiceRecord,
@@ -55,8 +55,9 @@ export async function addServiceRecord(
 
   const record = await createServiceRecord(user.id, vehicleId, result.data);
   if (!record) return { error: "That car wasn't found.", values: result.raw };
-  const toCheck = await syncParts(user.id, vehicleId, { serviceRecordId: record.id }, result.parts);
-  checkPricesLater(toCheck);
+  const parent = { serviceRecordId: record.id };
+  const toCheck = await syncParts(user.id, vehicleId, parent, result.parts);
+  await settlePartsCost(user.id, parent, toCheck, result.data.cost != null);
 
   redirect(`/garage/${vehicleId}`);
 }
@@ -73,8 +74,9 @@ export async function editServiceRecord(
 
   const record = await updateServiceRecord(user.id, vehicleId, recordId, result.data);
   if (!record) return { error: "That record wasn't found.", values: result.raw };
-  const toCheck = await syncParts(user.id, vehicleId, { serviceRecordId: record.id }, result.parts);
-  checkPricesLater(toCheck);
+  const parent = { serviceRecordId: record.id };
+  const toCheck = await syncParts(user.id, vehicleId, parent, result.parts);
+  await settlePartsCost(user.id, parent, toCheck, result.data.cost != null);
 
   redirect(`/garage/${vehicleId}`);
 }
