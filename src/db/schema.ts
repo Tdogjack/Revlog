@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
+  check,
   date,
   integer,
   numeric,
@@ -8,6 +10,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { authenticatedRole, authUid, authUsers } from "drizzle-orm/supabase";
@@ -70,6 +73,20 @@ export const serviceRecords = pgTable(
   () => [ownerPolicy("service_records")],
 ).enableRLS();
 
+// User-created service types, like "Transmission fluid". Service records and
+// reminders refer to a type by key: a built-in slug ("oil") or one of these ids.
+export const serviceTypes = pgTable(
+  "service_types",
+  {
+    ...ownerColumns,
+    name: text("name").notNull(),
+  },
+  (t) => [
+    uniqueIndex("service_types_user_name_idx").on(t.userId, sql`lower(${t.name})`),
+    ownerPolicy("service_types"),
+  ],
+).enableRLS();
+
 export const modStatus = pgEnum("mod_status", ["planned", "installed", "removed"]);
 
 export const mods = pgTable(
@@ -99,6 +116,8 @@ export const reminders = pgTable(
       .notNull()
       .references(() => vehicles.id, { onDelete: "cascade" }),
     task: text("task").notNull(),
+    // When set, logging a service record of this category resets the reminder.
+    serviceCategory: text("service_category"),
     intervalMiles: integer("interval_miles"),
     intervalMonths: integer("interval_months"),
     lastDoneOn: date("last_done_on"),
@@ -106,6 +125,52 @@ export const reminders = pgTable(
     lastNotifiedAt: timestamp("last_notified_at", { withTimezone: true }),
   },
   () => [ownerPolicy("reminders")],
+).enableRLS();
+
+// Parts used for a service or wanted/used for a mod. Each part belongs to
+// exactly one mod or one service record. With trackPrice on, a daily job
+// reads the price from the link and records it in part_prices.
+export const parts = pgTable(
+  "parts",
+  {
+    ...ownerColumns,
+    vehicleId: uuid("vehicle_id")
+      .notNull()
+      .references(() => vehicles.id, { onDelete: "cascade" }),
+    modId: uuid("mod_id").references(() => mods.id, { onDelete: "cascade" }),
+    serviceRecordId: uuid("service_record_id").references(() => serviceRecords.id, {
+      onDelete: "cascade",
+    }),
+    name: text("name").notNull(),
+    url: text("url"),
+    quantity: integer("quantity").notNull().default(1),
+    // The price the user entered, or the latest one found at the link.
+    price: numeric("price", { precision: 10, scale: 2 }),
+    currency: text("currency"),
+    trackPrice: boolean("track_price").notNull().default(false),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    lastCheckError: text("last_check_error"),
+  },
+  (t) => [
+    check(
+      "parts_one_parent",
+      sql`(${t.modId} is not null)::int + (${t.serviceRecordId} is not null)::int = 1`,
+    ),
+    ownerPolicy("parts"),
+  ],
+).enableRLS();
+
+export const partPrices = pgTable(
+  "part_prices",
+  {
+    ...ownerColumns,
+    partId: uuid("part_id")
+      .notNull()
+      .references(() => parts.id, { onDelete: "cascade" }),
+    price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+    currency: text("currency"),
+  },
+  () => [ownerPolicy("part_prices")],
 ).enableRLS();
 
 // Receipts and photos live in Supabase Storage; this table points at them.
@@ -128,4 +193,7 @@ export type Vehicle = typeof vehicles.$inferSelect;
 export type ServiceRecord = typeof serviceRecords.$inferSelect;
 export type Mod = typeof mods.$inferSelect;
 export type Reminder = typeof reminders.$inferSelect;
+export type ServiceType = typeof serviceTypes.$inferSelect;
+export type Part = typeof parts.$inferSelect;
+export type PartPrice = typeof partPrices.$inferSelect;
 export type Attachment = typeof attachments.$inferSelect;
