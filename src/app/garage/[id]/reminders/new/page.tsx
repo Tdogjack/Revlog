@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
+import { addReminder } from "../actions";
 import { ReminderForm } from "./reminder-form";
 
 export const metadata: Metadata = { title: "Add a reminder · Revlog" };
@@ -35,7 +36,7 @@ async function NewReminder({ params }: Pick<PageProps<"/garage/[id]/reminders/ne
       </Link>
       <h1 className="mt-4 text-2xl font-semibold">Add a reminder</h1>
       <ReminderForm
-        vehicleId={car.id}
+        action={addReminder.bind(null, car.id)}
         currentMileage={car.currentMileage}
         customTypes={customTypes}
       />

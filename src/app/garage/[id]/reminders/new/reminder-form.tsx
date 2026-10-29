@@ -5,7 +5,7 @@ import { ServiceTypeSelect } from "@/components/service-type-select";
 import { localToday } from "@/lib/local-date";
 import { REMINDER_PRESETS } from "@/lib/reminder-presets";
 import type { CustomType } from "@/lib/service-categories";
-import { addReminder } from "../actions";
+import type { ReminderFormState } from "../actions";
 
 const inputClass =
   "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
@@ -21,17 +21,24 @@ function presetIntervals(type: string) {
     : null;
 }
 
+// Used for both adding and editing. When editing, `initial` holds the
+// reminder's values and the last-done fields are hidden.
 export function ReminderForm({
-  vehicleId,
+  action,
   currentMileage,
   customTypes,
+  initial,
+  submitLabel = "Save reminder",
 }: {
-  vehicleId: string;
+  action: (prev: ReminderFormState, formData: FormData) => Promise<ReminderFormState>;
   currentMileage: number;
   customTypes: CustomType[];
+  initial?: Record<string, string>;
+  submitLabel?: string;
 }) {
-  const [state, formAction, pending] = useActionState(addReminder.bind(null, vehicleId), undefined);
-  const v = state?.values;
+  const [state, formAction, pending] = useActionState(action, undefined);
+  const isEdit = !!initial;
+  const v = state?.values ?? initial;
   const [type, setType] = useState(v?.category || "oil");
   const [intervals, setIntervals] = useState(
     () =>
@@ -90,31 +97,39 @@ export function ReminderForm({
         manual and adjust if needed.
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="text-steel">Last done (optional)</span>
-          <input
-            type="date"
-            name="lastDoneOn"
-            defaultValue={v?.lastDoneOn}
-            className={inputClass}
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-steel">Mileage then (optional)</span>
-          <input
-            name="lastDoneMileage"
-            inputMode="numeric"
-            placeholder={currentMileage.toLocaleString("en-US")}
-            defaultValue={v?.lastDoneMileage}
-            className={inputClass}
-          />
-        </label>
-      </div>
-      <p className="-mt-2 text-xs text-steel">
-        If you fill these in, the service is added to your history. If you&apos;ve already logged
-        it, leave them blank and the reminder uses your latest record.
-      </p>
+      {isEdit ? (
+        <p className="text-xs text-steel">
+          Last done comes from your service history. To change it, edit or log the service.
+        </p>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="text-steel">Last done (optional)</span>
+              <input
+                type="date"
+                name="lastDoneOn"
+                defaultValue={v?.lastDoneOn}
+                className={inputClass}
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-steel">Mileage then (optional)</span>
+              <input
+                name="lastDoneMileage"
+                inputMode="numeric"
+                placeholder={currentMileage.toLocaleString("en-US")}
+                defaultValue={v?.lastDoneMileage}
+                className={inputClass}
+              />
+            </label>
+          </div>
+          <p className="-mt-2 text-xs text-steel">
+            If you fill these in, the service is added to your history. If you&apos;ve already
+            logged it, leave them blank and the reminder uses your latest record.
+          </p>
+        </>
+      )}
 
       <label className="block text-sm">
         <span className="text-steel">Name (optional)</span>
@@ -137,7 +152,7 @@ export function ReminderForm({
         disabled={pending}
         className="w-full rounded-md bg-redline py-2.5 font-medium text-white hover:bg-redline-hover disabled:opacity-60"
       >
-        {pending ? "Saving…" : "Save reminder"}
+        {pending ? "Saving…" : submitLabel}
       </button>
     </form>
   );

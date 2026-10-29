@@ -12,7 +12,13 @@ function today() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function ModForm({ vehicleId, currentMileage }: { vehicleId: string; currentMileage: number }) {
+export function ModForm({
+  vehicleId,
+  currentMileage,
+}: {
+  vehicleId: string;
+  currentMileage: number;
+}) {
   const [state, formAction, pending] = useActionState(addMod.bind(null, vehicleId), undefined);
   const v = state?.values ?? {};
   const [status, setStatus] = useState(v.status || "installed");
@@ -24,11 +30,20 @@ export function ModForm({ vehicleId, currentMileage }: { vehicleId: string; curr
   }, [state, status]);
 
   return (
-    <form action={formAction} className="mt-6 space-y-4 rounded-xl border border-graphite bg-panel p-6">
+    <form
+      action={formAction}
+      className="mt-6 space-y-4 rounded-xl border border-graphite bg-panel p-6"
+    >
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm">
           <span className="text-steel">Part</span>
-          <input name="part" required placeholder="Cold air intake" defaultValue={v.part} className={inputClass} />
+          <input
+            name="part"
+            required
+            placeholder="Cold air intake"
+            defaultValue={v.part}
+            className={inputClass}
+          />
         </label>
         <label className="block text-sm">
           <span className="text-steel">Brand (optional)</span>
@@ -39,7 +54,12 @@ export function ModForm({ vehicleId, currentMileage }: { vehicleId: string; curr
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm">
           <span className="text-steel">Category</span>
-          <select name="category" required defaultValue={v.category ?? "engine"} className={inputClass}>
+          <select
+            name="category"
+            required
+            defaultValue={v.category ?? "engine"}
+            className={inputClass}
+          >
             {MOD_CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.label}
@@ -68,7 +88,13 @@ export function ModForm({ vehicleId, currentMileage }: { vehicleId: string; curr
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="text-steel">Install date (optional)</span>
-            <input ref={dateRef} type="date" name="installedOn" defaultValue={v.installedOn} className={inputClass} />
+            <input
+              ref={dateRef}
+              type="date"
+              name="installedOn"
+              defaultValue={v.installedOn}
+              className={inputClass}
+            />
           </label>
           <label className="block text-sm">
             <span className="text-steel">Mileage at install (optional)</span>
@@ -84,8 +110,16 @@ export function ModForm({ vehicleId, currentMileage }: { vehicleId: string; curr
       )}
 
       <label className="block text-sm">
-        <span className="text-steel">{status === "planned" ? "Estimated cost (optional)" : "Cost (optional)"}</span>
-        <input name="cost" inputMode="decimal" placeholder="$349.99" defaultValue={v.cost} className={inputClass} />
+        <span className="text-steel">
+          {status === "planned" ? "Estimated cost (optional)" : "Cost (optional)"}
+        </span>
+        <input
+          name="cost"
+          inputMode="decimal"
+          placeholder="$349.99"
+          defaultValue={v.cost}
+          className={inputClass}
+        />
       </label>
 
       <label className="block text-sm">

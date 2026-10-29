@@ -10,6 +10,7 @@ import {
   markDoneInput,
   reminderInput,
   setReminderStart,
+  updateReminder,
 } from "@/lib/reminder-store";
 import { categoryLabel } from "@/lib/service-categories";
 import { createServiceRecord } from "@/lib/service-records";
@@ -66,6 +67,36 @@ export async function addReminder(
       notes: null,
     });
   }
+
+  redirect(`/garage/${vehicleId}`);
+}
+
+// Last-done comes from service history, so editing only changes the type,
+// name, and intervals.
+export async function editReminder(
+  vehicleId: string,
+  reminderId: string,
+  _prev: ReminderFormState,
+  formData: FormData,
+): Promise<ReminderFormState> {
+  const user = await requireUser();
+  const raw = Object.fromEntries(FIELDS.map((k) => [k, String(formData.get(k) ?? "")]));
+
+  const parsed = reminderInput.safeParse(raw);
+  if (!parsed.success) return { error: parsed.error.issues[0].message, values: raw };
+
+  const type = await resolveServiceType(user.id, raw.category, raw.newType);
+  if ("error" in type) return { error: type.error, values: raw };
+
+  const label = categoryLabel(type.key, await listServiceTypes(user.id));
+  const r = parsed.data;
+  const updated = await updateReminder(user.id, vehicleId, reminderId, {
+    task: r.task || label,
+    serviceCategory: type.key,
+    intervalMiles: r.intervalMiles,
+    intervalMonths: r.intervalMonths,
+  });
+  if (!updated) return { error: "That reminder wasn't found.", values: raw };
 
   redirect(`/garage/${vehicleId}`);
 }

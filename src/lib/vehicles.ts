@@ -46,6 +46,9 @@ export type VehicleInput = z.infer<typeof vehicleInput>;
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Ids come from the URL; anything that isn't a uuid would make Postgres error.
+export const isUuid = (id: string) => uuidPattern.test(id);
+
 export function listVehicles(userId: string) {
   return db
     .select()

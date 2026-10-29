@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Bell, Plus, Wrench, Zap } from "lucide-react";
+import { Bell, Pencil, Plus, Wrench, Zap } from "lucide-react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
 import { modCategoryLabel } from "@/lib/mod-categories";
@@ -141,7 +141,16 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                         </p>
                         {r.notes && <p className="mt-2 whitespace-pre-line text-sm">{r.notes}</p>}
                       </div>
-                      <DeleteRecordButton vehicleId={car.id} recordId={r.id} />
+                      <div className="flex items-start gap-3">
+                        <Link
+                          href={`/garage/${car.id}/service/${r.id}/edit`}
+                          aria-label="Edit record"
+                          className="text-steel hover:text-chalk"
+                        >
+                          <Pencil className="h-4 w-4" aria-hidden />
+                        </Link>
+                        <DeleteRecordButton vehicleId={car.id} recordId={r.id} />
+                      </div>
                     </li>
                   ))}
                 </ol>
@@ -238,7 +247,17 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                       <p className="font-medium">{r.task}</p>
                       <StatusBadge status={result.status} />
                     </div>
-                    <p className="mt-1 text-sm text-steel">{describeDue(result)}</p>
+                    <p
+                      className={`mt-1 text-sm ${
+                        result.status === "overdue"
+                          ? "font-medium text-overdue"
+                          : result.status === "due_soon"
+                            ? "text-due"
+                            : "text-steel"
+                      }`}
+                    >
+                      {describeDue(result)}
+                    </p>
                     {r.lastDoneOn && (
                       <p className="mt-0.5 text-xs text-steel">
                         Last done {formatDate(r.lastDoneOn)}

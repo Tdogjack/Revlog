@@ -14,7 +14,12 @@ function Field({
   defaultValue,
   hint,
   ...props
-}: { label: string; name: string; defaultValue?: string; hint?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string;
+  hint?: string;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className="block text-sm">
       <span className="text-steel">{label}</span>
@@ -46,13 +51,25 @@ export function VehicleForm() {
       {/* The form resets after each submit, so remount the picker to clear its preview too. */}
       <PhotoPicker key={state?.error ?? "initial"} />
       <div className="grid gap-4 sm:grid-cols-[7rem_1fr_1fr]">
-        <Field label="Year" name="year" inputMode="numeric" placeholder="2019" required defaultValue={v.year} />
+        <Field
+          label="Year"
+          name="year"
+          inputMode="numeric"
+          placeholder="2019"
+          required
+          defaultValue={v.year}
+        />
         <Field label="Make" name="make" placeholder="Honda" required defaultValue={v.make} />
         <Field label="Model" name="model" placeholder="Civic" required defaultValue={v.model} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Trim (optional)" name="trim" placeholder="Si" defaultValue={v.trim} />
-        <Field label="Nickname (optional)" name="nickname" placeholder="Daily driver" defaultValue={v.nickname} />
+        <Field
+          label="Nickname (optional)"
+          name="nickname"
+          placeholder="Daily driver"
+          defaultValue={v.nickname}
+        />
       </div>
       <Field
         label="Current mileage"

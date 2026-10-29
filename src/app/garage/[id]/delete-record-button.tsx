@@ -3,7 +3,13 @@
 import { Trash2 } from "lucide-react";
 import { removeServiceRecord } from "./service/actions";
 
-export function DeleteRecordButton({ vehicleId, recordId }: { vehicleId: string; recordId: string }) {
+export function DeleteRecordButton({
+  vehicleId,
+  recordId,
+}: {
+  vehicleId: string;
+  recordId: string;
+}) {
   return (
     <form
       action={removeServiceRecord.bind(null, vehicleId, recordId)}

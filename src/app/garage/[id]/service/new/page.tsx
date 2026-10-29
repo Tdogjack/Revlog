@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
+import { addServiceRecord } from "../actions";
 import { ServiceForm } from "./service-form";
 
 export const metadata: Metadata = { title: "Log service · Revlog" };
@@ -35,7 +36,7 @@ async function NewService({ params }: Pick<PageProps<"/garage/[id]/service/new">
       </Link>
       <h1 className="mt-4 text-2xl font-semibold">Log service</h1>
       <ServiceForm
-        vehicleId={car.id}
+        action={addServiceRecord.bind(null, car.id)}
         currentMileage={car.currentMileage}
         customTypes={customTypes}
       />
