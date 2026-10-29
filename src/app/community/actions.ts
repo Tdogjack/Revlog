@@ -6,11 +6,13 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { posts } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
-import { createPost, deletePost } from "@/lib/community";
+import { addPostPhoto, createPost, deletePost } from "@/lib/community";
+import { readPhoto } from "@/lib/photos";
 import { getProfile } from "@/lib/profiles";
 import { isUuid } from "@/lib/vehicles";
 
-export type PostFormState = { error?: string; values?: Record<string, string> } | undefined;
+export type PostFormState =
+  { error?: string; values?: Record<string, string>; postId?: string } | undefined;
 
 const POSTS_PER_DAY = 10;
 
@@ -45,8 +47,21 @@ export async function sharePost(_prev: PostFormState, formData: FormData): Promi
   });
   if ("error" in result) return { error: result.error, values };
 
+  // The form uploads any new photos to the post, then opens it.
   revalidatePath("/community");
-  redirect(`/community/${result.id}`);
+  return { postId: result.id };
+}
+
+// One new photo per call, so each request stays under the upload size limit.
+export async function uploadPostPhoto(postId: string, formData: FormData) {
+  const user = await requireUser();
+  const photo = readPhoto(formData);
+  if (!photo) return { error: "Choose a photo first." };
+  if ("error" in photo) return { error: photo.error };
+  const error = await addPostPhoto(user.id, postId, photo);
+  if (error) return { error };
+  revalidatePath(`/community/${postId}`);
+  return {};
 }
 
 export async function removePost(postId: string) {

@@ -149,6 +149,34 @@ export async function createPost(
   return { id: post.id };
 }
 
+// A photo uploaded just for a post (not saved to the garage). Returns an
+// error message, or null once it's added after the post's other photos.
+export async function addPostPhoto(userId: string, postId: string, file: File) {
+  if (!isUuid(postId)) return "That post wasn't found.";
+  const [post] = await db
+    .select({ id: posts.id })
+    .from(posts)
+    .where(and(eq(posts.id, postId), eq(posts.userId, userId)));
+  if (!post) return "That post wasn't found.";
+  const existing = await db
+    .select({ position: postPhotos.position })
+    .from(postPhotos)
+    .where(eq(postPhotos.postId, postId));
+  if (existing.length >= MAX_POST_PHOTOS) return `Posts can have up to ${MAX_POST_PHOTOS} photos.`;
+
+  const ext = file.type.split("/")[1];
+  const path = `${userId}/${postId}/${randomUUID()}.${ext}`;
+  const supabase = await createClient();
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, file, { contentType: file.type, cacheControl: "31536000" });
+  if (error) return "A photo didn't upload. Try again.";
+
+  const position = Math.max(-1, ...existing.map((p) => p.position)) + 1;
+  await db.insert(postPhotos).values({ userId, postId, storagePath: path, position });
+  return null;
+}
+
 export async function deletePost(userId: string, postId: string) {
   if (!isUuid(postId)) return;
   const files = await db

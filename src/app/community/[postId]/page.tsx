@@ -20,27 +20,36 @@ export async function generateMetadata({
   };
 }
 
-export default function PostPage({ params }: PageProps<"/community/[postId]">) {
+export default function PostPage({ params, searchParams }: PageProps<"/community/[postId]">) {
   return (
     <div className="mx-auto max-w-2xl">
       <Link href="/community" className="text-sm text-steel hover:text-chalk">
         ← Back to community
       </Link>
       <Suspense fallback={<p className="mt-6 text-sm text-steel">Loading post…</p>}>
-        <PostDetails params={params} />
+        <PostDetails params={params} searchParams={searchParams} />
       </Suspense>
     </div>
   );
 }
 
-async function PostDetails({ params }: Pick<PageProps<"/community/[postId]">, "params">) {
-  const { postId } = await params;
+async function PostDetails({
+  params,
+  searchParams,
+}: Pick<PageProps<"/community/[postId]">, "params" | "searchParams">) {
+  const [{ postId }, { failed }] = await Promise.all([params, searchParams]);
   const [post, user] = await Promise.all([getPost(postId), getUser()]);
   if (!post) notFound();
   const buildList = post.kind === "build" ? await listInstalledMods(post.vehicleId) : [];
 
   return (
     <div className="mt-4 space-y-4">
+      {typeof failed === "string" && user?.id === post.userId && (
+        <p role="alert" className="rounded-md bg-overdue-bg px-3 py-2 text-sm text-overdue">
+          {failed === "1" ? "One photo" : `${failed} photos`} didn&apos;t upload. Try a smaller
+          photo, or share again.
+        </p>
+      )}
       <PostCard post={post} link={false} />
 
       {buildList.length > 0 && (
