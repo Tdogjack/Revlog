@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, inArray, lt } from "drizzle-orm";
 import { db } from "@/db";
-import { mods, postPhotos, posts, profiles, vehicles } from "@/db/schema";
+import { mods, parts, postPhotos, posts, profiles, vehicles } from "@/db/schema";
 import { getPhotosByIds } from "@/lib/gallery";
 import { getMod } from "@/lib/mods";
 import { supabaseUrl } from "@/lib/supabase/env";
@@ -26,6 +26,8 @@ const postFields = {
   body: posts.body,
   createdAt: posts.createdAt,
   vehicleId: posts.vehicleId,
+  modId: posts.modId,
+  showParts: posts.showParts,
   username: profiles.username,
   year: vehicles.year,
   make: vehicles.make,
@@ -104,7 +106,56 @@ export type NewPost = {
   title: string;
   body: string | null;
   photoIds: string[];
+  showParts: boolean;
 };
+
+// The parts a post shares when the poster chose to: the mod's parts for a
+// mod post, or the parts of every installed mod for a build post.
+export async function listPostParts(post: FeedPost) {
+  if (!post.showParts) return [];
+  const fields = {
+    id: parts.id,
+    modId: parts.modId,
+    name: parts.name,
+    url: parts.url,
+    quantity: parts.quantity,
+    price: parts.price,
+    currency: parts.currency,
+  };
+  if (post.kind === "mod") {
+    if (!post.modId) return [];
+    return db
+      .select(fields)
+      .from(parts)
+      .where(and(eq(parts.userId, post.userId), eq(parts.modId, post.modId)))
+      .orderBy(asc(parts.createdAt));
+  }
+  return db
+    .select(fields)
+    .from(parts)
+    .innerJoin(mods, eq(mods.id, parts.modId))
+    .where(
+      and(
+        eq(parts.userId, post.userId),
+        eq(parts.vehicleId, post.vehicleId),
+        eq(mods.status, "installed"),
+      ),
+    )
+    .orderBy(asc(parts.createdAt));
+}
+
+// How many parts a new post would list, for the share form.
+export async function countShareableParts(userId: string, vehicleId: string, modId: string | null) {
+  const where = modId
+    ? and(eq(parts.userId, userId), eq(parts.modId, modId))
+    : and(eq(parts.userId, userId), eq(parts.vehicleId, vehicleId), eq(mods.status, "installed"));
+  const rows = await db
+    .select({ id: parts.id })
+    .from(parts)
+    .innerJoin(mods, eq(mods.id, parts.modId))
+    .where(where);
+  return rows.length;
+}
 
 // Returns the new post's id, or an error message.
 export async function createPost(
@@ -129,6 +180,7 @@ export async function createPost(
       kind: input.modId ? "mod" : "build",
       title: input.title,
       body: input.body,
+      showParts: input.showParts,
     })
     .returning({ id: posts.id });
 

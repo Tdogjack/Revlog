@@ -63,6 +63,14 @@ export function PostCard({ post, link = true }: { post: FeedPost; link?: boolean
           {post.body}
         </p>
       )}
+      {link && post.showParts && (
+        <Link
+          href={`/community/${post.id}`}
+          className="mt-2 inline-block text-xs text-steel hover:text-chalk"
+        >
+          Parts list with links
+        </Link>
+      )}
       {post.photos.length > 0 && (
         <div className="mt-4">
           <PhotoGallery photos={link ? post.photos.slice(0, 6) : post.photos} />

@@ -60,9 +60,10 @@ export default function PrivacyPage() {
       <p>
         Your garage is private. Only what you post to the community is public: your username, the
         post&apos;s title and text, the photos you pick for it, the car&apos;s year, make, model,
-        trim, and nickname, and (for build posts) its list of installed mods. Shared photos are
-        copied to a public folder; the originals and your receipts stay private. Deleting a post
-        removes it and its shared photos.
+        trim, and nickname, and (for build posts) its list of installed mods, plus their parts,
+        links, and prices if you choose to include them. Shared photos are copied to a public
+        folder; the originals and your receipts stay private. Deleting a post removes it and its
+        shared photos.
       </p>
 
       <h2>Who else handles it</h2>

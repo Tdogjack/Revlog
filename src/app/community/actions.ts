@@ -44,6 +44,7 @@ export async function sharePost(_prev: PostFormState, formData: FormData): Promi
     title,
     body: body || null,
     photoIds: formData.getAll("photoIds").map(String),
+    showParts: formData.get("showParts") === "on",
   });
   if ("error" in result) return { error: result.error, values };
 

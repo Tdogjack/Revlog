@@ -261,6 +261,8 @@ export const posts = pgTable(
     kind: postKind("kind").notNull(),
     title: text("title").notNull(),
     body: text("body"),
+    // When on, the post lists the mod's (or build's) parts with their links.
+    showParts: boolean("show_parts").notNull().default(false),
   },
   () => [ownerPolicy("posts")],
 ).enableRLS();

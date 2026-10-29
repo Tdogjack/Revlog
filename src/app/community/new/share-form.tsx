@@ -19,6 +19,8 @@ export function ShareForm({
   defaultTitle,
   photos,
   maxPhotos,
+  partCount,
+  partScope,
 }: {
   action: (prev: PostFormState, formData: FormData) => Promise<PostFormState>;
   vehicleId: string;
@@ -26,6 +28,8 @@ export function ShareForm({
   defaultTitle: string;
   photos: SharePhoto[];
   maxPhotos: number;
+  partCount: number;
+  partScope: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -209,6 +213,23 @@ export function ShareForm({
           garage. Receipts are never shared.
         </p>
       </div>
+
+      <label className="flex items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          name="showParts"
+          disabled={partCount === 0}
+          className="mt-0.5 h-4 w-4 accent-redline"
+        />
+        <span>
+          <span className="font-medium">Include part links</span>
+          <span className="block text-xs text-steel">
+            {partCount === 0
+              ? `No parts on ${partScope} yet. Add parts with links on the car's page to share them.`
+              : `Lists ${partCount} ${partCount === 1 ? "part" : "parts"} from ${partScope} with their links and current prices. Stays up to date as you edit them.`}
+          </span>
+        </span>
+      </label>
 
       {state?.error && (
         <p role="alert" className="text-sm text-overdue">

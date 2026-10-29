@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { getUser } from "@/lib/auth";
-import { MAX_POST_PHOTOS } from "@/lib/community";
+import { countShareableParts, MAX_POST_PHOTOS } from "@/lib/community";
 import { listPhotosForVehicle } from "@/lib/gallery";
 import { getMod } from "@/lib/mods";
 import { signedPhotoUrls } from "@/lib/photos";
@@ -49,7 +49,10 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
   const ordered = mod
     ? [...gallery.filter((p) => p.modId === mod.id), ...gallery.filter((p) => p.modId !== mod.id)]
     : gallery;
-  const urls = await signedPhotoUrls(ordered.map((p) => p.storagePath));
+  const [urls, partCount] = await Promise.all([
+    signedPhotoUrls(ordered.map((p) => p.storagePath)),
+    countShareableParts(user.id, car.id, mod?.id ?? null),
+  ]);
   const photos = ordered.flatMap((p) => {
     const url = urls.get(p.storagePath);
     return url ? [{ id: p.id, url, fromMod: p.modId === mod?.id && !!mod }] : [];
@@ -72,6 +75,8 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
         defaultTitle={mod ? `Just installed: ${modName}` : `My ${vehicleName(car)} build`}
         photos={photos}
         maxPhotos={MAX_POST_PHOTOS}
+        partCount={partCount}
+        partScope={mod ? "this mod" : "your installed mods"}
       />
     </>
   );

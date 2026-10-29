@@ -1,0 +1,1 @@
+ALTER TABLE "posts" ADD COLUMN "show_parts" boolean DEFAULT false NOT NULL;
