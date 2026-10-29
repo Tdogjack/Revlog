@@ -8,6 +8,7 @@ import { posts } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { addPostPhoto, createPost, deletePost } from "@/lib/community";
 import { readPhoto } from "@/lib/photos";
+import { isPostTag } from "@/lib/post-tags";
 import { getProfile } from "@/lib/profiles";
 import { isUuid } from "@/lib/vehicles";
 
@@ -24,7 +25,9 @@ export async function sharePost(_prev: PostFormState, formData: FormData): Promi
   const modId = String(formData.get("modId") ?? "") || null;
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
-  const values = { title, body };
+  const rawTag = String(formData.get("tag") ?? "");
+  const tag = isPostTag(rawTag) ? rawTag : modId ? "mod" : "build";
+  const values = { title, body, tag };
   if (!isUuid(vehicleId) || (modId && !isUuid(modId))) return { error: "Pick a car to share." };
   if (!title) return { error: "Give your post a title.", values };
   if (title.length > 120) return { error: "Keep the title under 120 characters.", values };
@@ -45,6 +48,7 @@ export async function sharePost(_prev: PostFormState, formData: FormData): Promi
     body: body || null,
     photoIds: formData.getAll("photoIds").map(String),
     showParts: formData.get("showParts") === "on",
+    tag,
   });
   if ("error" in result) return { error: result.error, values };
 

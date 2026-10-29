@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, ImagePlus, X } from "lucide-react";
+import { POST_TAGS } from "@/lib/post-tags";
 import { resizeImage } from "@/lib/resize-image";
 import { uploadPostPhoto, type PostFormState } from "../actions";
 
@@ -21,6 +22,7 @@ export function ShareForm({
   maxPhotos,
   partCount,
   partScope,
+  defaultTag,
 }: {
   action: (prev: PostFormState, formData: FormData) => Promise<PostFormState>;
   vehicleId: string;
@@ -30,6 +32,7 @@ export function ShareForm({
   maxPhotos: number;
   partCount: number;
   partScope: string;
+  defaultTag: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -113,6 +116,26 @@ export function ShareForm({
       {picked.map((id) => (
         <input key={id} type="hidden" name="photoIds" value={id} />
       ))}
+
+      <div className="text-sm">
+        <span className="text-steel">Tag</span>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {POST_TAGS.map((t) => (
+            <label key={t.value} className="cursor-pointer">
+              <input
+                type="radio"
+                name="tag"
+                value={t.value}
+                defaultChecked={(state?.values?.tag ?? defaultTag) === t.value}
+                className="peer sr-only"
+              />
+              <span className="block rounded-full border border-graphite px-3 py-1 text-xs text-steel peer-checked:border-redline peer-checked:bg-redline/15 peer-checked:text-chalk peer-focus-visible:ring-2 peer-focus-visible:ring-redline hover:border-steel">
+                {t.label}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
 
       <label className="block text-sm">
         <span className="text-steel">Title</span>

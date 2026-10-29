@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PhotoGallery } from "@/components/photo-strip";
 import type { FeedPost } from "@/lib/community";
 import { modCategoryLabel } from "@/lib/mod-categories";
+import { postTagLabel, postTagTone } from "@/lib/post-tags";
 import { vehicleName } from "@/lib/vehicles";
 
 export function timeAgo(date: Date, now = new Date()) {
@@ -37,11 +38,12 @@ export function PostCard({ post, link = true }: { post: FeedPost; link?: boolean
         <span>{postCarName(post)}</span>
         <span aria-hidden>·</span>
         <time dateTime={post.createdAt.toISOString()}>{timeAgo(post.createdAt)}</time>
-        <span
-          className={`ml-auto rounded px-2 py-0.5 text-xs ${post.kind === "mod" ? "bg-due-bg text-due" : "bg-graphite text-chalk"}`}
+        <Link
+          href={`/community?tag=${post.tag}`}
+          className={`ml-auto rounded px-2 py-0.5 text-xs hover:opacity-80 ${postTagTone(post.tag)}`}
         >
-          {post.kind === "mod" ? "New mod" : "Build"}
-        </span>
+          {postTagLabel(post.tag)}
+        </Link>
       </div>
 
       <h2 className="mt-3 text-lg font-semibold">
