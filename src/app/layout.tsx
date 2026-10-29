@@ -13,7 +13,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Revlog — car maintenance and mod tracker",
+  title: "Revlog: car maintenance and mod tracker",
   description:
     "Track every oil change, repair, and mod for your cars, with reminders before service is due.",
 };
