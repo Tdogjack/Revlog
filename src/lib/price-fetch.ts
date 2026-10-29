@@ -141,7 +141,7 @@ export async function fetchPagePrice(rawUrl: string): Promise<ExtractedPrice> {
         redirect: "manual",
         signal,
         headers: {
-          "user-agent": "RevlogPriceCheck/1.0 (+https://revlog.app)",
+          "user-agent": "RevlogPriceCheck/1.0 (+https://revlog.me)",
           accept: "text/html,application/xhtml+xml",
         },
       });
