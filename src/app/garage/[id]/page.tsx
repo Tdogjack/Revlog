@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Bell, Wrench, Zap } from "lucide-react";
+import { Bell, Plus, Wrench, Zap } from "lucide-react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
 import { signedPhotoUrls } from "@/lib/photos";
+import { categoryLabel } from "@/lib/service-categories";
+import { listServiceRecords } from "@/lib/service-records";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
+import { DeleteRecordButton } from "./delete-record-button";
 import { PhotoControls } from "./photo-controls";
 
 export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
@@ -21,18 +24,30 @@ export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
   );
 }
 
-const sections = [
-  { icon: Wrench, title: "Service history", empty: "No service records yet." },
-  { icon: Zap, title: "Mods", empty: "No mods logged yet." },
-  { icon: Bell, title: "Reminders", empty: "No reminders set." },
-];
+const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+// Stored as YYYY-MM-DD; format in UTC so the day never shifts.
+function formatDate(isoDate: string) {
+  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
   const { id } = await params;
   const user = await requireUser();
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
-  const photoUrl = car.photoPath ? (await signedPhotoUrls([car.photoPath])).get(car.photoPath) : null;
+
+  const [records, photos] = await Promise.all([
+    listServiceRecords(user.id, car.id),
+    signedPhotoUrls([car.photoPath]),
+  ]);
+  const photoUrl = car.photoPath ? photos.get(car.photoPath) : null;
+  const totalSpent = records.reduce((sum, r) => sum + (r.cost ? Number(r.cost) : 0), 0);
 
   return (
     <>
@@ -57,15 +72,79 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        {sections.map(({ icon: Icon, title, empty }) => (
-          <section key={title} className="rounded-xl border border-graphite bg-panel p-5">
+        <section className="rounded-xl border border-graphite bg-panel p-5 md:col-span-2">
+          <div className="flex items-center justify-between gap-3">
             <h2 className="flex items-center gap-2 font-medium">
-              <Icon className="h-4 w-4 text-redline" aria-hidden />
-              {title}
+              <Wrench className="h-4 w-4 text-redline" aria-hidden />
+              Service history
             </h2>
-            <p className="mt-3 text-sm text-steel">{empty}</p>
+            <Link
+              href={`/garage/${car.id}/service/new`}
+              className="flex items-center gap-1 rounded-md bg-redline px-3 py-1.5 text-sm font-medium text-white hover:bg-redline-hover"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              Log service
+            </Link>
+          </div>
+
+          {records.length === 0 ? (
+            <p className="mt-4 text-sm text-steel">
+              No service records yet. Log your last oil change to start the timeline.
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 text-xs text-steel">
+                {records.length} {records.length === 1 ? "record" : "records"}
+                {totalSpent > 0 && ` · ${money.format(totalSpent)} spent`}
+              </p>
+              <ol className="mt-4">
+                {records.map((r) => (
+                  <li key={r.id} className="flex gap-4 border-t border-graphite py-4">
+                    <div className="w-24 shrink-0 font-mono text-xs text-steel">
+                      {formatDate(r.servicedOn)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{r.title}</p>
+                        <span className="rounded bg-graphite px-2 py-0.5 text-xs">
+                          {categoryLabel(r.category)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-steel">
+                        {[
+                          r.mileage != null && `${r.mileage.toLocaleString("en-US")} mi`,
+                          r.cost != null && money.format(Number(r.cost)),
+                          r.shop,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                      {r.notes && <p className="mt-2 whitespace-pre-line text-sm">{r.notes}</p>}
+                    </div>
+                    <DeleteRecordButton vehicleId={car.id} recordId={r.id} />
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+        </section>
+
+        <div className="space-y-4">
+          <section className="rounded-xl border border-graphite bg-panel p-5">
+            <h2 className="flex items-center gap-2 font-medium">
+              <Zap className="h-4 w-4 text-redline" aria-hidden />
+              Mods
+            </h2>
+            <p className="mt-3 text-sm text-steel">No mods logged yet.</p>
           </section>
-        ))}
+          <section className="rounded-xl border border-graphite bg-panel p-5">
+            <h2 className="flex items-center gap-2 font-medium">
+              <Bell className="h-4 w-4 text-redline" aria-hidden />
+              Reminders
+            </h2>
+            <p className="mt-3 text-sm text-steel">No reminders set.</p>
+          </section>
+        </div>
       </div>
     </>
   );
