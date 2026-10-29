@@ -30,6 +30,9 @@ async function AccountMenu() {
   return (
     <div className="flex items-center gap-4 text-sm">
       <span className="hidden text-steel sm:inline">{user.email}</span>
+      <Link href="/reset-password" className="text-steel hover:text-chalk">
+        Change password
+      </Link>
       <form action={signOut}>
         <button type="submit" className="text-steel hover:text-chalk">
           Log out
