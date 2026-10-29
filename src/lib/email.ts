@@ -1,7 +1,7 @@
 import "server-only";
 
 // Sends through Resend's HTTP API. RESEND_API_KEY and EMAIL_FROM (like
-// "Revlog <reminders@revlog.app>") come from the environment; without them,
+// "Revlog <reminders@revlog.me>") come from the environment; without them,
 // sending is skipped so local dev and previews never email anyone.
 export type EmailMessage = {
   to: string;
