@@ -92,7 +92,6 @@ export async function createReminder(
     serviceCategory: string;
     intervalMiles: number | null;
     intervalMonths: number | null;
-    startOn: string | null;
   },
 ) {
   const [car] = await db
@@ -111,8 +110,9 @@ export async function createReminder(
       serviceCategory: input.serviceCategory,
       intervalMiles: input.intervalMiles,
       intervalMonths: input.intervalMonths,
-      lastDoneOn: input.startOn,
-      lastDoneMileage: car.currentMileage,
+      // Until a service of this type is logged, it counts as never done, from 0 mi.
+      lastDoneOn: null,
+      lastDoneMileage: 0,
     })
     .returning({ id: reminders.id });
   return reminder;

@@ -25,13 +25,11 @@ function presetIntervals(type: string) {
 // reminder's values and the last-done fields are hidden.
 export function ReminderForm({
   action,
-  currentMileage,
   customTypes,
   initial,
   submitLabel = "Save reminder",
 }: {
   action: (prev: ReminderFormState, formData: FormData) => Promise<ReminderFormState>;
-  currentMileage: number;
   customTypes: CustomType[];
   initial?: Record<string, string>;
   submitLabel?: string;
@@ -118,15 +116,16 @@ export function ReminderForm({
               <input
                 name="lastDoneMileage"
                 inputMode="numeric"
-                placeholder={currentMileage.toLocaleString("en-US")}
+                placeholder="0"
                 defaultValue={v?.lastDoneMileage}
                 className={inputClass}
               />
             </label>
           </div>
           <p className="-mt-2 text-xs text-steel">
-            If you fill these in, the service is added to your history. If you&apos;ve already
-            logged it, leave them blank and the reminder uses your latest record.
+            If you fill these in, the service is added to your history. Leave them blank if
+            you&apos;ve already logged it (the reminder uses your latest record) or if it&apos;s
+            never been done (it counts from 0 mi).
           </p>
         </>
       )}

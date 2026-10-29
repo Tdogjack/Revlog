@@ -47,7 +47,6 @@ async function EditReminder({ params }: Pick<Props, "params">) {
       <h1 className="mt-4 text-2xl font-semibold">Edit reminder</h1>
       <ReminderForm
         action={editReminder.bind(null, car.id, reminder.id)}
-        currentMileage={car.currentMileage}
         customTypes={customTypes}
         submitLabel="Save changes"
         initial={{
