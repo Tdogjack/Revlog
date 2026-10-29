@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
+import { addMod } from "../actions";
 import { ModForm } from "./mod-form";
 
 export const metadata: Metadata = { title: "Add a mod · Revlog" };
@@ -30,7 +31,7 @@ async function NewMod({ params }: Pick<PageProps<"/garage/[id]/mods/new">, "para
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
       <h1 className="mt-4 text-2xl font-semibold">Add a mod</h1>
-      <ModForm vehicleId={car.id} currentMileage={car.currentMileage} />
+      <ModForm action={addMod.bind(null, car.id)} currentMileage={car.currentMileage} />
     </>
   );
 }

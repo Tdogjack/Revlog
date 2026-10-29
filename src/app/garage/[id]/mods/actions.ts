@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { createMod, deleteMod, modInput, modStatusInput, setModStatus } from "@/lib/mods";
+import {
+  createMod,
+  deleteMod,
+  modInput,
+  modStatusInput,
+  setModStatus,
+  updateMod,
+} from "@/lib/mods";
 
 export type ModFormState = { error?: string; values?: Record<string, string> } | undefined;
 
@@ -31,6 +38,24 @@ export async function addMod(
 
   const mod = await createMod(user.id, vehicleId, parsed.data);
   if (!mod) return { error: "That car wasn't found.", values: raw };
+
+  redirect(`/garage/${vehicleId}`);
+}
+
+export async function editMod(
+  vehicleId: string,
+  modId: string,
+  _prev: ModFormState,
+  formData: FormData,
+): Promise<ModFormState> {
+  const user = await requireUser();
+  const raw = Object.fromEntries(FIELDS.map((k) => [k, String(formData.get(k) ?? "")]));
+
+  const parsed = modInput.safeParse(raw);
+  if (!parsed.success) return { error: parsed.error.issues[0].message, values: raw };
+
+  const mod = await updateMod(user.id, vehicleId, modId, parsed.data);
+  if (!mod) return { error: "That mod wasn't found.", values: raw };
 
   redirect(`/garage/${vehicleId}`);
 }

@@ -6,6 +6,7 @@ import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { listMods } from "@/lib/mods";
+import { listPartsForVehicle } from "@/lib/parts";
 import { signedPhotoUrls } from "@/lib/photos";
 import { listReminders } from "@/lib/reminder-store";
 import { describeDue, evaluateReminder, STATUS_RANK, withLastService } from "@/lib/reminders";
@@ -15,6 +16,7 @@ import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
 import { DeleteRecordButton } from "./delete-record-button";
 import { ModControls } from "./mod-controls";
+import { PartsList } from "./parts-list";
 import { PhotoControls } from "./photo-controls";
 import { MileageEditor, ReminderControls } from "./reminder-controls";
 import { StatusBadge } from "@/components/status-badge";
@@ -50,13 +52,16 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
 
-  const [records, carMods, reminderRows, customTypes, photos] = await Promise.all([
+  const [records, carMods, reminderRows, customTypes, carParts, photos] = await Promise.all([
     listServiceRecords(user.id, car.id),
     listMods(user.id, car.id),
     listReminders(user.id, car.id),
     listServiceTypes(user.id),
+    listPartsForVehicle(user.id, car.id),
     signedPhotoUrls([car.photoPath]),
   ]);
+  const partsFor = (key: "modId" | "serviceRecordId", id: string) =>
+    carParts.filter((p) => p[key] === id);
   // Each reminder counts from its latest matching service record; most urgent first.
   const carReminders = reminderRows
     .map((row) => withLastService(row, records))
@@ -140,6 +145,12 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                             .join(" · ")}
                         </p>
                         {r.notes && <p className="mt-2 whitespace-pre-line text-sm">{r.notes}</p>}
+                        <PartsList
+                          vehicleId={car.id}
+                          parent={{ serviceRecordId: r.id }}
+                          parts={partsFor("serviceRecordId", r.id)}
+                          label="Parts used"
+                        />
                       </div>
                       <div className="flex items-start gap-3">
                         <Link
@@ -209,6 +220,12 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                             .join(" · ")}
                         </p>
                         {m.notes && <p className="mt-2 whitespace-pre-line text-sm">{m.notes}</p>}
+                        <PartsList
+                          vehicleId={car.id}
+                          parent={{ modId: m.id }}
+                          parts={partsFor("modId", m.id)}
+                          label={m.status === "planned" ? "Parts wanted" : "Parts used"}
+                        />
                       </div>
                       <ModControls vehicleId={car.id} modId={m.id} status={m.status} />
                     </li>
