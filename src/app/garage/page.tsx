@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Car, Plus } from "lucide-react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
+import { getEmailSettings } from "@/lib/email-settings";
 import { StatusBadge } from "@/components/status-badge";
 import { signedPhotoUrls } from "@/lib/photos";
 import { listAllReminders } from "@/lib/reminder-store";
@@ -41,17 +42,24 @@ export default function GaragePage() {
 async function VehicleList() {
   const user = await requireUser();
   const cars = await listVehicles(user.id);
-  const [photos, allReminders, serviceDates] = await Promise.all([
+  const [photos, allReminders, serviceDates, settings] = await Promise.all([
     signedPhotoUrls(cars.map((c) => c.photoPath)),
     listAllReminders(user.id),
     listServiceDates(user.id),
+    getEmailSettings(user.id),
   ]);
+  const options = { dueSoonPercent: settings.reminderPercent };
 
   // The most urgent reminder status for each car, and how many share it.
   const urgency = new Map<string, { status: ReminderStatus; count: number }>();
   for (const car of cars) {
     for (const r of allReminders.filter((r) => r.vehicleId === car.id)) {
-      const { status } = evaluateReminder(withLastService(r, serviceDates), car.currentMileage);
+      const { status } = evaluateReminder(
+        withLastService(r, serviceDates),
+        car.currentMileage,
+        undefined,
+        options,
+      );
       const current = urgency.get(car.id);
       if (!current || STATUS_RANK[status] < STATUS_RANK[current.status]) {
         urgency.set(car.id, { status, count: 1 });

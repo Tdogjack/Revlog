@@ -43,6 +43,20 @@
       "when": 1793261079366,
       "tag": "0005_email_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793265850883,
+      "tag": "0006_community",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793265861335,
+      "tag": "0007_community_photos_storage",
+      "breakpoints": true
     }
   ]
 }

@@ -183,6 +183,9 @@ export const emailSettings = pgTable(
       .default(sql`auth.uid()`)
       .references(() => authUsers.id, { onDelete: "cascade" }),
     reminderEmails: boolean("reminder_emails").notNull().default(true),
+    // When set, a reminder counts as due soon once this share of its mileage
+    // interval is used (e.g. 80 = 80%), in place of the 500-mile rule.
+    reminderPercent: integer("reminder_percent"),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow()
@@ -207,6 +210,75 @@ export const attachments = pgTable(
   () => [ownerPolicy("attachments")],
 ).enableRLS();
 
+// Public identity for community features. Usernames are stored lowercase.
+export const profiles = pgTable(
+  "profiles",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .default(sql`auth.uid()`)
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    username: text("username").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("profiles_username_idx").on(t.username), ownerPolicy("profiles")],
+).enableRLS();
+
+// Private photos in the vehicle-photos bucket: the build library (no mod or
+// record), photos of a mod, or receipts for a service record.
+export const photos = pgTable(
+  "photos",
+  {
+    ...ownerColumns,
+    vehicleId: uuid("vehicle_id")
+      .notNull()
+      .references(() => vehicles.id, { onDelete: "cascade" }),
+    modId: uuid("mod_id").references(() => mods.id, { onDelete: "cascade" }),
+    serviceRecordId: uuid("service_record_id").references(() => serviceRecords.id, {
+      onDelete: "cascade",
+    }),
+    storagePath: text("storage_path").notNull(),
+    caption: text("caption"),
+  },
+  (t) => [
+    check("photos_one_parent", sql`num_nonnulls(${t.modId}, ${t.serviceRecordId}) <= 1`),
+    ownerPolicy("photos"),
+  ],
+).enableRLS();
+
+export const postKind = pgEnum("post_kind", ["build", "mod"]);
+
+// Community posts. Anyone can read them (through the server); only the
+// owner can change them.
+export const posts = pgTable(
+  "posts",
+  {
+    ...ownerColumns,
+    vehicleId: uuid("vehicle_id")
+      .notNull()
+      .references(() => vehicles.id, { onDelete: "cascade" }),
+    modId: uuid("mod_id").references(() => mods.id, { onDelete: "set null" }),
+    kind: postKind("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body"),
+  },
+  () => [ownerPolicy("posts")],
+).enableRLS();
+
+// Public copies of photos attached to a post, in the community-photos bucket.
+export const postPhotos = pgTable(
+  "post_photos",
+  {
+    ...ownerColumns,
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    storagePath: text("storage_path").notNull(),
+    position: integer("position").notNull().default(0),
+  },
+  () => [ownerPolicy("post_photos")],
+).enableRLS();
+
 export type Vehicle = typeof vehicles.$inferSelect;
 export type ServiceRecord = typeof serviceRecords.$inferSelect;
 export type Mod = typeof mods.$inferSelect;
@@ -215,3 +287,6 @@ export type ServiceType = typeof serviceTypes.$inferSelect;
 export type Part = typeof parts.$inferSelect;
 export type PartPrice = typeof partPrices.$inferSelect;
 export type Attachment = typeof attachments.$inferSelect;
+export type Profile = typeof profiles.$inferSelect;
+export type Photo = typeof photos.$inferSelect;
+export type Post = typeof posts.$inferSelect;

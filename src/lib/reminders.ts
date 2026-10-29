@@ -86,10 +86,24 @@ export function describeDue({ status, milesLeft, daysLeft, neverDone }: Reminder
   return parts.length ? `Due in ${parts.join(" or ")}` : "Log the mileage to track this";
 }
 
+export type ReminderOptions = {
+  // Due soon once this percent of the mileage interval is used, in place of
+  // the 500-mile rule. Null or undefined keeps the default.
+  dueSoonPercent?: number | null;
+};
+
+// Miles left at which a reminder turns "due soon".
+function dueSoonMiles(intervalMiles: number, options: ReminderOptions) {
+  const pct = options.dueSoonPercent;
+  if (pct == null) return DUE_SOON_MILES;
+  return Math.round((intervalMiles * (100 - pct)) / 100);
+}
+
 export function evaluateReminder(
   reminder: ReminderInput,
   currentMileage: number,
   today: Date = new Date(),
+  options: ReminderOptions = {},
 ): ReminderResult {
   let milesLeft: number | null = null;
   let daysLeft: number | null = null;
@@ -114,7 +128,9 @@ export function evaluateReminder(
   if ((milesLeft != null && milesLeft <= 0) || (daysLeft != null && daysLeft <= 0)) {
     status = "overdue";
   } else if (
-    (milesLeft != null && milesLeft <= DUE_SOON_MILES) ||
+    (milesLeft != null &&
+      reminder.intervalMiles != null &&
+      milesLeft <= dueSoonMiles(reminder.intervalMiles, options)) ||
     (daysLeft != null && daysLeft <= DUE_SOON_DAYS)
   ) {
     status = "due_soon";

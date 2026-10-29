@@ -7,7 +7,20 @@ import { isUuid } from "@/lib/vehicles";
 
 export async function getEmailSettings(userId: string) {
   const [row] = await db.select().from(emailSettings).where(eq(emailSettings.userId, userId));
-  return { reminderEmails: row?.reminderEmails ?? true };
+  return {
+    reminderEmails: row?.reminderEmails ?? true,
+    reminderPercent: row?.reminderPercent ?? null,
+  };
+}
+
+export async function setReminderPercent(userId: string, percent: number | null) {
+  await db
+    .insert(emailSettings)
+    .values({ userId, reminderPercent: percent })
+    .onConflictDoUpdate({
+      target: emailSettings.userId,
+      set: { reminderPercent: percent, updatedAt: new Date() },
+    });
 }
 
 export async function setReminderEmails(userId: string, enabled: boolean) {

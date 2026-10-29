@@ -32,10 +32,16 @@ export async function deleteVehiclePhoto(path: string) {
   await supabase.storage.from(BUCKET).remove([path]);
 }
 
-// Removes every photo under the user's folder (<user_id>/<vehicle_id>/<file>).
+// Removes every photo under the user's folder (<user_id>/<folder>/<file>) in
+// the private car photos bucket and the public community bucket.
 export async function deleteAllPhotos(userId: string) {
+  await deleteUserFolder(BUCKET, userId);
+  await deleteUserFolder("community-photos", userId);
+}
+
+async function deleteUserFolder(bucketName: string, userId: string) {
   const supabase = await createClient();
-  const bucket = supabase.storage.from(BUCKET);
+  const bucket = supabase.storage.from(bucketName);
   const { data: folders, error } = await bucket.list(userId, { limit: 1000 });
   if (error) throw error;
   for (const folder of folders ?? []) {

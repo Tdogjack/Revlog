@@ -45,6 +45,7 @@ async function SettingsSections() {
           action={saveEmailSettings}
           testAction={sendTestEmail}
           reminderEmails={settings.reminderEmails}
+          reminderPercent={settings.reminderPercent}
         />
       </section>
 

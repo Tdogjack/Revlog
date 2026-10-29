@@ -18,6 +18,9 @@
   --color-overdue-solid: #d62839;
   --color-done: #7fd99a;
   --color-done-bg: #16301f;
+  /* Chart series, checked for colorblind separation on the panel surface. */
+  --color-chart-service: #e63946;
+  --color-chart-mods: #3b8fd0;
 
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);

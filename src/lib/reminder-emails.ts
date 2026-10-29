@@ -22,6 +22,7 @@ type Candidate = {
   reminderId: string;
   task: string;
   serviceCategory: string | null;
+  reminderPercent: number | null;
   intervalMiles: number | null;
   intervalMonths: number | null;
   lastDoneOn: string | null;
@@ -52,6 +53,7 @@ async function candidateReminders(): Promise<Candidate[]> {
       intervalMonths: reminders.intervalMonths,
       lastDoneOn: reminders.lastDoneOn,
       lastDoneMileage: reminders.lastDoneMileage,
+      reminderPercent: emailSettings.reminderPercent,
       vehicleId: reminders.vehicleId,
       year: vehicles.year,
       make: vehicles.make,
@@ -107,7 +109,12 @@ async function buildOutbox(today: Date) {
   const ranked = candidates
     .map((c) => {
       const reminder = withLastService(c, services);
-      return { c, result: evaluateReminder(reminder, c.currentMileage, today) };
+      return {
+        c,
+        result: evaluateReminder(reminder, c.currentMileage, today, {
+          dueSoonPercent: c.reminderPercent,
+        }),
+      };
     })
     .filter(({ result }) => result.status !== "ok")
     .sort((a, b) => STATUS_RANK[a.result.status] - STATUS_RANK[b.result.status]);

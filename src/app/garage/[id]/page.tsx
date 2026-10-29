@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Bell, Copy, Pencil, Plus, Wrench, Zap } from "lucide-react";
+import { Bell, Copy, Download, Pencil, Plus, Share2, Wrench, Zap } from "lucide-react";
+import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
+import { getEmailSettings } from "@/lib/email-settings";
+import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { listMods } from "@/lib/mods";
 import { listPartsForVehicle } from "@/lib/parts";
@@ -52,20 +55,34 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
 
-  const [records, carMods, reminderRows, customTypes, carParts, photos] = await Promise.all([
-    listServiceRecords(user.id, car.id),
-    listMods(user.id, car.id),
-    listReminders(user.id, car.id),
-    listServiceTypes(user.id),
-    listPartsForVehicle(user.id, car.id),
-    signedPhotoUrls([car.photoPath]),
-  ]);
+  const [records, carMods, reminderRows, customTypes, carParts, gallery, settings] =
+    await Promise.all([
+      listServiceRecords(user.id, car.id),
+      listMods(user.id, car.id),
+      listReminders(user.id, car.id),
+      listServiceTypes(user.id),
+      listPartsForVehicle(user.id, car.id),
+      listPhotosForVehicle(user.id, car.id),
+      getEmailSettings(user.id),
+    ]);
+  const photos = await signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]);
+  const stripPhotos = (match: (p: (typeof gallery)[number]) => boolean): StripPhoto[] =>
+    gallery.filter(match).flatMap((p) => {
+      const url = photos.get(p.storagePath);
+      return url ? [{ id: p.id, url }] : [];
+    });
+  const buildPhotos = stripPhotos((p) => !p.modId && !p.serviceRecordId);
   const partsFor = (key: "modId" | "serviceRecordId", id: string) =>
     carParts.filter((p) => p[key] === id);
   // Each reminder counts from its latest matching service record; most urgent first.
   const carReminders = reminderRows
     .map((row) => withLastService(row, records))
-    .map((reminder) => ({ reminder, result: evaluateReminder(reminder, car.currentMileage) }))
+    .map((reminder) => ({
+      reminder,
+      result: evaluateReminder(reminder, car.currentMileage, undefined, {
+        dueSoonPercent: settings.reminderPercent,
+      }),
+    }))
     .sort((a, b) => STATUS_RANK[a.result.status] - STATUS_RANK[b.result.status]);
   const photoUrl = car.photoPath ? photos.get(car.photoPath) : null;
   const sumCost = (items: { cost: string | null }[]) =>
@@ -103,13 +120,25 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                 <Wrench className="h-4 w-4 text-redline" aria-hidden />
                 Service history
               </h2>
-              <Link
-                href={`/garage/${car.id}/service/new`}
-                className="flex items-center gap-1 rounded-md bg-redline px-3 py-1.5 text-sm font-medium text-white hover:bg-redline-hover"
-              >
-                <Plus className="h-4 w-4" aria-hidden />
-                Log service
-              </Link>
+              <div className="flex items-center gap-2">
+                {records.length > 0 && (
+                  <a
+                    href={`/garage/${car.id}/history`}
+                    className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
+                    title="Download service history as a PDF"
+                  >
+                    <Download className="h-4 w-4" aria-hidden />
+                    PDF
+                  </a>
+                )}
+                <Link
+                  href={`/garage/${car.id}/service/new`}
+                  className="flex items-center gap-1 rounded-md bg-redline px-3 py-1.5 text-sm font-medium text-white hover:bg-redline-hover"
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                  Log service
+                </Link>
+              </div>
             </div>
 
             {records.length === 0 ? (
@@ -151,6 +180,14 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                           parts={partsFor("serviceRecordId", r.id)}
                           label="Parts used"
                         />
+                        <PhotoStrip
+                          vehicleId={car.id}
+                          kind="record"
+                          targetId={r.id}
+                          photos={stripPhotos((p) => p.serviceRecordId === r.id)}
+                          max={PHOTO_LIMITS.record}
+                          addLabel="Add receipt photos"
+                        />
                       </div>
                       <div className="flex items-start gap-3">
                         <Link
@@ -181,15 +218,35 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
             <div className="flex items-center justify-between gap-3">
               <h2 className="flex items-center gap-2 font-medium">
                 <Zap className="h-4 w-4 text-redline" aria-hidden />
-                Mods
+                Build
               </h2>
-              <Link
-                href={`/garage/${car.id}/mods/new`}
-                className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
-              >
-                <Plus className="h-4 w-4" aria-hidden />
-                Add mod
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/community/new?vehicle=${car.id}`}
+                  className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
+                >
+                  <Share2 className="h-4 w-4" aria-hidden />
+                  Share build
+                </Link>
+                <Link
+                  href={`/garage/${car.id}/mods/new`}
+                  className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                  Add mod
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <PhotoStrip
+                vehicleId={car.id}
+                kind="build"
+                photos={buildPhotos}
+                max={PHOTO_LIMITS.build}
+                addLabel="Add build photos"
+                size="large"
+              />
             </div>
 
             {carMods.length === 0 ? (
@@ -234,8 +291,27 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                           parts={partsFor("modId", m.id)}
                           label={m.status === "planned" ? "Parts wanted" : "Parts used"}
                         />
+                        <PhotoStrip
+                          vehicleId={car.id}
+                          kind="mod"
+                          targetId={m.id}
+                          photos={stripPhotos((p) => p.modId === m.id)}
+                          max={PHOTO_LIMITS.mod}
+                          addLabel="Add mod photos"
+                        />
                       </div>
-                      <ModControls vehicleId={car.id} modId={m.id} status={m.status} />
+                      <div className="flex flex-col items-end gap-3">
+                        <ModControls vehicleId={car.id} modId={m.id} status={m.status} />
+                        {m.status === "installed" && (
+                          <Link
+                            href={`/community/new?vehicle=${car.id}&mod=${m.id}`}
+                            className="flex items-center gap-1 text-xs text-steel hover:text-chalk"
+                          >
+                            <Share2 className="h-3.5 w-3.5" aria-hidden />
+                            Share
+                          </Link>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
