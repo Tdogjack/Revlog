@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Bell, Gauge, Wrench, Zap } from "lucide-react";
+import { SiteFooter } from "@/components/site-footer";
 
 const features = [
   {
@@ -37,9 +38,15 @@ export default function Home() {
             </span>
           </Link>
           <div className="hidden gap-8 text-sm text-steel md:flex">
-            <a href="#features" className="hover:text-chalk">Features</a>
-            <a href="#pricing" className="hover:text-chalk">Pricing</a>
-            <a href="#community" className="hover:text-chalk">Community</a>
+            <a href="#features" className="hover:text-chalk">
+              Features
+            </a>
+            <a href="#pricing" className="hover:text-chalk">
+              Pricing
+            </a>
+            <a href="#community" className="hover:text-chalk">
+              Community
+            </a>
           </div>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/login" className="text-steel hover:text-chalk">
@@ -62,12 +69,11 @@ export default function Home() {
               {"// YOUR CAR'S FULL STORY"}
             </p>
             <h1 className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">
-              Every oil change, every mod.{" "}
-              <span className="text-redline">Logged.</span>
+              Every oil change, every mod. <span className="text-redline">Logged.</span>
             </h1>
             <p className="mt-5 max-w-lg text-lg leading-relaxed text-steel">
-              Track maintenance, plan builds, and never miss a service again.
-              Built for people who actually care about their cars.
+              Track maintenance, plan builds, and never miss a service again. Built for people who
+              actually care about their cars.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -101,9 +107,7 @@ export default function Home() {
                   className="flex items-center justify-between border-t border-graphite py-3 text-sm"
                 >
                   <span>{item.label}</span>
-                  <span className={`rounded px-2 py-0.5 text-xs ${item.tone}`}>
-                    {item.status}
-                  </span>
+                  <span className={`rounded px-2 py-0.5 text-xs ${item.tone}`}>{item.status}</span>
                 </li>
               ))}
             </ul>
@@ -123,9 +127,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-graphite py-6 text-center text-xs text-steel">
-        © Revlog
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

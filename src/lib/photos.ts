@@ -32,6 +32,25 @@ export async function deleteVehiclePhoto(path: string) {
   await supabase.storage.from(BUCKET).remove([path]);
 }
 
+// Removes every photo under the user's folder (<user_id>/<vehicle_id>/<file>).
+export async function deleteAllPhotos(userId: string) {
+  const supabase = await createClient();
+  const bucket = supabase.storage.from(BUCKET);
+  const { data: folders, error } = await bucket.list(userId, { limit: 1000 });
+  if (error) throw error;
+  for (const folder of folders ?? []) {
+    const { data: files, error: listError } = await bucket.list(`${userId}/${folder.name}`, {
+      limit: 1000,
+    });
+    if (listError) throw listError;
+    const paths = (files ?? []).map((f) => `${userId}/${folder.name}/${f.name}`);
+    if (paths.length) {
+      const { error: removeError } = await bucket.remove(paths);
+      if (removeError) throw removeError;
+    }
+  }
+}
+
 // Private bucket, so photos are shown through short-lived signed links.
 export async function signedPhotoUrls(paths: (string | null)[]) {
   const wanted = paths.filter((p): p is string => !!p);

@@ -27,3 +27,25 @@ body {
   background: var(--color-carbon);
   color: var(--color-chalk);
 }
+
+/* Headings and lists in the privacy policy and terms. */
+.legal h2 {
+  margin-top: 2rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-chalk);
+}
+.legal ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.legal li + li {
+  margin-top: 0.25rem;
+}
+.legal a {
+  color: var(--color-chalk);
+  text-decoration: underline;
+}
+.legal a:hover {
+  color: var(--color-redline);
+}

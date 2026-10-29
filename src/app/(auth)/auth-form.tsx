@@ -32,6 +32,17 @@ export function AuthShell({
         </Link>
         <div className="rounded-xl border border-graphite bg-panel p-6">{children}</div>
         {footer && <p className="mt-6 text-center text-sm text-steel">{footer}</p>}
+        <p className="mt-4 text-center text-xs text-steel">
+          <Link href="/privacy" className="hover:text-chalk">
+            Privacy
+          </Link>
+          <span className="mx-2" aria-hidden>
+            ·
+          </span>
+          <Link href="/terms" className="hover:text-chalk">
+            Terms
+          </Link>
+        </p>
       </div>
     </div>
   );
@@ -200,6 +211,17 @@ export function SignupForm({ action }: { action: Action }) {
           <NewPasswordField />
           <ErrorText error={state?.error} />
           <SubmitButton pending={pending} label="Create account" />
+          <p className="text-xs text-steel">
+            By creating an account, you agree to the{" "}
+            <Link href="/terms" className="text-chalk hover:text-redline">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-chalk hover:text-redline">
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </form>
       )}
     </AuthShell>
