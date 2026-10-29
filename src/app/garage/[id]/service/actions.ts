@@ -1,0 +1,33 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth";
+import { createServiceRecord, deleteServiceRecord, serviceRecordInput } from "@/lib/service-records";
+
+export type ServiceFormState = { error?: string; values?: Record<string, string> } | undefined;
+
+const FIELDS = ["category", "title", "servicedOn", "mileage", "cost", "shop", "notes"];
+
+export async function addServiceRecord(
+  vehicleId: string,
+  _prev: ServiceFormState,
+  formData: FormData,
+): Promise<ServiceFormState> {
+  const user = await requireUser();
+  const raw = Object.fromEntries(FIELDS.map((k) => [k, String(formData.get(k) ?? "")]));
+
+  const parsed = serviceRecordInput.safeParse(raw);
+  if (!parsed.success) return { error: parsed.error.issues[0].message, values: raw };
+
+  const record = await createServiceRecord(user.id, vehicleId, parsed.data);
+  if (!record) return { error: "That car wasn't found.", values: raw };
+
+  redirect(`/garage/${vehicleId}`);
+}
+
+export async function removeServiceRecord(vehicleId: string, recordId: string) {
+  const user = await requireUser();
+  await deleteServiceRecord(user.id, recordId);
+  revalidatePath(`/garage/${vehicleId}`);
+}
