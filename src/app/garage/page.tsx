@@ -1,59 +1,73 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Car, Gauge } from "lucide-react";
+import { Car, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { signOut } from "../(auth)/actions";
+import { listVehicles, vehicleName } from "@/lib/vehicles";
 
 export const metadata: Metadata = { title: "Your garage · Revlog" };
 
 export default function GaragePage() {
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="border-b border-graphite">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link href="/garage" className="flex items-center gap-2 text-lg font-semibold">
-            <Gauge className="h-5 w-5 text-redline" aria-hidden />
-            <span>
-              Rev<span className="text-redline">log</span>
-            </span>
-          </Link>
-          <Suspense fallback={null}>
-            <AccountMenu />
-          </Suspense>
-        </nav>
-      </header>
-
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+    <>
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Your garage</h1>
-        <div className="mt-8 rounded-xl border border-dashed border-graphite p-10 text-center">
-          <Car className="mx-auto h-8 w-8 text-steel" aria-hidden />
-          <h2 className="mt-4 font-medium">Add your first car</h2>
-          <p className="mt-1 text-sm text-steel">
-            Start a timeline of every service and mod for it.
-          </p>
-          <button
-            type="button"
-            className="mt-5 rounded-md bg-redline px-4 py-2 text-sm font-medium text-white hover:bg-redline-hover"
-          >
-            Add a car
-          </button>
-        </div>
-      </main>
-    </div>
+        <Link
+          href="/garage/new"
+          className="flex items-center gap-1.5 rounded-md bg-redline px-3 py-2 text-sm font-medium text-white hover:bg-redline-hover"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          Add a car
+        </Link>
+      </div>
+      <Suspense fallback={<p className="mt-8 text-sm text-steel">Loading your cars…</p>}>
+        <VehicleList />
+      </Suspense>
+    </>
   );
 }
 
-async function AccountMenu() {
+async function VehicleList() {
   const user = await requireUser();
+  const cars = await listVehicles(user.id);
+
+  if (cars.length === 0) {
+    return (
+      <div className="mt-8 rounded-xl border border-dashed border-graphite p-10 text-center">
+        <Car className="mx-auto h-8 w-8 text-steel" aria-hidden />
+        <h2 className="mt-4 font-medium">Add your first car</h2>
+        <p className="mt-1 text-sm text-steel">Start a timeline of every service and mod for it.</p>
+        <Link
+          href="/garage/new"
+          className="mt-5 inline-block rounded-md bg-redline px-4 py-2 text-sm font-medium text-white hover:bg-redline-hover"
+        >
+          Add a car
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center gap-4 text-sm">
-      <span className="hidden text-steel sm:inline">{user.email}</span>
-      <form action={signOut}>
-        <button type="submit" className="text-steel hover:text-chalk">
-          Log out
-        </button>
-      </form>
-    </div>
+    <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {cars.map((car) => (
+        <li key={car.id}>
+          <Link
+            href={`/garage/${car.id}`}
+            className="block rounded-xl border border-graphite bg-panel p-5 hover:border-steel"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-medium">{car.nickname ?? vehicleName(car)}</p>
+                {car.nickname && <p className="mt-0.5 text-sm text-steel">{vehicleName(car)}</p>}
+              </div>
+              <Car className="h-5 w-5 shrink-0 text-redline" aria-hidden />
+            </div>
+            <p className="mt-4 font-mono text-xs text-steel">
+              {car.currentMileage.toLocaleString("en-US")} mi
+            </p>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
