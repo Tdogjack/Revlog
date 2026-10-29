@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { vehicles } from "@/db/schema";
@@ -50,11 +50,48 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 export const isUuid = (id: string) => uuidPattern.test(id);
 
 export function listVehicles(userId: string) {
-  return db
-    .select()
-    .from(vehicles)
-    .where(eq(vehicles.userId, userId))
-    .orderBy(desc(vehicles.createdAt));
+  return (
+    db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.userId, userId))
+      // Favorites first, then the user's order; cars added since sit at the top.
+      .orderBy(
+        desc(vehicles.favorite),
+        sql`${vehicles.position} asc nulls first`,
+        desc(vehicles.createdAt),
+      )
+  );
+}
+
+export async function setVehicleFavorite(userId: string, id: string, favorite: boolean) {
+  if (!uuidPattern.test(id)) return;
+  await db
+    .update(vehicles)
+    .set({ favorite })
+    .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)));
+}
+
+// Swaps a car with its neighbor in the list as shown. Favorites and the rest
+// are reordered separately, so a car never jumps across that line.
+export async function moveVehicle(userId: string, id: string, direction: "up" | "down") {
+  const cars = await listVehicles(userId);
+  const index = cars.findIndex((c) => c.id === id);
+  if (index === -1) return;
+  const target = direction === "up" ? index - 1 : index + 1;
+  const neighbor = cars[target];
+  if (!neighbor || neighbor.favorite !== cars[index].favorite) return;
+
+  const order = cars.map((c) => c.id);
+  [order[index], order[target]] = [order[target], order[index]];
+  await db.transaction(async (tx) => {
+    for (const [position, carId] of order.entries()) {
+      await tx
+        .update(vehicles)
+        .set({ position })
+        .where(and(eq(vehicles.id, carId), eq(vehicles.userId, userId)));
+    }
+  });
 }
 
 export async function getVehicle(userId: string, id: string) {

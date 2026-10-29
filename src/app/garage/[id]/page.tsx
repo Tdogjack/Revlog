@@ -21,6 +21,7 @@ import { DeleteRecordButton } from "./delete-record-button";
 import { ModControls } from "./mod-controls";
 import { PartsList } from "./parts-list";
 import { PhotoControls } from "./photo-controls";
+import { RemoveCar } from "./remove-car";
 import { MileageEditor, ReminderControls } from "./reminder-controls";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -394,6 +395,8 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
           </section>
         </div>
       </div>
+
+      <RemoveCar vehicleId={car.id} name={car.nickname ?? vehicleName(car)} />
     </>
   );
 }

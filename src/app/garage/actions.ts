@@ -4,7 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { deleteVehiclePhoto, readPhoto, uploadVehiclePhoto } from "@/lib/photos";
-import { createVehicle, setVehiclePhoto, vehicleInput } from "@/lib/vehicles";
+import { deleteVehicle } from "@/lib/vehicle-removal";
+import {
+  createVehicle,
+  getVehicle,
+  moveVehicle,
+  setVehicleFavorite,
+  setVehiclePhoto,
+  vehicleInput,
+  vehicleName,
+} from "@/lib/vehicles";
 
 export type FormState = { error?: string; values?: Record<string, string> } | undefined;
 
@@ -75,4 +84,33 @@ export async function removeVehiclePhoto(vehicleId: string) {
   const oldPath = await setVehiclePhoto(user.id, vehicleId, null);
   if (oldPath) await deleteVehiclePhoto(oldPath);
   revalidatePath(`/garage/${vehicleId}`);
+}
+
+export async function removeVehicle(vehicleId: string, formData: FormData) {
+  const user = await requireUser();
+  const car = await getVehicle(user.id, vehicleId);
+  if (!car) redirect("/garage");
+  // The form asks for the car's name (or "DELETE") so it can't be removed by a stray click.
+  const typed = String(formData.get("confirm") ?? "")
+    .trim()
+    .toLowerCase();
+  const name = (car.nickname ?? vehicleName(car)).toLowerCase();
+  if (typed !== name && typed !== "delete") redirect(`/garage/${vehicleId}?remove=mismatch`);
+
+  await deleteVehicle(user.id, vehicleId);
+  revalidatePath("/garage");
+  revalidatePath("/community");
+  redirect("/garage");
+}
+
+export async function toggleFavorite(vehicleId: string, favorite: boolean) {
+  const user = await requireUser();
+  await setVehicleFavorite(user.id, vehicleId, favorite);
+  revalidatePath("/garage");
+}
+
+export async function reorderVehicle(vehicleId: string, direction: "up" | "down") {
+  const user = await requireUser();
+  await moveVehicle(user.id, vehicleId, direction === "up" ? "up" : "down");
+  revalidatePath("/garage");
 }

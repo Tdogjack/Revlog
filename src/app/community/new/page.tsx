@@ -63,7 +63,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
   return (
     <>
       <h1 className="mt-4 text-2xl font-semibold">
-        {mod ? "Share a new mod" : "Share your build"}
+        {mod ? "Share a new mod" : "Share to the community"}
       </h1>
       <p className="mt-1 text-sm text-steel">
         {mod ? `${modName} on your ${name}` : name}. Posts are public, with your username.
@@ -77,6 +77,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
         maxPhotos={MAX_POST_PHOTOS}
         partCount={partCount}
         partScope={mod ? "this mod" : "your installed mods"}
+        defaultTag={mod ? "mod" : "build"}
       />
     </>
   );

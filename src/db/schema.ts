@@ -51,6 +51,9 @@ export const vehicles = pgTable(
     vin: text("vin"),
     currentMileage: integer("current_mileage").notNull().default(0),
     photoPath: text("photo_path"),
+    // Favorites list first; then the user's own order (null until they reorder).
+    favorite: boolean("favorite").notNull().default(false),
+    position: integer("position"),
   },
   () => [ownerPolicy("vehicles")],
 ).enableRLS();
@@ -259,6 +262,8 @@ export const posts = pgTable(
       .references(() => vehicles.id, { onDelete: "cascade" }),
     modId: uuid("mod_id").references(() => mods.id, { onDelete: "set null" }),
     kind: postKind("kind").notNull(),
+    // What the post is about (see post-tags.ts); kind says whether it's tied to a mod.
+    tag: text("tag").notNull().default("build"),
     title: text("title").notNull(),
     body: text("body"),
     // When on, the post lists the mod's (or build's) parts with their links.

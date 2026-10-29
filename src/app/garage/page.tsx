@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Car, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, Car, Plus, Star } from "lucide-react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
 import { getEmailSettings } from "@/lib/email-settings";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/reminders";
 import { listServiceDates } from "@/lib/service-records";
 import { listVehicles, vehicleName } from "@/lib/vehicles";
+import { reorderVehicle, toggleFavorite } from "./actions";
 
 export const metadata: Metadata = { title: "Your garage · Revlog" };
 
@@ -87,11 +88,11 @@ async function VehicleList() {
 
   return (
     <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {cars.map((car) => (
-        <li key={car.id}>
+      {cars.map((car, i) => (
+        <li key={car.id} className="relative">
           <Link
             href={`/garage/${car.id}`}
-            className="block rounded-xl border border-graphite bg-panel p-5 hover:border-steel"
+            className={`block rounded-xl border bg-panel p-5 pr-12 hover:border-steel ${car.favorite ? "border-redline/50" : "border-graphite"}`}
           >
             <div className="flex items-center gap-4">
               <VehiclePhoto
@@ -119,8 +120,58 @@ async function VehicleList() {
               })()}
             </div>
           </Link>
+          <CardControls
+            vehicleId={car.id}
+            favorite={car.favorite}
+            canMoveUp={i > 0 && cars[i - 1].favorite === car.favorite}
+            canMoveDown={i < cars.length - 1 && cars[i + 1].favorite === car.favorite}
+          />
         </li>
       ))}
     </ul>
+  );
+}
+
+// Favorite and reorder buttons, kept outside the card link so they don't open the car.
+function CardControls({
+  vehicleId,
+  favorite,
+  canMoveUp,
+  canMoveDown,
+}: {
+  vehicleId: string;
+  favorite: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+}) {
+  const button = "rounded p-1 text-steel hover:bg-graphite hover:text-chalk";
+  return (
+    <div className="absolute top-3 right-3 flex flex-col items-center gap-0.5">
+      <form action={toggleFavorite.bind(null, vehicleId, !favorite)}>
+        <button
+          type="submit"
+          aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+          aria-pressed={favorite}
+          title={favorite ? "Favorite" : "Make favorite"}
+          className={`${button} ${favorite ? "text-redline" : ""}`}
+        >
+          <Star className={`h-4 w-4 ${favorite ? "fill-redline" : ""}`} aria-hidden />
+        </button>
+      </form>
+      {canMoveUp && (
+        <form action={reorderVehicle.bind(null, vehicleId, "up")}>
+          <button type="submit" aria-label="Move up" title="Move up" className={button}>
+            <ArrowUp className="h-4 w-4" aria-hidden />
+          </button>
+        </form>
+      )}
+      {canMoveDown && (
+        <form action={reorderVehicle.bind(null, vehicleId, "down")}>
+          <button type="submit" aria-label="Move down" title="Move down" className={button}>
+            <ArrowDown className="h-4 w-4" aria-hidden />
+          </button>
+        </form>
+      )}
+    </div>
   );
 }

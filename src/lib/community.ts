@@ -22,6 +22,7 @@ const postFields = {
   id: posts.id,
   userId: posts.userId,
   kind: posts.kind,
+  tag: posts.tag,
   title: posts.title,
   body: posts.body,
   createdAt: posts.createdAt,
@@ -72,10 +73,15 @@ async function withPhotos(rows: PostRow[]): Promise<FeedPost[]> {
 }
 
 // Newest first. `before` pages back through older posts.
-export async function listPosts({ before, username }: { before?: Date; username?: string } = {}) {
+export async function listPosts({
+  before,
+  username,
+  tag,
+}: { before?: Date; username?: string; tag?: string } = {}) {
   const filters = [
     before ? lt(posts.createdAt, before) : undefined,
     username ? eq(profiles.username, username) : undefined,
+    tag ? eq(posts.tag, tag) : undefined,
   ].filter((f) => f !== undefined);
   const rows = await selectPosts()
     .where(filters.length ? and(...filters) : undefined)
@@ -107,6 +113,7 @@ export type NewPost = {
   body: string | null;
   photoIds: string[];
   showParts: boolean;
+  tag: string;
 };
 
 // The parts a post shares when the poster chose to: the mod's parts for a
@@ -178,6 +185,7 @@ export async function createPost(
       vehicleId: input.vehicleId,
       modId: input.modId,
       kind: input.modId ? "mod" : "build",
+      tag: input.tag,
       title: input.title,
       body: input.body,
       showParts: input.showParts,

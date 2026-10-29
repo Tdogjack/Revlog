@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Share2, Users } from "lucide-react";
 import { FEED_PAGE, listPosts } from "@/lib/community";
+import { isPostTag, POST_TAGS, postTagLabel } from "@/lib/post-tags";
 import { PostCard } from "./post-card";
 
 export const metadata: Metadata = {
@@ -37,26 +38,55 @@ export default function CommunityPage({ searchParams }: PageProps<"/community">)
 }
 
 async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParams">) {
-  const { before } = await searchParams;
+  const { before, tag: rawTag } = await searchParams;
+  const tag = typeof rawTag === "string" && isPostTag(rawTag) ? rawTag : undefined;
   const beforeDate = typeof before === "string" ? new Date(before) : undefined;
   const feed = await listPosts({
     before: beforeDate && !Number.isNaN(beforeDate.getTime()) ? beforeDate : undefined,
+    tag,
   });
+  const chips = (
+    <nav aria-label="Filter by tag" className="mt-5 flex flex-wrap gap-2">
+      {[{ value: undefined, label: "All" }, ...POST_TAGS].map((t) => {
+        const active = t.value === tag;
+        return (
+          <Link
+            key={t.label}
+            href={t.value ? `/community?tag=${t.value}` : "/community"}
+            aria-current={active ? "page" : undefined}
+            className={`rounded-full border px-3 py-1 text-xs ${active ? "border-redline bg-redline/15 text-chalk" : "border-graphite text-steel hover:border-steel hover:text-chalk"}`}
+          >
+            {t.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 
   if (feed.length === 0) {
     return (
-      <div className="mt-6 rounded-xl border border-dashed border-graphite p-10 text-center">
-        <p className="font-medium">{before ? "No older posts." : "No posts yet."}</p>
-        <p className="mt-1 text-sm text-steel">
-          Share your build or a mod you just installed to get things started.
-        </p>
-      </div>
+      <>
+        {chips}
+        <div className="mt-6 rounded-xl border border-dashed border-graphite p-10 text-center">
+          <p className="font-medium">
+            {before
+              ? "No older posts."
+              : tag
+                ? `No ${postTagLabel(tag).toLowerCase()} posts yet.`
+                : "No posts yet."}
+          </p>
+          <p className="mt-1 text-sm text-steel">
+            Share your build or a mod you just installed to get things started.
+          </p>
+        </div>
+      </>
     );
   }
 
   const oldest = feed[feed.length - 1].createdAt;
   return (
     <>
+      {chips}
       <div className="mt-6 space-y-4">
         {feed.map((post) => (
           <PostCard key={post.id} post={post} />
@@ -64,7 +94,7 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
       </div>
       {feed.length === FEED_PAGE && (
         <Link
-          href={`/community?before=${encodeURIComponent(oldest.toISOString())}`}
+          href={`/community?${tag ? `tag=${tag}&` : ""}before=${encodeURIComponent(oldest.toISOString())}`}
           className="mt-6 block text-center text-sm text-steel hover:text-chalk"
         >
           Older posts
