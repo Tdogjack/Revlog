@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Car, Plus } from "lucide-react";
+import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
+import { signedPhotoUrls } from "@/lib/photos";
 import { listVehicles, vehicleName } from "@/lib/vehicles";
 
 export const metadata: Metadata = { title: "Your garage · Revlog" };
@@ -30,6 +32,7 @@ export default function GaragePage() {
 async function VehicleList() {
   const user = await requireUser();
   const cars = await listVehicles(user.id);
+  const photos = await signedPhotoUrls(cars.map((c) => c.photoPath));
 
   if (cars.length === 0) {
     return (
@@ -55,12 +58,16 @@ async function VehicleList() {
             href={`/garage/${car.id}`}
             className="block rounded-xl border border-graphite bg-panel p-5 hover:border-steel"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-medium">{car.nickname ?? vehicleName(car)}</p>
-                {car.nickname && <p className="mt-0.5 text-sm text-steel">{vehicleName(car)}</p>}
+            <div className="flex items-center gap-4">
+              <VehiclePhoto
+                src={car.photoPath ? photos.get(car.photoPath) : null}
+                alt={vehicleName(car)}
+                className="h-16 w-16"
+              />
+              <div className="min-w-0">
+                <p className="truncate font-medium">{car.nickname ?? vehicleName(car)}</p>
+                {car.nickname && <p className="mt-0.5 truncate text-sm text-steel">{vehicleName(car)}</p>}
               </div>
-              <Car className="h-5 w-5 shrink-0 text-redline" aria-hidden />
             </div>
             <p className="mt-4 font-mono text-xs text-steel">
               {car.currentMileage.toLocaleString("en-US")} mi

@@ -8,6 +8,13 @@
       "when": 1793247061082,
       "tag": "0000_slimy_lockheed",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793249134590,
+      "tag": "0001_vehicle_photos_storage",
+      "breakpoints": true
     }
   ]
 }
