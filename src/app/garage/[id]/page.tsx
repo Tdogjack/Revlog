@@ -4,11 +4,14 @@ import { Suspense } from "react";
 import { Bell, Plus, Wrench, Zap } from "lucide-react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
+import { modCategoryLabel } from "@/lib/mod-categories";
+import { listMods } from "@/lib/mods";
 import { signedPhotoUrls } from "@/lib/photos";
 import { categoryLabel } from "@/lib/service-categories";
 import { listServiceRecords } from "@/lib/service-records";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
 import { DeleteRecordButton } from "./delete-record-button";
+import { ModControls } from "./mod-controls";
 import { PhotoControls } from "./photo-controls";
 
 export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
@@ -42,12 +45,18 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
 
-  const [records, photos] = await Promise.all([
+  const [records, carMods, photos] = await Promise.all([
     listServiceRecords(user.id, car.id),
+    listMods(user.id, car.id),
     signedPhotoUrls([car.photoPath]),
   ]);
   const photoUrl = car.photoPath ? photos.get(car.photoPath) : null;
-  const totalSpent = records.reduce((sum, r) => sum + (r.cost ? Number(r.cost) : 0), 0);
+  const sumCost = (items: { cost: string | null }[]) =>
+    items.reduce((sum, i) => sum + (i.cost ? Number(i.cost) : 0), 0);
+  const totalSpent = sumCost(records);
+  const installed = carMods.filter((m) => m.status === "installed");
+  const installedSpent = sumCost(installed);
+  const plannedCost = sumCost(carMods.filter((m) => m.status === "planned"));
 
   return (
     <>
@@ -71,72 +80,127 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <section className="rounded-xl border border-graphite bg-panel p-5 md:col-span-2">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 font-medium">
-              <Wrench className="h-4 w-4 text-redline" aria-hidden />
-              Service history
-            </h2>
-            <Link
-              href={`/garage/${car.id}/service/new`}
-              className="flex items-center gap-1 rounded-md bg-redline px-3 py-1.5 text-sm font-medium text-white hover:bg-redline-hover"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              Log service
-            </Link>
-          </div>
+      <div className="mt-6 grid items-start gap-4 md:grid-cols-3">
+        <div className="space-y-4 md:col-span-2">
+          <section className="rounded-xl border border-graphite bg-panel p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 font-medium">
+                <Wrench className="h-4 w-4 text-redline" aria-hidden />
+                Service history
+              </h2>
+              <Link
+                href={`/garage/${car.id}/service/new`}
+                className="flex items-center gap-1 rounded-md bg-redline px-3 py-1.5 text-sm font-medium text-white hover:bg-redline-hover"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                Log service
+              </Link>
+            </div>
 
-          {records.length === 0 ? (
-            <p className="mt-4 text-sm text-steel">
-              No service records yet. Log your last oil change to start the timeline.
-            </p>
-          ) : (
-            <>
-              <p className="mt-2 text-xs text-steel">
-                {records.length} {records.length === 1 ? "record" : "records"}
-                {totalSpent > 0 && ` · ${money.format(totalSpent)} spent`}
+            {records.length === 0 ? (
+              <p className="mt-4 text-sm text-steel">
+                No service records yet. Log your last oil change to start the timeline.
               </p>
-              <ol className="mt-4">
-                {records.map((r) => (
-                  <li key={r.id} className="flex gap-4 border-t border-graphite py-4">
-                    <div className="w-24 shrink-0 font-mono text-xs text-steel">
-                      {formatDate(r.servicedOn)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium">{r.title}</p>
-                        <span className="rounded bg-graphite px-2 py-0.5 text-xs">
-                          {categoryLabel(r.category)}
-                        </span>
+            ) : (
+              <>
+                <p className="mt-2 text-xs text-steel">
+                  {records.length} {records.length === 1 ? "record" : "records"}
+                  {totalSpent > 0 && ` · ${money.format(totalSpent)} spent`}
+                </p>
+                <ol className="mt-4">
+                  {records.map((r) => (
+                    <li key={r.id} className="flex gap-4 border-t border-graphite py-4">
+                      <div className="w-24 shrink-0 font-mono text-xs text-steel">
+                        {formatDate(r.servicedOn)}
                       </div>
-                      <p className="mt-1 text-sm text-steel">
-                        {[
-                          r.mileage != null && `${r.mileage.toLocaleString("en-US")} mi`,
-                          r.cost != null && money.format(Number(r.cost)),
-                          r.shop,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                      {r.notes && <p className="mt-2 whitespace-pre-line text-sm">{r.notes}</p>}
-                    </div>
-                    <DeleteRecordButton vehicleId={car.id} recordId={r.id} />
-                  </li>
-                ))}
-              </ol>
-            </>
-          )}
-        </section>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium">{r.title}</p>
+                          <span className="rounded bg-graphite px-2 py-0.5 text-xs">
+                            {categoryLabel(r.category)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-sm text-steel">
+                          {[
+                            r.mileage != null && `${r.mileage.toLocaleString("en-US")} mi`,
+                            r.cost != null && money.format(Number(r.cost)),
+                            r.shop,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                        {r.notes && <p className="mt-2 whitespace-pre-line text-sm">{r.notes}</p>}
+                      </div>
+                      <DeleteRecordButton vehicleId={car.id} recordId={r.id} />
+                    </li>
+                  ))}
+                </ol>
+              </>
+            )}
+          </section>
+
+          <section className="rounded-xl border border-graphite bg-panel p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 font-medium">
+                <Zap className="h-4 w-4 text-redline" aria-hidden />
+                Mods
+              </h2>
+              <Link
+                href={`/garage/${car.id}/mods/new`}
+                className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                Add mod
+              </Link>
+            </div>
+
+            {carMods.length === 0 ? (
+              <p className="mt-4 text-sm text-steel">
+                No mods logged yet. Add parts you&apos;ve installed, or plan your next build.
+              </p>
+            ) : (
+              <>
+                <p className="mt-2 text-xs text-steel">
+                  {[
+                    `${installed.length} installed`,
+                    installedSpent > 0 && `${money.format(installedSpent)} invested`,
+                    plannedCost > 0 && `${money.format(plannedCost)} planned`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+                <ul className="mt-4">
+                  {carMods.map((m) => (
+                    <li key={m.id} className="flex gap-4 border-t border-graphite py-4">
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={`font-medium ${m.status === "removed" ? "text-steel line-through" : ""}`}
+                        >
+                          {m.brand ? `${m.brand} ${m.part}` : m.part}
+                        </p>
+                        <p className="mt-1 text-sm text-steel">
+                          {[
+                            modCategoryLabel(m.category),
+                            m.installedOn && formatDate(m.installedOn),
+                            m.installedMileage != null &&
+                              `${m.installedMileage.toLocaleString("en-US")} mi`,
+                            m.cost != null && money.format(Number(m.cost)),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                        {m.notes && <p className="mt-2 whitespace-pre-line text-sm">{m.notes}</p>}
+                      </div>
+                      <ModControls vehicleId={car.id} modId={m.id} status={m.status} />
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+        </div>
 
         <div className="space-y-4">
-          <section className="rounded-xl border border-graphite bg-panel p-5">
-            <h2 className="flex items-center gap-2 font-medium">
-              <Zap className="h-4 w-4 text-redline" aria-hidden />
-              Mods
-            </h2>
-            <p className="mt-3 text-sm text-steel">No mods logged yet.</p>
-          </section>
           <section className="rounded-xl border border-graphite bg-panel p-5">
             <h2 className="flex items-center gap-2 font-medium">
               <Bell className="h-4 w-4 text-redline" aria-hidden />
