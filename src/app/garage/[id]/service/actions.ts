@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { checkPricesLater, parsePartRows, syncParts } from "@/lib/parts";
 import { categoryLabel } from "@/lib/service-categories";
 import {
   createServiceRecord,
@@ -14,7 +15,17 @@ import { listServiceTypes, resolveServiceType } from "@/lib/service-types";
 
 export type ServiceFormState = { error?: string; values?: Record<string, string> } | undefined;
 
-const FIELDS = ["category", "newType", "title", "servicedOn", "mileage", "cost", "shop", "notes"];
+const FIELDS = [
+  "category",
+  "newType",
+  "title",
+  "servicedOn",
+  "mileage",
+  "cost",
+  "shop",
+  "notes",
+  "parts",
+];
 
 // Shared by add and edit: resolves the type (maybe creating a custom one) and validates.
 async function parseServiceForm(userId: string, formData: FormData) {
@@ -26,8 +37,11 @@ async function parseServiceForm(userId: string, formData: FormData) {
   const parsed = serviceRecordInput.safeParse({ ...raw, category: type.key });
   if (!parsed.success) return { error: parsed.error.issues[0].message, raw } as const;
 
+  const partRows = parsePartRows(raw.parts);
+  if ("error" in partRows) return { error: partRows.error, raw } as const;
+
   const title = parsed.data.title || categoryLabel(type.key, await listServiceTypes(userId));
-  return { data: { ...parsed.data, title }, raw } as const;
+  return { data: { ...parsed.data, title }, parts: partRows.rows, raw } as const;
 }
 
 export async function addServiceRecord(
@@ -41,6 +55,8 @@ export async function addServiceRecord(
 
   const record = await createServiceRecord(user.id, vehicleId, result.data);
   if (!record) return { error: "That car wasn't found.", values: result.raw };
+  const toCheck = await syncParts(user.id, vehicleId, { serviceRecordId: record.id }, result.parts);
+  checkPricesLater(toCheck);
 
   redirect(`/garage/${vehicleId}`);
 }
@@ -57,6 +73,8 @@ export async function editServiceRecord(
 
   const record = await updateServiceRecord(user.id, vehicleId, recordId, result.data);
   if (!record) return { error: "That record wasn't found.", values: result.raw };
+  const toCheck = await syncParts(user.id, vehicleId, { serviceRecordId: record.id }, result.parts);
+  checkPricesLater(toCheck);
 
   redirect(`/garage/${vehicleId}`);
 }

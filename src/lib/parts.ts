@@ -1,9 +1,11 @@
 import "server-only";
 import { and, asc, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { mods, partPrices, parts, serviceRecords, type Part } from "@/db/schema";
 import { fetchPagePrice, PriceCheckError, validatePartUrl } from "@/lib/price-fetch";
+import type { PartRow } from "@/lib/part-rows";
 import { isUuid } from "@/lib/vehicles";
 
 const stripNumber = (v: unknown) => (typeof v === "string" ? v.replace(/[$,\s]/g, "") : v);
@@ -221,4 +223,87 @@ export function partsDueForCheck(limit: number) {
     )
     .orderBy(asc(parts.lastCheckedAt))
     .limit(limit);
+}
+
+// Reads the JSON list of part rows the forms send, skipping blank rows.
+export function parsePartRows(
+  json: string,
+): { rows: (PartInput & { id?: string })[] } | { error: string } {
+  let raw: unknown;
+  try {
+    raw = json ? JSON.parse(json) : [];
+  } catch {
+    return { error: "The parts list couldn't be read. Try again." };
+  }
+  if (!Array.isArray(raw)) return { error: "The parts list couldn't be read. Try again." };
+  if (raw.length > 50) return { error: "Add up to 50 parts at a time." };
+
+  const rows: (PartInput & { id?: string })[] = [];
+  for (const [i, row] of raw.entries()) {
+    const r = (row ?? {}) as Partial<PartRow>;
+    const blank = !r.name?.trim() && !r.url?.trim() && !r.price?.trim();
+    if (blank) continue;
+    const parsed = partInput.safeParse({
+      name: r.name ?? "",
+      url: r.url ?? "",
+      quantity: r.quantity ?? "",
+      price: r.price ?? "",
+      trackPrice: r.trackPrice ? "on" : "",
+    });
+    if (!parsed.success) return { error: `Part ${i + 1}: ${parsed.error.issues[0].message}` };
+    rows.push({ ...parsed.data, id: typeof r.id === "string" && isUuid(r.id) ? r.id : undefined });
+  }
+  return { rows };
+}
+
+export function listPartsForParent(userId: string, parent: PartParent) {
+  const parentFilter =
+    "modId" in parent
+      ? eq(parts.modId, parent.modId)
+      : eq(parts.serviceRecordId, parent.serviceRecordId);
+  return db
+    .select()
+    .from(parts)
+    .where(and(eq(parts.userId, userId), parentFilter))
+    .orderBy(asc(parts.createdAt));
+}
+
+// Makes the parent's parts match the form: updates rows with an id, adds new
+// rows, and deletes parts that were removed. Returns tracked parts whose price
+// should be checked (new ones, or ones whose link changed).
+export async function syncParts(
+  userId: string,
+  vehicleId: string,
+  parent: PartParent,
+  rows: (PartInput & { id?: string })[],
+) {
+  const existing = await listPartsForParent(userId, parent);
+  const existingIds = new Set(existing.map((p) => p.id));
+  const keptIds = new Set(rows.flatMap((r) => (r.id && existingIds.has(r.id) ? [r.id] : [])));
+  const toCheck: Part[] = [];
+
+  for (const part of existing) {
+    if (!keptIds.has(part.id)) await deletePart(userId, part.id);
+  }
+  for (const { id, ...input } of rows) {
+    if (id && existingIds.has(id)) {
+      const before = existing.find((p) => p.id === id)!;
+      const updated = await updatePart(userId, id, input);
+      if (updated?.trackPrice && (updated.url !== before.url || !updated.lastCheckedAt)) {
+        toCheck.push(updated);
+      }
+    } else {
+      const created = await createPart(userId, vehicleId, parent, input);
+      if (created?.trackPrice) toCheck.push(created);
+    }
+  }
+  return toCheck;
+}
+
+// Price checks can take a few seconds each, so run them after the response.
+export function checkPricesLater(toCheck: Part[]) {
+  if (toCheck.length === 0) return;
+  after(async () => {
+    for (const part of toCheck) await checkPartPrice(part);
+  });
 }

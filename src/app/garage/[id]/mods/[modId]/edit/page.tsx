@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { getMod } from "@/lib/mods";
+import { toPartRows } from "@/lib/part-rows";
+import { listPartsForParent } from "@/lib/parts";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
 import { editMod } from "../../actions";
 import { ModForm } from "../../new/mod-form";
@@ -29,6 +31,7 @@ async function EditMod({ params }: Pick<Props, "params">) {
   if (!car) notFound();
   const mod = await getMod(user.id, car.id, modId);
   if (!mod) notFound();
+  const modParts = await listPartsForParent(user.id, { modId: mod.id });
 
   return (
     <>
@@ -40,6 +43,7 @@ async function EditMod({ params }: Pick<Props, "params">) {
         action={editMod.bind(null, car.id, mod.id)}
         currentMileage={car.currentMileage}
         submitLabel="Save changes"
+        initialParts={toPartRows(modParts)}
         initial={{
           part: mod.part,
           brand: mod.brand ?? "",

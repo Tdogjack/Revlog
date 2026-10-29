@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Bell, Pencil, Plus, Wrench, Zap } from "lucide-react";
+import { Bell, Copy, Pencil, Plus, Wrench, Zap } from "lucide-react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
 import { modCategoryLabel } from "@/lib/mod-categories";
@@ -153,6 +153,14 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                         />
                       </div>
                       <div className="flex items-start gap-3">
+                        <Link
+                          href={`/garage/${car.id}/service/new?copy=${r.id}`}
+                          aria-label="Copy record"
+                          title="Log again (copies parts too)"
+                          className="text-steel hover:text-chalk"
+                        >
+                          <Copy className="h-4 w-4" aria-hidden />
+                        </Link>
                         <Link
                           href={`/garage/${car.id}/service/${r.id}/edit`}
                           aria-label="Edit record"

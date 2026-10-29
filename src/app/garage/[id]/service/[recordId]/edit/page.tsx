@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { toPartRows } from "@/lib/part-rows";
+import { listPartsForParent } from "@/lib/parts";
 import { getServiceRecord } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
@@ -33,6 +35,7 @@ async function EditService({ params }: Pick<Props, "params">) {
   if (!car) notFound();
   const record = await getServiceRecord(user.id, car.id, recordId);
   if (!record) notFound();
+  const recordParts = await listPartsForParent(user.id, { serviceRecordId: record.id });
 
   return (
     <>
@@ -45,6 +48,7 @@ async function EditService({ params }: Pick<Props, "params">) {
         currentMileage={car.currentMileage}
         customTypes={customTypes}
         submitLabel="Save changes"
+        initialParts={toPartRows(recordParts)}
         initial={{
           category: record.category,
           title: record.title,
