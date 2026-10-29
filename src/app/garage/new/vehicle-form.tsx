@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useState } from "react";
+import { PhotoPicker } from "@/components/photo-picker";
+import { withResizedPhoto } from "@/lib/resize-image";
 import { addVehicle } from "../actions";
 
 const inputClass =
@@ -24,10 +26,25 @@ function Field({
 
 export function VehicleForm() {
   const [state, formAction, pending] = useActionState(addVehicle, undefined);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const v = state?.values ?? {};
+  const error = photoError ?? state?.error;
+
+  async function submit(formData: FormData) {
+    setPhotoError(null);
+    try {
+      await withResizedPhoto(formData);
+    } catch (err) {
+      setPhotoError((err as Error).message);
+      return;
+    }
+    startTransition(() => formAction(formData));
+  }
 
   return (
-    <form action={formAction} className="mt-6 space-y-4 rounded-xl border border-graphite bg-panel p-6">
+    <form action={submit} className="mt-6 space-y-4 rounded-xl border border-graphite bg-panel p-6">
+      {/* The form resets after each submit, so remount the picker to clear its preview too. */}
+      <PhotoPicker key={state?.error ?? "initial"} />
       <div className="grid gap-4 sm:grid-cols-[7rem_1fr_1fr]">
         <Field label="Year" name="year" inputMode="numeric" placeholder="2019" required defaultValue={v.year} />
         <Field label="Make" name="make" placeholder="Honda" required defaultValue={v.make} />
@@ -53,9 +70,9 @@ export function VehicleForm() {
         defaultValue={v.vin}
       />
 
-      {state?.error && (
+      {error && (
         <p role="alert" className="text-sm text-due">
-          {state.error}
+          {error}
         </p>
       )}
 

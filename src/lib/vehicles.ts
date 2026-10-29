@@ -72,6 +72,22 @@ export async function createVehicle(userId: string, input: VehicleInput) {
   return vehicle;
 }
 
+// Returns the previous photo path so the caller can delete the old file.
+export async function setVehiclePhoto(userId: string, id: string, photoPath: string | null) {
+  const [existing] = await db
+    .select({ photoPath: vehicles.photoPath })
+    .from(vehicles)
+    .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)))
+    .limit(1);
+  if (!existing) return undefined;
+
+  await db
+    .update(vehicles)
+    .set({ photoPath })
+    .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)));
+  return existing.photoPath;
+}
+
 export function vehicleName(v: { year: number; make: string; model: string; trim: string | null }) {
   return [v.year, v.make, v.model, v.trim].filter(Boolean).join(" ");
 }
