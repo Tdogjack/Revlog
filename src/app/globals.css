@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Redline brand palette */
+@theme {
+  --color-carbon: #121417;
+  --color-panel: #1b1f24;
+  --color-graphite: #2a2e35;
+  --color-redline: #e63946;
+  --color-redline-hover: #f04f5b;
+  --color-steel: #8d99ae;
+  --color-chalk: #f4f1ec;
+
+  /* Status colors, kept distinct from the brand red */
+  --color-due: #ff8a93;
+  --color-due-bg: #3a1a1d;
+  --color-done: #7fd99a;
+  --color-done-bg: #16301f;
+
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+body {
+  background: var(--color-carbon);
+  color: var(--color-chalk);
+}
