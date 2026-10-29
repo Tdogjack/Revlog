@@ -307,3 +307,38 @@ export function checkPricesLater(toCheck: Part[]) {
     for (const part of toCheck) await checkPartPrice(part);
   });
 }
+
+async function setParentCost(userId: string, parent: PartParent, cost: string) {
+  if ("modId" in parent) {
+    await db
+      .update(mods)
+      .set({ cost })
+      .where(and(eq(mods.id, parent.modId), eq(mods.userId, userId)));
+  } else {
+    await db
+      .update(serviceRecords)
+      .set({ cost })
+      .where(and(eq(serviceRecords.id, parent.serviceRecordId), eq(serviceRecords.userId, userId)));
+  }
+}
+
+// Runs after a record's parts are saved. If the user left the cost blank, it
+// becomes the parts total as of today (a snapshot: later price changes don't
+// alter it). Tracked parts without a price are checked first so they count;
+// any other price checks run after the response.
+export async function settlePartsCost(
+  userId: string,
+  parent: PartParent,
+  toCheck: Part[],
+  costGiven: boolean,
+) {
+  if (costGiven) return checkPricesLater(toCheck);
+
+  const unpriced = toCheck.filter((p) => p.price == null);
+  for (const part of unpriced) await checkPartPrice(part);
+  checkPricesLater(toCheck.filter((p) => p.price != null));
+
+  const current = await listPartsForParent(userId, parent);
+  const total = current.reduce((sum, p) => sum + (p.price ? Number(p.price) * p.quantity : 0), 0);
+  if (total > 0) await setParentCost(userId, parent, total.toFixed(2));
+}
