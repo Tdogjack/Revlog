@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ChevronLeft, ChevronRight, ImagePlus, Trash2, X } from "lucide-react";
 import { removePhoto, uploadPhoto } from "@/app/garage/[id]/photos/actions";
-import { resizeImage } from "@/lib/resize-image";
+import { PHOTO_ACCEPT, resizeImage } from "@/lib/resize-image";
 
 export type StripPhoto = { id: string; url: string };
 
@@ -93,7 +93,7 @@ export function PhotoStrip({
             <input
               ref={inputRef}
               type="file"
-              accept="image/*"
+              accept={PHOTO_ACCEPT}
               multiple
               className="sr-only"
               disabled={pending}

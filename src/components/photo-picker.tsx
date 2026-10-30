@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Camera } from "lucide-react";
+import { PHOTO_ACCEPT, toBrowserImage } from "@/lib/resize-image";
 
 type Props = { label?: string; onChoose?: () => void };
 
@@ -35,12 +36,17 @@ export function PhotoPicker({ label = "Photo (optional)", onChoose }: Props) {
             ref={inputRef}
             type="file"
             name="photo"
-            accept="image/*"
+            accept={PHOTO_ACCEPT}
             className="sr-only"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              setPreview(file ? URL.createObjectURL(file) : null);
-              if (file) onChoose?.();
+              setPreview(null);
+              if (!file) return;
+              onChoose?.();
+              // HEIC needs converting before Chrome and Firefox can show it.
+              toBrowserImage(file)
+                .then((shown) => setPreview(URL.createObjectURL(shown)))
+                .catch(() => {});
             }}
           />
         </label>
