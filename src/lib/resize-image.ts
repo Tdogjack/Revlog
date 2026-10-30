@@ -37,12 +37,33 @@ export async function resizeImage(file: File, maxSize = 1024, quality = 0.85): P
   canvas.getContext("2d")!.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/webp", quality),
-  );
-  if (!blob) throw new Error("That photo couldn't be processed. Try another one.");
+  const blob = await encode(canvas, quality);
+  return new File([blob], `photo.${blob.type.split("/")[1]}`, { type: blob.type });
+}
 
-  return new File([blob], "photo.webp", { type: "image/webp" });
+// Server Actions reject bodies over 1MB, so leave room for form overhead.
+const MAX_UPLOAD_BYTES = 900 * 1024;
+
+function toBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
+  return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
+// Safari can't encode WebP and silently hands back a huge PNG instead,
+// so fall back to JPEG there, and lower quality until the file fits.
+async function encode(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  let type = "image/webp";
+  let blob = await toBlob(canvas, type, quality);
+  if (blob && blob.type !== type) {
+    type = "image/jpeg";
+    blob = await toBlob(canvas, type, quality);
+  }
+  while (blob && blob.size > MAX_UPLOAD_BYTES && quality > 0.4) {
+    quality -= 0.15;
+    blob = await toBlob(canvas, type, quality);
+  }
+  if (!blob) throw new Error("That photo couldn't be processed. Try another one.");
+  if (blob.size > MAX_UPLOAD_BYTES) throw new Error("That photo is too large. Try a smaller one.");
+  return blob;
 }
 
 // Replaces the "photo" field with a resized copy, if one was chosen.
