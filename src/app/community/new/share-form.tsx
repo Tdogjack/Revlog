@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, ImagePlus, X } from "lucide-react";
 import { POST_TAGS } from "@/lib/post-tags";
-import { resizeImage } from "@/lib/resize-image";
+import { PHOTO_ACCEPT, resizeImage, toBrowserImage } from "@/lib/resize-image";
 import { uploadPostPhoto, type PostFormState } from "../actions";
 
 const inputClass =
@@ -68,8 +68,14 @@ export function ShareForm({
     );
   }
 
-  function addFiles(files: File[]) {
-    const fit = files.slice(0, room);
+  async function addFiles(files: File[]) {
+    // HEIC photos are converted up front so their previews show in every browser.
+    const fit = (
+      await Promise.all(files.slice(0, room).map((f) => toBrowserImage(f).catch(() => null)))
+    ).filter((f): f is File => f !== null);
+    if (fit.length < Math.min(files.length, room)) {
+      setState({ error: "Some photos couldn't be read. Try a JPG, PNG, or HEIC." });
+    }
     setAdded((current) => [
       ...current,
       ...fit.map((file) => ({
@@ -78,7 +84,7 @@ export function ShareForm({
         preview: URL.createObjectURL(file),
       })),
     ]);
-    if (files.length > fit.length) {
+    if (files.length > room) {
       setState({ error: `Posts can have up to ${maxPhotos} photos.` });
     }
   }
@@ -219,7 +225,7 @@ export function ShareForm({
               Upload
               <input
                 type="file"
-                accept="image/*"
+                accept={PHOTO_ACCEPT}
                 multiple
                 className="sr-only"
                 disabled={pending}

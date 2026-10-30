@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useRef, useState } from "react";
-import { withResizedPhoto } from "@/lib/resize-image";
+import { PHOTO_ACCEPT, withResizedPhoto } from "@/lib/resize-image";
 import { changeVehiclePhoto, removeVehiclePhoto } from "../actions";
 
 // "Change photo" uploads as soon as a picture is chosen.
@@ -34,7 +34,7 @@ export function PhotoControls({ vehicleId, hasPhoto }: { vehicleId: string; hasP
             <input
               type="file"
               name="photo"
-              accept="image/*"
+              accept={PHOTO_ACCEPT}
               className="sr-only"
               disabled={pending}
               onChange={() => formRef.current?.requestSubmit()}
