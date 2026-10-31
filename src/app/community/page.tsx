@@ -4,8 +4,10 @@ import { Suspense } from "react";
 import { Share2, Users } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { FEED_PAGE, listPosts } from "@/lib/community";
+import { DEFAULT_SORT, isPostSort, type PostSort } from "@/lib/post-sorts";
 import { isPostTag, POST_TAGS, postTagLabel } from "@/lib/post-tags";
 import { PostCard } from "./post-card";
+import { SortMenu } from "./sort-menu";
 
 export const metadata: Metadata = {
   title: "Community · Revlog",
@@ -38,45 +40,59 @@ export default function CommunityPage({ searchParams }: PageProps<"/community">)
   );
 }
 
+// Builds a feed link that keeps whichever filters aren't being changed.
+function feedHref({ tag, sort, page }: { tag?: string; sort: PostSort; page?: number }) {
+  const query = new URLSearchParams();
+  if (tag) query.set("tag", tag);
+  if (sort !== DEFAULT_SORT) query.set("sort", sort);
+  if (page && page > 1) query.set("page", String(page));
+  return query.size ? `/community?${query}` : "/community";
+}
+
 async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParams">) {
-  const { before, tag: rawTag } = await searchParams;
+  const { tag: rawTag, sort: rawSort, page: rawPage } = await searchParams;
   const tag = typeof rawTag === "string" && isPostTag(rawTag) ? rawTag : undefined;
-  const beforeDate = typeof before === "string" ? new Date(before) : undefined;
+  const sort = typeof rawSort === "string" && isPostSort(rawSort) ? rawSort : DEFAULT_SORT;
+  const page = Math.max(1, Number.parseInt(typeof rawPage === "string" ? rawPage : "", 10) || 1);
   const user = await getUser();
-  const feed = await listPosts({
-    before: beforeDate && !Number.isNaN(beforeDate.getTime()) ? beforeDate : undefined,
-    tag,
-    viewerId: user?.id,
-  });
-  const chips = (
-    <nav aria-label="Filter by tag" className="mt-5 flex flex-wrap gap-2">
-      {[{ value: undefined, label: "All" }, ...POST_TAGS].map((t) => {
-        const active = t.value === tag;
-        return (
-          <Link
-            key={t.label}
-            href={t.value ? `/community?tag=${t.value}` : "/community"}
-            aria-current={active ? "page" : undefined}
-            className={`rounded-full border px-3 py-1 text-xs ${active ? "border-redline bg-redline/15 text-chalk" : "border-graphite text-steel hover:border-steel hover:text-chalk"}`}
-          >
-            {t.label}
-          </Link>
-        );
-      })}
-    </nav>
+  const feed = await listPosts({ sort, page, tag, viewerId: user?.id });
+
+  const controls = (
+    <>
+      <nav aria-label="Filter by tag" className="mt-5 flex flex-wrap gap-2">
+        {[{ value: undefined, label: "All" }, ...POST_TAGS].map((t) => {
+          const active = t.value === tag;
+          return (
+            <Link
+              key={t.label}
+              href={feedHref({ tag: t.value, sort })}
+              aria-current={active ? "page" : undefined}
+              className={`rounded-full border px-3 py-1 text-xs ${active ? "border-redline bg-redline/15 text-chalk" : "border-graphite text-steel hover:border-steel hover:text-chalk"}`}
+            >
+              {t.label}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="mt-4">
+        <SortMenu sort={sort} tag={tag} />
+      </div>
+    </>
   );
 
   if (feed.length === 0) {
     return (
       <>
-        {chips}
-        <div className="mt-6 rounded-xl border border-dashed border-graphite p-10 text-center">
+        {controls}
+        <div className="mt-4 rounded-xl border border-dashed border-graphite p-10 text-center">
           <p className="font-medium">
-            {before
-              ? "No older posts."
-              : tag
-                ? `No ${postTagLabel(tag).toLowerCase()} posts yet.`
-                : "No posts yet."}
+            {page > 1
+              ? "No more posts."
+              : sort === "rising"
+                ? "Nothing rising in the last 3 days."
+                : tag
+                  ? `No ${postTagLabel(tag).toLowerCase()} posts yet.`
+                  : "No posts yet."}
           </p>
           <p className="mt-1 text-sm text-steel">
             Share your build or a mod you just installed to get things started.
@@ -86,22 +102,29 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
     );
   }
 
-  const oldest = feed[feed.length - 1].createdAt;
   return (
     <>
-      {chips}
-      <div className="mt-6 space-y-4">
+      {controls}
+      <div className="mt-4 space-y-4">
         {feed.map((post) => (
           <PostCard key={post.id} post={post} signedIn={!!user} />
         ))}
       </div>
-      {feed.length === FEED_PAGE && (
-        <Link
-          href={`/community?${tag ? `tag=${tag}&` : ""}before=${encodeURIComponent(oldest.toISOString())}`}
-          className="mt-6 block text-center text-sm text-steel hover:text-chalk"
-        >
-          Older posts
-        </Link>
+      {(page > 1 || feed.length === FEED_PAGE) && (
+        <nav aria-label="Pages" className="mt-6 flex justify-between text-sm text-steel">
+          {page > 1 ? (
+            <Link href={feedHref({ tag, sort, page: page - 1 })} className="hover:text-chalk">
+              ← Previous
+            </Link>
+          ) : (
+            <span />
+          )}
+          {feed.length === FEED_PAGE && (
+            <Link href={feedHref({ tag, sort, page: page + 1 })} className="hover:text-chalk">
+              More posts →
+            </Link>
+          )}
+        </nav>
       )}
     </>
   );

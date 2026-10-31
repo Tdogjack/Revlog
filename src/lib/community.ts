@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, asc, count, desc, eq, gt, inArray, lt } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   mods,
@@ -14,6 +14,7 @@ import {
 } from "@/db/schema";
 import { getPhotosByIds } from "@/lib/gallery";
 import { getMod } from "@/lib/mods";
+import type { PostSort } from "@/lib/post-sorts";
 import { supabaseUrl } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 import { getVehicle, isUuid } from "@/lib/vehicles";
@@ -106,22 +107,52 @@ async function withExtras(rows: PostRow[], viewerId?: string): Promise<FeedPost[
   }));
 }
 
-// Newest first. `before` pages back through older posts.
+const likeTotal = sql<number>`(select count(*) from ${postLikes} where ${postLikes.postId} = ${posts.id})`;
+const commentTotal = sql<number>`(select count(*) from ${postComments} where ${postComments.postId} = ${posts.id})`;
+const engagement = sql<number>`(${likeTotal} + 2 * ${commentTotal})`;
+const ageHours = sql<number>`(extract(epoch from now() - ${posts.createdAt}) / 3600)`;
+
+// Hot fades engagement with age (the +1 lets brand-new posts in); Rising
+// ranks recent posts by how fast they're picking up.
+function sortOrder(sort: PostSort) {
+  switch (sort) {
+    case "best":
+      return [desc(engagement), desc(posts.createdAt)];
+    case "hot":
+      return [desc(sql`(${engagement} + 1) / power(${ageHours} + 2, 1.5)`), desc(posts.createdAt)];
+    case "top":
+      return [desc(likeTotal), desc(posts.createdAt)];
+    case "rising":
+      return [desc(sql`${engagement} / (${ageHours} + 2)`), desc(posts.createdAt)];
+    case "new":
+      return [desc(posts.createdAt)];
+  }
+}
+
+// One page of posts in the chosen order (newest first by default).
 export async function listPosts({
-  before,
+  sort = "new",
+  page = 1,
   username,
   tag,
   viewerId,
-}: { before?: Date; username?: string; tag?: string; viewerId?: string } = {}) {
+}: {
+  sort?: PostSort;
+  page?: number;
+  username?: string;
+  tag?: string;
+  viewerId?: string;
+} = {}) {
   const filters = [
-    before ? lt(posts.createdAt, before) : undefined,
     username ? eq(profiles.username, username) : undefined,
     tag ? eq(posts.tag, tag) : undefined,
+    sort === "rising" ? sql`${posts.createdAt} > now() - interval '3 days'` : undefined,
   ].filter((f) => f !== undefined);
   const rows = await selectPosts()
     .where(filters.length ? and(...filters) : undefined)
-    .orderBy(desc(posts.createdAt))
-    .limit(FEED_PAGE);
+    .orderBy(...sortOrder(sort))
+    .limit(FEED_PAGE)
+    .offset((Math.max(1, page) - 1) * FEED_PAGE);
   return withExtras(rows, viewerId);
 }
 
