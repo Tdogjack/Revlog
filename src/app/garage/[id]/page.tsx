@@ -116,7 +116,19 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
             </div>
             <MileageEditor vehicleId={car.id} currentMileage={car.currentMileage} />
           </div>
-          {car.vin && <p className="mt-3 font-mono text-xs text-steel">VIN {car.vin}</p>}
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            {car.vin && <p className="font-mono text-xs text-steel">VIN {car.vin}</p>}
+            {car.builtOn && (
+              <p className="font-mono text-xs text-steel">Built {formatDate(car.builtOn)}</p>
+            )}
+            <Link
+              href={`/garage/${car.id}/edit`}
+              className="flex items-center gap-1 rounded-md border border-graphite px-2.5 py-1 text-xs font-medium hover:border-steel"
+            >
+              <Pencil className="h-3.5 w-3.5" aria-hidden />
+              Edit car
+            </Link>
+          </div>
         </div>
       </div>
 

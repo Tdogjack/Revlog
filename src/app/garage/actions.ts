@@ -11,20 +11,30 @@ import {
   moveVehicle,
   setVehicleFavorite,
   setVehiclePhoto,
+  updateVehicle,
   vehicleInput,
   vehicleName,
 } from "@/lib/vehicles";
 
 export type FormState = { error?: string; values?: Record<string, string> } | undefined;
 
+const vehicleFields = [
+  "year",
+  "make",
+  "model",
+  "trim",
+  "nickname",
+  "vin",
+  "currentMileage",
+  "builtOn",
+];
+
+const readVehicleFields = (formData: FormData) =>
+  Object.fromEntries(vehicleFields.map((k) => [k, String(formData.get(k) ?? "")]));
+
 export async function addVehicle(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
-  const raw = Object.fromEntries(
-    ["year", "make", "model", "trim", "nickname", "vin", "currentMileage"].map((k) => [
-      k,
-      String(formData.get(k) ?? ""),
-    ]),
-  );
+  const raw = readVehicleFields(formData);
 
   const parsed = vehicleInput.safeParse(raw);
   if (!parsed.success) {
@@ -47,6 +57,27 @@ export async function addVehicle(_prev: FormState, formData: FormData): Promise<
   }
 
   redirect(`/garage/${vehicle.id}`);
+}
+
+export async function editVehicle(
+  vehicleId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireUser();
+  const raw = readVehicleFields(formData);
+
+  const parsed = vehicleInput.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message, values: raw };
+  }
+
+  const found = await updateVehicle(user.id, vehicleId, parsed.data);
+  if (!found) return { error: "That car wasn't found.", values: raw };
+
+  revalidatePath("/garage");
+  revalidatePath(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}`);
 }
 
 export type PhotoState = { error?: string; ok?: boolean } | undefined;

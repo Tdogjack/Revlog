@@ -43,6 +43,7 @@ type Candidate = {
     nickname: string | null;
   };
   vin: string | null;
+  builtOn: string | null;
   currentMileage: number;
 };
 
@@ -70,6 +71,7 @@ async function candidateReminders(): Promise<Candidate[]> {
       trim: vehicles.trim,
       nickname: vehicles.nickname,
       vin: vehicles.vin,
+      builtOn: vehicles.builtOn,
       currentMileage: vehicles.currentMileage,
     })
     .from(reminders)
@@ -121,6 +123,7 @@ async function buildOutbox(today: Date) {
       const reminder = withCarAgeStart(withLastService(c, services), {
         year: c.vehicle.year,
         vin: c.vin,
+        builtOn: c.builtOn,
       });
       return {
         c,
