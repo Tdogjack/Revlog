@@ -448,49 +448,51 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
             ) : (
               <ul className="mt-4">
                 {carReminders.map(({ reminder: r, result }) => (
-                  <li key={r.id} className="border-t border-graphite py-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium">{r.task}</p>
+                  <li key={r.id} className="flex gap-3 border-t border-graphite py-3">
+                    <details className="group min-w-0 flex-1">
+                      <summary className={summaryClass}>
+                        <p className="font-medium">{r.task}</p>
+                        <p
+                          className={`mt-1 text-sm ${
+                            result.status === "overdue"
+                              ? "font-medium text-overdue"
+                              : result.status === "due_soon"
+                                ? "text-due"
+                                : "text-steel"
+                          }`}
+                        >
+                          {describeDue(result)}
+                        </p>
+                        <ChevronDown
+                          className="mt-1 h-3.5 w-3.5 text-steel transition-transform group-open:rotate-180 group-hover:text-chalk"
+                          aria-label="Details"
+                        />
+                      </summary>
+                      <p className="mt-1 text-xs text-steel">
+                        {r.lastDoneOn ? (
+                          <>
+                            Last done {formatDate(r.lastDoneOn)}
+                            {r.lastDoneMileage != null &&
+                              ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
+                          </>
+                        ) : (
+                          "Last done: never"
+                        )}
+                      </p>
+                      <p className="mt-0.5 text-xs text-steel">
+                        Every{" "}
+                        {[
+                          r.intervalMiles && `${r.intervalMiles.toLocaleString("en-US")} mi`,
+                          r.intervalMonths &&
+                            `${r.intervalMonths} ${r.intervalMonths === 1 ? "month" : "months"}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" or ")}
+                      </p>
+                    </details>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
                       <StatusBadge status={result.status} />
-                    </div>
-                    <p
-                      className={`mt-1 text-sm ${
-                        result.status === "overdue"
-                          ? "font-medium text-overdue"
-                          : result.status === "due_soon"
-                            ? "text-due"
-                            : "text-steel"
-                      }`}
-                    >
-                      {describeDue(result)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-steel">
-                      {r.lastDoneOn ? (
-                        <>
-                          Last done {formatDate(r.lastDoneOn)}
-                          {r.lastDoneMileage != null &&
-                            ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
-                        </>
-                      ) : (
-                        "Last done: never"
-                      )}
-                    </p>
-                    <p className="mt-0.5 text-xs text-steel">
-                      Every{" "}
-                      {[
-                        r.intervalMiles && `${r.intervalMiles.toLocaleString("en-US")} mi`,
-                        r.intervalMonths &&
-                          `${r.intervalMonths} ${r.intervalMonths === 1 ? "month" : "months"}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" or ")}
-                    </p>
-                    <div className="mt-3">
-                      <ReminderControls
-                        vehicleId={car.id}
-                        reminderId={r.id}
-                        currentMileage={car.currentMileage}
-                      />
+                      <ReminderControls vehicleId={car.id} reminderId={r.id} />
                     </div>
                   </li>
                 ))}

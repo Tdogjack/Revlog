@@ -10,7 +10,7 @@ import { mileageTypes } from "@/lib/service-categories";
 import { getServiceRecord } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
-import { addServiceRecord } from "../actions";
+import { addReminderService, addServiceRecord } from "../actions";
 import { ServiceForm } from "./service-form";
 
 export const metadata: Metadata = { title: "Log service · Revlog" };
@@ -36,7 +36,7 @@ const formatDate = (isoDate: string) =>
   });
 
 async function NewService({ params, searchParams }: Pick<Props, "params" | "searchParams">) {
-  const [{ id }, { copy }] = await Promise.all([params, searchParams]);
+  const [{ id }, { copy, reminder: reminderId }] = await Promise.all([params, searchParams]);
   const user = await requireUser();
   const [car, customTypes] = await Promise.all([
     getVehicle(user.id, id),
@@ -44,6 +44,9 @@ async function NewService({ params, searchParams }: Pick<Props, "params" | "sear
   ]);
   if (!car) notFound();
   const reminders = await listReminders(user.id, car.id);
+  // "Mark done" on a reminder starts from that reminder's type and name.
+  const reminder =
+    typeof reminderId === "string" ? (reminders.find((r) => r.id === reminderId) ?? null) : null;
 
   // "Copy" starts from an existing record: everything carries over except the
   // date (today) and mileage (blank), which are what usually change.
@@ -64,8 +67,17 @@ async function NewService({ params, searchParams }: Pick<Props, "params" | "sear
           mileage, then save.
         </p>
       )}
+      {reminder && (
+        <p className="mt-2 rounded-md bg-graphite px-3 py-2 text-sm">
+          Marking {reminder.task} done. Check the date and mileage, then save.
+        </p>
+      )}
       <ServiceForm
-        action={addServiceRecord.bind(null, car.id)}
+        action={
+          reminder
+            ? addReminderService.bind(null, car.id, reminder.id)
+            : addServiceRecord.bind(null, car.id)
+        }
         currentMileage={car.currentMileage}
         customTypes={customTypes}
         mileageTypes={mileageTypes(reminders)}
@@ -79,7 +91,9 @@ async function NewService({ params, searchParams }: Pick<Props, "params" | "sear
                 shop: source.shop ?? "",
                 notes: source.notes ?? "",
               }
-            : undefined
+            : reminder
+              ? { category: reminder.serviceCategory ?? "other", title: reminder.task }
+              : undefined
         }
         initialParts={toPartRows(sourceParts, { keepIds: false })}
       />

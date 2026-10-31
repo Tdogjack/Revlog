@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { photoPathsFor, removePhotoFiles } from "@/lib/gallery";
 import { parsePartRows, settlePartsCost, syncParts } from "@/lib/parts";
-import { listReminders } from "@/lib/reminder-store";
+import { getReminder, listReminders, setReminderStart } from "@/lib/reminder-store";
 import { categoryLabel, mileageTypes } from "@/lib/service-categories";
 import {
   createServiceRecord,
@@ -52,6 +52,24 @@ export async function addServiceRecord(
   _prev: ServiceFormState,
   formData: FormData,
 ): Promise<ServiceFormState> {
+  return logService(vehicleId, null, formData);
+}
+
+// "Mark done" on a reminder logs the service through the same form.
+export async function addReminderService(
+  vehicleId: string,
+  reminderId: string,
+  _prev: ServiceFormState,
+  formData: FormData,
+): Promise<ServiceFormState> {
+  return logService(vehicleId, reminderId, formData);
+}
+
+async function logService(
+  vehicleId: string,
+  reminderId: string | null,
+  formData: FormData,
+): Promise<ServiceFormState> {
   const user = await requireUser();
   const result = await parseServiceForm(user.id, formData);
   if ("error" in result) return { error: result.error, values: result.raw };
@@ -70,6 +88,20 @@ export async function addServiceRecord(
   const parent = { serviceRecordId: record.id };
   const toCheck = await syncParts(user.id, vehicleId, parent, result.parts);
   await settlePartsCost(user.id, parent, toCheck, result.data.cost != null);
+
+  // Reminders tied to a service type reset from the new record on their own;
+  // ones without a type restart their schedule here.
+  if (reminderId) {
+    const reminder = await getReminder(user.id, vehicleId, reminderId);
+    if (reminder && !reminder.serviceCategory) {
+      await setReminderStart(
+        user.id,
+        reminderId,
+        data.servicedOn,
+        data.mileage ?? car.currentMileage,
+      );
+    }
+  }
 
   redirect(`/garage/${vehicleId}`);
 }
