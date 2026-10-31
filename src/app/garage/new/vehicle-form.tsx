@@ -6,8 +6,7 @@ import { withResizedPhoto } from "@/lib/resize-image";
 import type { FormState } from "../actions";
 import { lookUpVin } from "./vin-actions";
 
-const inputClass =
-  "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
+const inputClass = "field mt-1";
 
 const MONTHS = [
   "January",
@@ -37,10 +36,10 @@ function Field({
   hint?: string;
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <label className="block text-sm">
-      <span className="text-steel">{label}</span>
+    <label className="block">
+      <span className="field-label">{label}</span>
       <input name={name} defaultValue={defaultValue} className={inputClass} {...props} />
-      {hint && <span className="mt-1 block text-xs text-steel">{hint}</span>}
+      {hint && <span className="field-hint">{hint}</span>}
     </label>
   );
 }
@@ -103,7 +102,7 @@ export function VehicleForm({
     <form
       ref={formRef}
       action={submit}
-      className="mt-6 space-y-4 rounded-xl border border-graphite bg-panel p-6"
+      className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6"
     >
       {/* The form resets after each submit, so remount the picker to clear its preview too. */}
       {!initial && <PhotoPicker key={state?.error ?? "initial"} />}
@@ -191,7 +190,7 @@ export function VehicleForm({
               className={inputClass}
             />
           </div>
-          <span className="mt-1 block text-xs text-steel">
+          <span className="field-hint">
             On the door jamb sticker, like MFD 06/19.
           </span>
         </fieldset>
@@ -206,7 +205,7 @@ export function VehicleForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-redline py-2.5 font-medium text-white hover:bg-redline-hover disabled:opacity-60"
+        className="btn btn-primary btn-lg w-full"
       >
         {pending ? pendingLabel : submitLabel}
       </button>

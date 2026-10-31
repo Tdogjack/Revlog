@@ -24,17 +24,14 @@ export const metadata: Metadata = { title: "Your garage · Revlog" };
 export default function GaragePage() {
   return (
     <>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Your garage</h1>
-        <Link
-          href="/garage/new"
-          className="flex items-center gap-1.5 rounded-md bg-redline px-3 py-2 text-sm font-medium text-white hover:bg-redline-hover"
-        >
+      <div className="flex items-end justify-between gap-4">
+        <h1 className="font-display text-4xl leading-none font-semibold">Your garage</h1>
+        <Link href="/garage/new" className="btn btn-primary">
           <Plus className="h-4 w-4" aria-hidden />
           Add a car
         </Link>
       </div>
-      <Suspense fallback={<p className="mt-8 text-sm text-steel">Loading your cars…</p>}>
+      <Suspense fallback={<GarageSkeleton />}>
         <VehicleList />
       </Suspense>
     </>
@@ -73,14 +70,11 @@ async function VehicleList() {
 
   if (cars.length === 0) {
     return (
-      <div className="mt-8 rounded-xl border border-dashed border-graphite p-10 text-center">
+      <div className="mt-8 rounded-lg border border-dashed border-graphite px-6 py-12 text-center">
         <Car className="mx-auto h-8 w-8 text-steel" aria-hidden />
-        <h2 className="mt-4 font-medium">Add your first car</h2>
+        <h2 className="mt-4 font-display text-2xl font-semibold">Add your first car</h2>
         <p className="mt-1 text-sm text-steel">Start a timeline of every service and mod for it.</p>
-        <Link
-          href="/garage/new"
-          className="mt-5 inline-block rounded-md bg-redline px-4 py-2 text-sm font-medium text-white hover:bg-redline-hover"
-        >
+        <Link href="/garage/new" className="btn btn-primary mt-6">
           Add a car
         </Link>
       </div>
@@ -88,28 +82,31 @@ async function VehicleList() {
   }
 
   return (
-    <ul className="mt-8 space-y-4">
+    <ul className="mt-8 space-y-3">
       {cars.map((car, i) => (
         <li key={car.id} className="relative">
           <Link
             href={`/garage/${car.id}`}
-            className={`flex items-center gap-4 rounded-xl border bg-panel p-4 pr-14 hover:border-steel sm:gap-6 sm:p-6 sm:pr-16 ${car.favorite ? "border-redline/50" : "border-graphite"}`}
+            className="group flex items-center gap-4 rounded-lg border border-graphite bg-panel p-3 pr-14 transition-colors hover:border-steel sm:gap-6 sm:pr-16"
           >
             <VehiclePhoto
               src={car.photoPath ? photos.get(car.photoPath) : null}
               alt={vehicleName(car)}
-              className="h-24 w-24 sm:h-36 sm:w-36"
+              className="aspect-[4/3] w-28 rounded-md sm:w-56"
             />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-lg font-semibold sm:text-xl">
+            <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
+              <p className="line-clamp-2 font-display text-2xl leading-tight font-semibold sm:text-3xl">
                 {car.nickname ?? vehicleName(car)}
               </p>
               {car.nickname && (
                 <p className="mt-0.5 truncate text-sm text-steel">{vehicleName(car)}</p>
               )}
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <p className="font-mono text-sm text-steel">
-                  {car.currentMileage.toLocaleString("en-US")} mi
+              <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-2">
+                <p className="text-steel">
+                  <span className="readout text-xl text-chalk">
+                    {car.currentMileage.toLocaleString("en-US")}
+                  </span>{" "}
+                  <span className="text-xs">mi</span>
                 </p>
                 {(() => {
                   const u = urgency.get(car.id);
@@ -145,16 +142,16 @@ function CardControls({
   canMoveUp: boolean;
   canMoveDown: boolean;
 }) {
-  const button = "rounded p-1 text-steel hover:bg-graphite hover:text-chalk";
+  const button = "icon-btn";
   return (
-    <div className="absolute top-3 right-3 flex flex-col items-center gap-0.5">
+    <div className="absolute top-2 right-2 flex flex-col items-center">
       <form action={toggleFavorite.bind(null, vehicleId, !favorite)}>
         <button
           type="submit"
           aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
           aria-pressed={favorite}
           title={favorite ? "Favorite" : "Make favorite"}
-          className={`${button} ${favorite ? "text-redline" : ""}`}
+          className={`${button} ${favorite ? "text-redline hover:text-redline" : ""}`}
         >
           <Star className={`h-4 w-4 ${favorite ? "fill-redline" : ""}`} aria-hidden />
         </button>
@@ -182,5 +179,16 @@ function CardControls({
         </form>
       )}
     </div>
+  );
+}
+
+// Placeholder rows while the cars load, sized like the real list.
+function GarageSkeleton() {
+  return (
+    <ul className="mt-8 space-y-3" aria-busy="true" aria-label="Loading your cars">
+      {[0, 1].map((i) => (
+        <li key={i} className="skeleton h-[108px] sm:h-[192px]" />
+      ))}
+    </ul>
   );
 }

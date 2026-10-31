@@ -7,8 +7,7 @@ import { REMINDER_PRESETS } from "@/lib/reminder-presets";
 import type { CustomType } from "@/lib/service-categories";
 import type { ReminderFormState } from "../actions";
 
-const inputClass =
-  "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
+const inputClass = "field mt-1";
 
 // Picking a type with a known interval fills it in; other types keep what's typed.
 function presetIntervals(type: string) {
@@ -50,7 +49,7 @@ export function ReminderForm({
         fd.set("today", localToday());
         return formAction(fd);
       }}
-      className="mt-6 space-y-4 rounded-xl border border-graphite bg-panel p-6"
+      className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6"
     >
       <ServiceTypeSelect
         key={state?.error ?? "initial"}
@@ -67,8 +66,8 @@ export function ReminderForm({
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="text-steel">Every … miles</span>
+        <label className="block">
+          <span className="field-label">Every … miles</span>
           <input
             name="intervalMiles"
             inputMode="numeric"
@@ -78,8 +77,8 @@ export function ReminderForm({
             className={inputClass}
           />
         </label>
-        <label className="block text-sm">
-          <span className="text-steel">Or every … months</span>
+        <label className="block">
+          <span className="field-label">Or every … months</span>
           <input
             name="intervalMonths"
             inputMode="numeric"
@@ -102,8 +101,8 @@ export function ReminderForm({
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm">
-              <span className="text-steel">Last done (optional)</span>
+            <label className="block">
+              <span className="field-label">Last done (optional)</span>
               <input
                 type="date"
                 name="lastDoneOn"
@@ -111,8 +110,8 @@ export function ReminderForm({
                 className={inputClass}
               />
             </label>
-            <label className="block text-sm">
-              <span className="text-steel">Mileage then (optional)</span>
+            <label className="block">
+              <span className="field-label">Mileage then (optional)</span>
               <input
                 name="lastDoneMileage"
                 inputMode="numeric"
@@ -130,8 +129,8 @@ export function ReminderForm({
         </>
       )}
 
-      <label className="block text-sm">
-        <span className="text-steel">Name (optional)</span>
+      <label className="block">
+        <span className="field-label">Name (optional)</span>
         <input
           name="task"
           placeholder="Uses the service name"
@@ -149,7 +148,7 @@ export function ReminderForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-redline py-2.5 font-medium text-white hover:bg-redline-hover disabled:opacity-60"
+        className="btn btn-primary btn-lg w-full"
       >
         {pending ? "Saving…" : submitLabel}
       </button>

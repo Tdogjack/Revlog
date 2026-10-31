@@ -29,8 +29,8 @@ export function ServiceTypeSelect({
 
   return (
     <div className="space-y-4">
-      <label className="block text-sm">
-        <span className="text-steel">{label}</span>
+      <label className="block">
+        <span className="field-label">{label}</span>
         <select
           name="category"
           required
@@ -61,8 +61,8 @@ export function ServiceTypeSelect({
         </select>
       </label>
       {selected === NEW_TYPE && (
-        <label className="block text-sm">
-          <span className="text-steel">New service type</span>
+        <label className="block">
+          <span className="field-label">New service type</span>
           <input
             name="newType"
             required
@@ -72,7 +72,7 @@ export function ServiceTypeSelect({
             defaultValue={defaultNewType}
             className={className}
           />
-          <span className="mt-1 block text-xs text-steel">
+          <span className="field-hint">
             It&apos;ll show up in both service history and reminders.
           </span>
         </label>

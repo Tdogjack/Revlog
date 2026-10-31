@@ -57,10 +57,10 @@ async function NewService({ params, searchParams }: Pick<Props, "params" | "sear
 
   return (
     <>
-      <Link href={`/garage/${car.id}`} className="text-sm text-steel hover:text-chalk">
+      <Link href={`/garage/${car.id}`} className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
-      <h1 className="mt-4 text-2xl font-semibold">Log service</h1>
+      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Log service</h1>
       {source && (
         <p className="mt-2 rounded-md bg-graphite px-3 py-2 text-sm">
           Copied from {source.title} on {formatDate(source.servicedOn)}. Update the date and

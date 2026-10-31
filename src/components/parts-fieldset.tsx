@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { PartRow } from "@/lib/part-rows";
 
 const smallInput =
-  "mt-1 w-full rounded-md border border-graphite bg-carbon px-2 py-1.5 text-sm outline-none focus:border-redline";
+  "field mt-1 min-h-9 px-2 py-1.5 text-sm";
 
 type KeyedRow = PartRow & { key: number };
 
@@ -31,7 +31,7 @@ export function PartsFieldset({ initial = [], label }: { initial?: PartRow[]; la
 
   return (
     <fieldset className="space-y-2">
-      <legend className="text-sm text-steel">{label}</legend>
+      <legend className="field-label">{label}</legend>
       <input
         type="hidden"
         name="parts"
@@ -75,7 +75,7 @@ export function PartsFieldset({ initial = [], label }: { initial?: PartRow[]; la
               type="button"
               aria-label={`Remove part ${i + 1}`}
               onClick={() => setRows((rs) => rs.filter((r) => r.key !== row.key))}
-              className="mt-5 text-steel hover:text-overdue"
+              className="icon-btn icon-btn-danger mt-4"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
@@ -105,7 +105,7 @@ export function PartsFieldset({ initial = [], label }: { initial?: PartRow[]; la
       <button
         type="button"
         onClick={() => setRows((rs) => [...rs, blankRow()])}
-        className="inline-flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm hover:border-steel"
+        className="btn"
       >
         <Plus className="h-4 w-4" aria-hidden />
         Add part

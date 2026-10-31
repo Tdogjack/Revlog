@@ -56,11 +56,11 @@ export function EmailSettingsForm({
               inputMode="numeric"
               placeholder="e.g. 80"
               defaultValue={reminderPercent ?? ""}
-              className="w-24 rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline"
+              className="field w-24"
             />
             <span className="text-steel">% of the miles driven</span>
           </span>
-          <span className="mt-1 block text-xs text-steel">
+          <span className="field-hint">
             With 80%, a 5,000 mi oil change turns due soon (and emails you) at 4,000 mi. Leave blank
             for the default: 500 mi or 14 days before it&apos;s due.
           </span>
@@ -69,7 +69,7 @@ export function EmailSettingsForm({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-md bg-redline px-4 py-2 text-sm font-medium text-white hover:bg-redline-hover disabled:opacity-60"
+            className="btn btn-primary"
           >
             {pending ? "Saving…" : "Save"}
           </button>
@@ -81,7 +81,7 @@ export function EmailSettingsForm({
         <button
           type="submit"
           disabled={testPending}
-          className="rounded-md border border-graphite px-4 py-2 text-sm hover:border-steel disabled:opacity-60"
+          className="btn"
         >
           {testPending ? "Sending…" : "Send me a test email"}
         </button>
@@ -107,19 +107,19 @@ export function DeleteAccountForm({ action }: { action: Action }) {
         Permanently deletes your account, cars, photos, service history, mods, reminders, and parts.
         This can&apos;t be undone.
       </p>
-      <label className="block text-sm">
-        <span className="text-steel">Type DELETE to confirm</span>
+      <label className="block">
+        <span className="field-label">Type DELETE to confirm</span>
         <input
           name="confirm"
           autoComplete="off"
-          className="mt-1 w-full max-w-xs rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-overdue"
+          className="field mt-1 max-w-xs"
         />
       </label>
       <Feedback state={state} />
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-overdue-solid px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+        className="btn border-transparent bg-overdue-solid text-white hover:border-transparent hover:opacity-90"
       >
         {pending ? "Deleting…" : "Delete my account"}
       </button>

@@ -8,8 +8,7 @@ import { localToday } from "@/lib/local-date";
 import type { CustomType } from "@/lib/service-categories";
 import type { ServiceFormState } from "../actions";
 
-const inputClass =
-  "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
+const inputClass = "field mt-1";
 
 // Used for both logging and editing; `initial` holds an existing record's values.
 export function ServiceForm({
@@ -44,7 +43,7 @@ export function ServiceForm({
   return (
     <form
       action={formAction}
-      className="mt-6 space-y-4 rounded-xl border border-graphite bg-panel p-6"
+      className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6"
     >
       <div className="grid items-start gap-4 sm:grid-cols-2">
         <ServiceTypeSelect
@@ -56,8 +55,8 @@ export function ServiceForm({
           onChange={setCategory}
           className={inputClass}
         />
-        <label className="block text-sm">
-          <span className="text-steel">Date</span>
+        <label className="block">
+          <span className="field-label">Date</span>
           <input
             ref={dateRef}
             type="date"
@@ -69,8 +68,8 @@ export function ServiceForm({
         </label>
       </div>
 
-      <label className="block text-sm">
-        <span className="text-steel">Description (optional)</span>
+      <label className="block">
+        <span className="field-label">Description (optional)</span>
         <input
           name="title"
           placeholder="Full synthetic 0W-20 and filter"
@@ -80,8 +79,8 @@ export function ServiceForm({
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="text-steel">{needsMileage ? "Mileage" : "Mileage (optional)"}</span>
+        <label className="block">
+          <span className="field-label">{needsMileage ? "Mileage" : "Mileage (optional)"}</span>
           <input
             name="mileage"
             inputMode="numeric"
@@ -90,13 +89,13 @@ export function ServiceForm({
             className={inputClass}
           />
           {needsMileage && (
-            <span className="mt-1 block text-xs text-steel">
+            <span className="field-hint">
               Leave blank to use the current {currentMileage.toLocaleString("en-US")} mi.
             </span>
           )}
         </label>
-        <label className="block text-sm">
-          <span className="text-steel">Cost (optional)</span>
+        <label className="block">
+          <span className="field-label">Cost (optional)</span>
           <input
             name="cost"
             inputMode="decimal"
@@ -104,12 +103,12 @@ export function ServiceForm({
             defaultValue={v.cost}
             className={inputClass}
           />
-          <span className="mt-1 block text-xs text-steel">Leave blank to use the parts total.</span>
+          <span className="field-hint">Leave blank to use the parts total.</span>
         </label>
       </div>
 
-      <label className="block text-sm">
-        <span className="text-steel">Shop (optional)</span>
+      <label className="block">
+        <span className="field-label">Shop (optional)</span>
         <input
           name="shop"
           placeholder="Did it myself"
@@ -118,8 +117,8 @@ export function ServiceForm({
         />
       </label>
 
-      <label className="block text-sm">
-        <span className="text-steel">Notes (optional)</span>
+      <label className="block">
+        <span className="field-label">Notes (optional)</span>
         <textarea name="notes" rows={3} defaultValue={v.notes} className={inputClass} />
       </label>
 
@@ -134,7 +133,7 @@ export function ServiceForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-redline py-2.5 font-medium text-white hover:bg-redline-hover disabled:opacity-60"
+        className="btn btn-primary btn-lg w-full"
       >
         {pending ? "Saving…" : submitLabel}
       </button>

@@ -2,7 +2,8 @@ import { Car } from "lucide-react";
 
 type Props = { src?: string | null; alt: string; className?: string };
 
-// Square car photo, falling back to a car icon when there isn't one.
+// Car photo, falling back to a car icon when there isn't one. The size and
+// aspect ratio come from `className`.
 export function VehiclePhoto({ src, alt, className = "h-14 w-14" }: Props) {
   if (!src) {
     return (

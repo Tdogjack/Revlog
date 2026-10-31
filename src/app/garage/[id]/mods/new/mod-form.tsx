@@ -7,8 +7,7 @@ import { localToday } from "@/lib/local-date";
 import { MOD_CATEGORIES, MOD_STATUSES } from "@/lib/mod-categories";
 import type { ModFormState } from "../actions";
 
-const inputClass =
-  "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
+const inputClass = "field mt-1";
 
 // Used for both adding and editing; `initial` holds an existing mod's values.
 export function ModForm({
@@ -39,11 +38,11 @@ export function ModForm({
   return (
     <form
       action={formAction}
-      className="mt-6 space-y-4 rounded-xl border border-graphite bg-panel p-6"
+      className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6"
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="text-steel">Part</span>
+        <label className="block">
+          <span className="field-label">Part</span>
           <input
             name="part"
             required
@@ -52,15 +51,15 @@ export function ModForm({
             className={inputClass}
           />
         </label>
-        <label className="block text-sm">
-          <span className="text-steel">Brand (optional)</span>
+        <label className="block">
+          <span className="field-label">Brand (optional)</span>
           <input name="brand" placeholder="K&N" defaultValue={v.brand} className={inputClass} />
         </label>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="text-steel">Category</span>
+        <label className="block">
+          <span className="field-label">Category</span>
           <select
             name="category"
             required
@@ -74,8 +73,8 @@ export function ModForm({
             ))}
           </select>
         </label>
-        <label className="block text-sm">
-          <span className="text-steel">Status</span>
+        <label className="block">
+          <span className="field-label">Status</span>
           <select
             name="status"
             value={status}
@@ -93,8 +92,8 @@ export function ModForm({
 
       {status !== "planned" && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm">
-            <span className="text-steel">Install date (optional)</span>
+          <label className="block">
+            <span className="field-label">Install date (optional)</span>
             <input
               ref={dateRef}
               type="date"
@@ -103,8 +102,8 @@ export function ModForm({
               className={inputClass}
             />
           </label>
-          <label className="block text-sm">
-            <span className="text-steel">Mileage at install (optional)</span>
+          <label className="block">
+            <span className="field-label">Mileage at install (optional)</span>
             <input
               name="installedMileage"
               inputMode="numeric"
@@ -116,8 +115,8 @@ export function ModForm({
         </div>
       )}
 
-      <label className="block text-sm">
-        <span className="text-steel">
+      <label className="block">
+        <span className="field-label">
           {status === "planned" ? "Estimated cost (optional)" : "Cost (optional)"}
         </span>
         <input
@@ -127,11 +126,11 @@ export function ModForm({
           defaultValue={v.cost}
           className={inputClass}
         />
-        <span className="mt-1 block text-xs text-steel">Leave blank to use the parts total.</span>
+        <span className="field-hint">Leave blank to use the parts total.</span>
       </label>
 
-      <label className="block text-sm">
-        <span className="text-steel">Notes (optional)</span>
+      <label className="block">
+        <span className="field-label">Notes (optional)</span>
         <textarea
           name="notes"
           rows={3}
@@ -155,7 +154,7 @@ export function ModForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-redline py-2.5 font-medium text-white hover:bg-redline-hover disabled:opacity-60"
+        className="btn btn-primary btn-lg w-full"
       >
         {pending ? "Saving…" : submitLabel}
       </button>

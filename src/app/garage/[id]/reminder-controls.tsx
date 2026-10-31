@@ -14,11 +14,12 @@ export function ReminderControls({
   reminderId: string;
 }) {
   return (
-    <div className="mt-2 flex items-center gap-3">
+    <div className="mt-2 -ml-2 flex items-center">
       <Link
         href={`/garage/${vehicleId}/reminders/${reminderId}/edit`}
         aria-label="Edit reminder"
-        className="text-steel hover:text-chalk"
+        title="Edit reminder"
+        className="icon-btn"
       >
         <Pencil className="h-4 w-4" aria-hidden />
       </Link>
@@ -31,7 +32,8 @@ export function ReminderControls({
         <button
           type="submit"
           aria-label="Delete reminder"
-          className="text-steel hover:text-overdue"
+          title="Delete reminder"
+          className="icon-btn icon-btn-danger"
         >
           <Trash2 className="h-4 w-4" aria-hidden />
         </button>
@@ -63,17 +65,24 @@ export function MileageEditor({
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="group flex items-center gap-1.5 font-mono text-sm text-steel hover:text-chalk"
+        className="group -mx-2 flex items-baseline gap-2 rounded-md px-2 py-1 text-left hover:bg-panel"
         title="Update mileage"
+        aria-label={`Odometer ${currentMileage.toLocaleString("en-US")} miles, update mileage`}
       >
-        {currentMileage.toLocaleString("en-US")} mi
-        <Pencil className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" aria-hidden />
+        <span className="readout text-5xl leading-none">
+          {currentMileage.toLocaleString("en-US")}
+        </span>
+        <span className="text-sm text-steel">mi</span>
+        <Pencil
+          className="h-4 w-4 self-center text-steel opacity-60 group-hover:opacity-100"
+          aria-hidden
+        />
       </button>
     );
   }
 
   return (
-    <form action={formAction} className="flex flex-col items-end gap-1">
+    <form action={formAction} className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
         <input
           name="currentMileage"
@@ -81,19 +90,15 @@ export function MileageEditor({
           autoFocus
           defaultValue={currentMileage.toString()}
           aria-label="Current mileage"
-          className="w-28 rounded-md border border-graphite bg-carbon px-2 py-1 text-right font-mono text-sm outline-none focus:border-redline"
+          className="field readout w-36 text-2xl"
         />
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-redline px-2.5 py-1 text-xs font-medium text-white hover:bg-redline-hover disabled:opacity-60"
-        >
+        <button type="submit" disabled={pending} className="btn btn-primary">
           Save
         </button>
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="text-xs text-steel hover:text-chalk"
+          className="btn border-transparent text-steel hover:text-chalk"
         >
           Cancel
         </button>

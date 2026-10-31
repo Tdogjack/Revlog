@@ -16,11 +16,11 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 export default function CostsPage() {
   return (
     <>
-      <h1 className="text-2xl font-semibold">Costs</h1>
-      <p className="mt-1 text-sm text-steel">
+      <h1 className="font-display text-4xl leading-none font-semibold">Costs</h1>
+      <p className="mt-2 text-steel">
         What you&apos;ve spent on service and installed mods, from your records.
       </p>
-      <Suspense fallback={<p className="mt-6 text-sm text-steel">Adding it up…</p>}>
+      <Suspense fallback={<CostsSkeleton />}>
         <CostDetails />
       </Suspense>
     </>
@@ -37,8 +37,8 @@ async function CostDetails() {
 
   if (items.length === 0) {
     return (
-      <div className="mt-6 rounded-xl border border-dashed border-graphite p-10 text-center">
-        <p className="font-medium">Nothing to add up yet.</p>
+      <div className="mt-6 rounded-lg border border-dashed border-graphite px-6 py-12 text-center">
+        <p className="font-display text-2xl font-semibold">Nothing to add up yet.</p>
         <p className="mt-1 text-sm text-steel">
           Costs appear here as you log service and installed mods with a price.
         </p>
@@ -76,7 +76,7 @@ async function CostDetails() {
   const topCategories = [...byCategory.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
 
   return (
-    <div className="mt-6 space-y-4">
+    <div className="mt-8 space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="All time" value={money.format(total)} />
         <Stat label="Last 12 months" value={money.format(lastYear)} />
@@ -87,17 +87,17 @@ async function CostDetails() {
         />
       </div>
 
-      <section className="rounded-xl border border-graphite bg-panel p-5">
-        <h2 className="font-medium">Spending by month</h2>
+      <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+        <h2 className="font-display text-2xl leading-tight font-semibold">Spending by month</h2>
         <div className="mt-4">
           <CostChart months={months} />
         </div>
       </section>
 
-      <div className="grid items-start gap-4 md:grid-cols-2">
-        <section className="rounded-xl border border-graphite bg-panel p-5">
-          <h2 className="font-medium">By car</h2>
-          <table className="mt-3 w-full text-left text-sm">
+      <div className="grid items-start gap-6 md:grid-cols-2">
+        <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+          <h2 className="font-display text-2xl leading-tight font-semibold">By car</h2>
+          <table className="mt-4 w-full text-left text-sm tabular-nums">
             <thead className="text-xs text-steel">
               <tr>
                 <th className="py-1 font-normal">Car</th>
@@ -108,31 +108,31 @@ async function CostDetails() {
             </thead>
             <tbody>
               {perCar.map(({ car, service, mods }) => (
-                <tr key={car.id} className="border-t border-graphite">
-                  <td className="py-2">
+                <tr key={car.id} className="border-t border-rule">
+                  <td className="py-3">
                     <Link href={`/garage/${car.id}`} className="hover:text-redline">
                       {car.nickname ?? vehicleName(car)}
                     </Link>
                   </td>
-                  <td className="py-2 text-right">{money.format(service)}</td>
-                  <td className="py-2 text-right">{money.format(mods)}</td>
-                  <td className="py-2 text-right font-medium">{money.format(service + mods)}</td>
+                  <td className="py-3 text-right">{money.format(service)}</td>
+                  <td className="py-3 text-right">{money.format(mods)}</td>
+                  <td className="py-3 text-right font-medium">{money.format(service + mods)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </section>
 
-        <section className="rounded-xl border border-graphite bg-panel p-5">
-          <h2 className="font-medium">Biggest categories</h2>
-          <ul className="mt-3">
+        <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+          <h2 className="font-display text-2xl leading-tight font-semibold">Biggest categories</h2>
+          <ul className="mt-4">
             {topCategories.map(([label, amount]) => (
               <li
                 key={label}
-                className="flex items-baseline justify-between gap-3 border-t border-graphite py-2 text-sm"
+                className="flex items-baseline justify-between gap-3 border-t border-rule py-3 text-sm first:border-t-0"
               >
                 <span>{label}</span>
-                <span className="font-medium">{money.format(amount)}</span>
+                <span className="font-medium tabular-nums">{money.format(amount)}</span>
               </li>
             ))}
           </ul>
@@ -144,9 +144,22 @@ async function CostDetails() {
 
 function Stat({ label, value, small }: { label: string; value: string; small?: boolean }) {
   return (
-    <div className="rounded-xl border border-graphite bg-panel p-5">
-      <p className="text-xs text-steel">{label}</p>
-      <p className={`mt-1 font-semibold ${small ? "text-lg" : "text-2xl"}`}>{value}</p>
+    <div className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+      <p className="text-sm text-steel">{label}</p>
+      <p className={`readout mt-2 leading-none ${small ? "text-2xl" : "text-4xl"}`}>{value}</p>
+    </div>
+  );
+}
+
+function CostsSkeleton() {
+  return (
+    <div className="mt-8 space-y-6" aria-busy="true" aria-label="Loading costs">
+      <div className="grid gap-4 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="skeleton h-28" />
+        ))}
+      </div>
+      <div className="skeleton h-72" />
     </div>
   );
 }
