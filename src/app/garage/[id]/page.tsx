@@ -85,7 +85,7 @@ function DetailsHint({ notes, parts, photos }: { notes: boolean; parts: number; 
     photos > 0 && `${photos} ${photos === 1 ? "photo" : "photos"}`,
   ].filter(Boolean);
   return (
-    <p className="mt-1 flex items-center gap-1 text-xs text-steel group-hover:text-chalk">
+    <p className="mt-1 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
       <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden />
       {bits.length > 0 ? bits.join(" · ") : "Add parts or photos"}
     </p>
@@ -300,7 +300,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                               <p className="font-medium">
                                 {categoryLabel(group[0].category, customTypes)}
                               </p>
-                              <p className="mt-1 flex items-center gap-1 text-xs text-steel group-hover/type:text-chalk">
+                              <p className="mt-1 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
                                 <ChevronDown
                                   className="h-3.5 w-3.5 transition-transform group-open/type:rotate-180"
                                   aria-hidden
@@ -486,7 +486,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                           {describeDue(result)}
                         </p>
                         <ChevronDown
-                          className="mt-1 h-3.5 w-3.5 text-steel transition-transform group-open:rotate-180 group-hover:text-chalk"
+                          className="mt-1 h-3.5 w-3.5 text-steel transition-transform group-open:rotate-180 hover:text-chalk"
                           aria-label="Details"
                         />
                       </summary>
