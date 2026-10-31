@@ -22,6 +22,29 @@ export const SERVICE_CATEGORIES = [
   { value: "other", label: "Other" },
 ] as const;
 
+// Built-in types usually done by the odometer, so logging one needs a mileage.
+const MILEAGE_TYPES = [
+  "oil",
+  "rotation",
+  "tires",
+  "brakes",
+  "air-filter",
+  "coolant",
+  "transmission",
+  "spark-plugs",
+];
+
+// Mileage-based types for a car: the built-in ones, plus any type the car
+// has a mileage-interval reminder for (which covers custom types).
+export function mileageTypes(
+  reminders: { serviceCategory: string | null; intervalMiles: number | null }[],
+) {
+  const fromReminders = reminders.flatMap((r) =>
+    r.serviceCategory && r.intervalMiles != null ? [r.serviceCategory] : [],
+  );
+  return [...new Set([...MILEAGE_TYPES, ...fromReminders])];
+}
+
 // Dropdown value that reveals the "name your new type" field.
 export const NEW_TYPE = "__new";
 

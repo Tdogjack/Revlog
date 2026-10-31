@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { photoPathsFor, removePhotoFiles } from "@/lib/gallery";
 import { parsePartRows, settlePartsCost, syncParts } from "@/lib/parts";
-import { categoryLabel } from "@/lib/service-categories";
+import { listReminders } from "@/lib/reminder-store";
+import { categoryLabel, mileageTypes } from "@/lib/service-categories";
 import {
   createServiceRecord,
   deleteServiceRecord,
@@ -13,6 +14,7 @@ import {
   updateServiceRecord,
 } from "@/lib/service-records";
 import { listServiceTypes, resolveServiceType } from "@/lib/service-types";
+import { getVehicle } from "@/lib/vehicles";
 
 export type ServiceFormState = { error?: string; values?: Record<string, string> } | undefined;
 
@@ -54,7 +56,16 @@ export async function addServiceRecord(
   const result = await parseServiceForm(user.id, formData);
   if ("error" in result) return { error: result.error, values: result.raw };
 
-  const record = await createServiceRecord(user.id, vehicleId, result.data);
+  // Mileage-based services always get a mileage; blank means the car's current one.
+  const car = await getVehicle(user.id, vehicleId);
+  if (!car) return { error: "That car wasn't found.", values: result.raw };
+  let data = result.data;
+  if (data.mileage == null) {
+    const types = mileageTypes(await listReminders(user.id, vehicleId));
+    if (types.includes(data.category)) data = { ...data, mileage: car.currentMileage };
+  }
+
+  const record = await createServiceRecord(user.id, vehicleId, data);
   if (!record) return { error: "That car wasn't found.", values: result.raw };
   const parent = { serviceRecordId: record.id };
   const toCheck = await syncParts(user.id, vehicleId, parent, result.parts);

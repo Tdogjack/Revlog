@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { toPartRows } from "@/lib/part-rows";
 import { listPartsForParent } from "@/lib/parts";
+import { listReminders } from "@/lib/reminder-store";
+import { mileageTypes } from "@/lib/service-categories";
 import { getServiceRecord } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
@@ -41,6 +43,7 @@ async function NewService({ params, searchParams }: Pick<Props, "params" | "sear
     listServiceTypes(user.id),
   ]);
   if (!car) notFound();
+  const reminders = await listReminders(user.id, car.id);
 
   // "Copy" starts from an existing record: everything carries over except the
   // date (today) and mileage (blank), which are what usually change.
@@ -65,6 +68,7 @@ async function NewService({ params, searchParams }: Pick<Props, "params" | "sear
         action={addServiceRecord.bind(null, car.id)}
         currentMileage={car.currentMileage}
         customTypes={customTypes}
+        mileageTypes={mileageTypes(reminders)}
         initial={
           source
             ? {
