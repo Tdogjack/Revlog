@@ -1,18 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import {
-  Bell,
-  Check,
-  ChevronDown,
-  Copy,
-  Download,
-  Pencil,
-  Plus,
-  Share2,
-  Wrench,
-  Zap,
-} from "lucide-react";
+import { Check, ChevronDown, Copy, Download, Pencil, Plus, Share2 } from "lucide-react";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
 import { DeletePostButton } from "@/app/community/delete-post-button";
 import { requireUser } from "@/lib/auth";
@@ -47,10 +36,10 @@ import { StatusBadge } from "@/components/status-badge";
 export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
   return (
     <>
-      <Link href="/garage" className="text-sm text-steel hover:text-chalk">
+      <Link href="/garage" className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
         ← Back to garage
       </Link>
-      <Suspense fallback={<p className="mt-6 text-sm text-steel">Loading car…</p>}>
+      <Suspense fallback={<CarSkeleton />}>
         <VehicleDetails params={params} />
       </Suspense>
     </>
@@ -83,6 +72,14 @@ function formatMonth(isoDate: string) {
 // Records and mods show one summary line; notes, parts, and photos open on click.
 const summaryClass = "cursor-pointer list-none [&::-webkit-details-marker]:hidden";
 
+// Sections are quiet L1 panels; rows inside are split by hairlines.
+const panelClass = "rounded-lg border border-graphite bg-panel p-5 sm:p-6";
+const sectionHeadClass = "flex flex-wrap items-start justify-between gap-3";
+const headingClass = "font-display text-2xl leading-tight font-semibold";
+const rowClass =
+  "-mx-3 rounded-md border-t border-rule px-3 py-4 first:border-t-0 hover:bg-graphite/40";
+const dateClass = "shrink-0 pt-0.5 text-sm text-steel tabular-nums sm:w-24";
+
 function DetailsHint({ notes, parts, photos }: { notes: boolean; parts: number; photos: number }) {
   const bits = [
     notes && "notes",
@@ -90,7 +87,7 @@ function DetailsHint({ notes, parts, photos }: { notes: boolean; parts: number; 
     photos > 0 && `${photos} ${photos === 1 ? "photo" : "photos"}`,
   ].filter(Boolean);
   return (
-    <p className="mt-1 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
+    <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
       <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden />
       {bits.length > 0 ? bits.join(" · ") : "Add parts or photos"}
     </p>
@@ -153,18 +150,14 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const renderRecord = (r: (typeof records)[number]) => (
     <li
       key={r.id}
-      className="flex gap-4 border-t border-graphite py-3 -mx-2 rounded-md px-2 hover:bg-graphite/40"
+      className={`${rowClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}
     >
-      <div className="w-24 shrink-0 pt-0.5 font-mono text-xs text-steel">
-        {formatDate(r.servicedOn)}
-      </div>
+      <div className={dateClass}>{formatDate(r.servicedOn)}</div>
       <details className="group min-w-0 flex-1">
         <summary className={summaryClass}>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-baseline gap-x-2">
             <p className="font-medium">{r.title}</p>
-            <span className="rounded bg-graphite px-2 py-0.5 text-xs">
-              {categoryLabel(r.category, customTypes)}
-            </span>
+            <p className="text-sm text-steel">{categoryLabel(r.category, customTypes)}</p>
           </div>
           <p className="mt-1 text-sm text-steel">
             {[
@@ -196,19 +189,20 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
           max={PHOTO_LIMITS.record}
           addLabel="Add receipt photos"
         />
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-2 -ml-2 flex items-center">
           <Link
             href={`/garage/${car.id}/service/new?copy=${r.id}`}
             aria-label="Copy record"
             title="Log again (copies parts too)"
-            className="text-steel hover:text-chalk"
+            className="icon-btn"
           >
             <Copy className="h-4 w-4" aria-hidden />
           </Link>
           <Link
             href={`/garage/${car.id}/service/${r.id}/edit`}
             aria-label="Edit record"
-            className="text-steel hover:text-chalk"
+            title="Edit record"
+            className="icon-btn"
           >
             <Pencil className="h-4 w-4" aria-hidden />
           </Link>
@@ -221,58 +215,63 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   return (
     <>
       <title>{`${car.nickname ?? vehicleName(car)} · Revlog`}</title>
-      <div className="mt-4 flex flex-col gap-5 rounded-xl border border-graphite bg-panel p-6 sm:flex-row sm:items-center">
+      <header className="mt-6 flex flex-col gap-6 border-b border-graphite pb-8 sm:flex-row sm:items-end">
         <div className="flex flex-col items-start gap-2">
           <ProfilePhoto src={photoUrl ?? null} alt={vehicleName(car)} />
           <PhotoControls vehicleId={car.id} hasPhoto={!!car.photoPath} />
         </div>
-        <div className="flex-1">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <div>
-              <h1 className="text-2xl font-semibold">{car.nickname ?? vehicleName(car)}</h1>
-              {car.nickname && <p className="mt-1 text-steel">{vehicleName(car)}</p>}
-            </div>
-            <MileageEditor vehicleId={car.id} currentMileage={car.currentMileage} />
+        <div className="flex min-w-0 flex-1 flex-col gap-5 sm:pb-8">
+          <div>
+            <h1 className="font-display text-4xl leading-none font-semibold sm:text-5xl">
+              {car.nickname ?? vehicleName(car)}
+            </h1>
+            {car.nickname && <p className="mt-2 text-steel">{vehicleName(car)}</p>}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-            {car.vin && <p className="font-mono text-xs text-steel">VIN {car.vin}</p>}
-            {car.builtOn && (
-              <p className="font-mono text-xs text-steel">Built {formatMonth(car.builtOn)}</p>
-            )}
-            <Link
-              href={`/garage/${car.id}/edit`}
-              className="flex items-center gap-1 rounded-md border border-graphite px-2.5 py-1 text-xs font-medium hover:border-steel"
-            >
-              <Pencil className="h-3.5 w-3.5" aria-hidden />
-              Edit car
-            </Link>
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+            <MileageEditor vehicleId={car.id} currentMileage={car.currentMileage} />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              {car.vin && (
+                <p className="text-xs text-steel">
+                  VIN <span className="font-mono text-chalk/80">{car.vin}</span>
+                </p>
+              )}
+              {car.builtOn && (
+                <p className="text-xs text-steel">Built {formatMonth(car.builtOn)}</p>
+              )}
+              <Link href={`/garage/${car.id}/edit`} className="btn">
+                <Pencil className="h-3.5 w-3.5" aria-hidden />
+                Edit car
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="mt-6 grid items-start gap-4 md:grid-cols-3">
-        <div className="space-y-4 md:col-span-2">
-          <section className="rounded-xl border border-graphite bg-panel p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 font-medium">
-                <Wrench className="h-4 w-4 text-redline" aria-hidden />
-                Service history
-              </h2>
+      <div className="mt-8 grid items-start gap-6 md:grid-cols-3">
+        <div className="space-y-6 md:col-span-2">
+          <section className={panelClass}>
+            <div className={sectionHeadClass}>
+              <div>
+                <h2 className={headingClass}>Service history</h2>
+                {records.length > 0 && (
+                  <p className="mt-1 text-sm text-steel">
+                    {records.length} {records.length === 1 ? "record" : "records"}
+                    {totalSpent > 0 && `, ${money.format(totalSpent)} spent`}
+                  </p>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 {records.length > 0 && (
                   <a
                     href={`/garage/${car.id}/history`}
-                    className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
+                    className="btn"
                     title="Download service history as a PDF"
                   >
                     <Download className="h-4 w-4" aria-hidden />
                     PDF
                   </a>
                 )}
-                <Link
-                  href={`/garage/${car.id}/service/new`}
-                  className="flex items-center gap-1 rounded-md bg-redline px-3 py-1.5 text-sm font-medium text-white hover:bg-redline-hover"
-                >
+                <Link href={`/garage/${car.id}/service/new`} className="btn btn-primary">
                   <Plus className="h-4 w-4" aria-hidden />
                   Log service
                 </Link>
@@ -285,28 +284,22 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
               </p>
             ) : (
               <>
-                <p className="mt-2 text-xs text-steel">
-                  {records.length} {records.length === 1 ? "record" : "records"}
-                  {totalSpent > 0 && ` · ${money.format(totalSpent)} spent`}
-                </p>
                 <ol className="mt-4">
                   {groupByType(records).map((group) =>
                     group.length === 1 ? (
                       renderRecord(group[0])
                     ) : (
-                      <li key={group[0].category} className="border-t border-graphite">
+                      <li key={group[0].category} className="border-t border-rule first:border-t-0">
                         <details className="group/type">
                           <summary
-                            className={`${summaryClass} flex gap-4 py-3 -mx-2 rounded-md px-2 hover:bg-graphite/40`}
+                            className={`${summaryClass} -mx-3 flex flex-col gap-1 rounded-md px-3 py-4 hover:bg-graphite/40 sm:flex-row sm:gap-4`}
                           >
-                            <div className="w-24 shrink-0 pt-0.5 font-mono text-xs text-steel">
-                              {formatDate(group[0].servicedOn)}
-                            </div>
+                            <div className={dateClass}>{formatDate(group[0].servicedOn)}</div>
                             <div className="min-w-0 flex-1">
                               <p className="font-medium">
                                 {categoryLabel(group[0].category, customTypes)}
                               </p>
-                              <p className="mt-1 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
+                              <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
                                 <ChevronDown
                                   className="h-3.5 w-3.5 transition-transform group-open/type:rotate-180"
                                   aria-hidden
@@ -322,7 +315,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                               </p>
                             </div>
                           </summary>
-                          <ol className="mb-3 ml-2 border-l border-graphite pl-4">
+                          <ol className="mb-3 ml-1 border-l border-graphite pl-4">
                             {group.map(renderRecord)}
                           </ol>
                         </details>
@@ -334,24 +327,28 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
             )}
           </section>
 
-          <section className="rounded-xl border border-graphite bg-panel p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 font-medium">
-                <Zap className="h-4 w-4 text-redline" aria-hidden />
-                Build
-              </h2>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/community/new?vehicle=${car.id}&build=1`}
-                  className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
-                >
+          <section className={panelClass}>
+            <div className={sectionHeadClass}>
+              <div>
+                <h2 className={headingClass}>Build</h2>
+                {carMods.length > 0 && (
+                  <p className="mt-1 text-sm text-steel">
+                    {[
+                      `${installed.length} installed`,
+                      installedSpent > 0 && `${money.format(installedSpent)} invested`,
+                      plannedCost > 0 && `${money.format(plannedCost)} planned`,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href={`/community/new?vehicle=${car.id}&build=1`} className="btn">
                   <Share2 className="h-4 w-4" aria-hidden />
                   {buildPostId ? "Update public build" : "Post public build"}
                 </Link>
-                <Link
-                  href={`/garage/${car.id}/mods/new`}
-                  className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
-                >
+                <Link href={`/garage/${car.id}/mods/new`} className="btn">
                   <Plus className="h-4 w-4" aria-hidden />
                   Add mod
                 </Link>
@@ -359,9 +356,15 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
             </div>
 
             {buildPostId && (
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-steel">
-                <span>Your public build is live.</span>
-                <Link href={`/community/${buildPostId}`} className="hover:text-chalk">
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-carbon/60 px-3 py-2 text-sm text-steel">
+                <span className="flex items-center gap-2 text-chalk">
+                  <span className="h-1.5 w-1.5 rounded-full bg-done" aria-hidden />
+                  Your public build is live.
+                </span>
+                <Link
+                  href={`/community/${buildPostId}`}
+                  className="underline-offset-4 hover:text-chalk hover:underline"
+                >
                   View post
                 </Link>
                 <DeletePostButton
@@ -390,21 +393,9 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
               </p>
             ) : (
               <>
-                <p className="mt-2 text-xs text-steel">
-                  {[
-                    `${installed.length} installed`,
-                    installedSpent > 0 && `${money.format(installedSpent)} invested`,
-                    plannedCost > 0 && `${money.format(plannedCost)} planned`,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
                 <ul className="mt-4">
                   {carMods.map((m) => (
-                    <li
-                      key={m.id}
-                      className="flex gap-4 border-t border-graphite py-3 -mx-2 rounded-md px-2 hover:bg-graphite/40"
-                    >
+                    <li key={m.id} className={`${rowClass} flex flex-col gap-2 sm:flex-row sm:gap-4`}>
                       <details className="group min-w-0 flex-1">
                         <summary className={summaryClass}>
                           <p
@@ -445,12 +436,12 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                           addLabel="Add mod photos"
                         />
                       </details>
-                      <div className="flex flex-col items-end gap-3">
+                      <div className="-ml-1 flex items-center gap-1 sm:ml-0 sm:flex-col sm:items-end">
                         <ModControls vehicleId={car.id} modId={m.id} status={m.status} />
                         {m.status === "installed" && (
                           <Link
                             href={`/community/new?vehicle=${car.id}&mod=${m.id}`}
-                            className="flex items-center gap-1 text-xs text-steel hover:text-chalk"
+                            className="flex min-h-9 items-center gap-1 px-1 text-xs text-steel hover:text-chalk"
                           >
                             <Share2 className="h-3.5 w-3.5" aria-hidden />
                             Share
@@ -466,16 +457,10 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
         </div>
 
         <div className="space-y-4">
-          <section className="rounded-xl border border-graphite bg-panel p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 font-medium">
-                <Bell className="h-4 w-4 text-redline" aria-hidden />
-                Reminders
-              </h2>
-              <Link
-                href={`/garage/${car.id}/reminders/new`}
-                className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
-              >
+          <section className={panelClass}>
+            <div className={sectionHeadClass}>
+              <h2 className={headingClass}>Reminders</h2>
+              <Link href={`/garage/${car.id}/reminders/new`} className="btn">
                 <Plus className="h-4 w-4" aria-hidden />
                 Add
               </Link>
@@ -488,10 +473,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
             ) : (
               <ul className="mt-4">
                 {carReminders.map(({ reminder: r, result }) => (
-                  <li
-                    key={r.id}
-                    className="flex gap-3 border-t border-graphite py-3 -mx-2 rounded-md px-2 hover:bg-graphite/40"
-                  >
+                  <li key={r.id} className={`${rowClass} flex gap-3`}>
                     <details className="group min-w-0 flex-1">
                       <summary className={summaryClass}>
                         <p className="font-medium">{r.task}</p>
@@ -539,7 +521,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                       {/* Opens Log service with this reminder's type filled in. */}
                       <Link
                         href={`/garage/${car.id}/service/new?reminder=${r.id}`}
-                        className="flex items-center gap-1 rounded-md border border-graphite px-2 py-1 text-xs hover:border-steel"
+                        className="btn min-h-8 px-2.5 text-xs"
                       >
                         <Check className="h-3.5 w-3.5" aria-hidden />
                         Done
@@ -555,5 +537,24 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
 
       <RemoveCar vehicleId={car.id} name={car.nickname ?? vehicleName(car)} />
     </>
+  );
+}
+
+// Placeholder shaped like the car header and its two columns.
+function CarSkeleton() {
+  return (
+    <div className="mt-6" aria-busy="true" aria-label="Loading car">
+      <div className="flex flex-col gap-6 border-b border-graphite pb-8 sm:flex-row sm:items-end">
+        <div className="skeleton aspect-[4/3] w-full sm:w-80" />
+        <div className="flex-1 space-y-4 sm:pb-8">
+          <div className="skeleton h-12 w-2/3" />
+          <div className="skeleton h-10 w-40" />
+        </div>
+      </div>
+      <div className="mt-8 grid gap-6 md:grid-cols-3">
+        <div className="skeleton h-80 md:col-span-2" />
+        <div className="skeleton h-80" />
+      </div>
+    </div>
   );
 }

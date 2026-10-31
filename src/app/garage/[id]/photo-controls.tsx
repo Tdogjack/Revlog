@@ -27,9 +27,9 @@ export function PhotoControls({ vehicleId, hasPhoto }: { vehicleId: string; hasP
 
   return (
     <div className="text-sm">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-4">
         <form ref={formRef} action={submit}>
-          <label className="cursor-pointer text-steel hover:text-chalk">
+          <label className="flex min-h-9 cursor-pointer items-center text-steel focus-within:text-chalk focus-within:underline hover:text-chalk">
             {pending ? "Uploading…" : hasPhoto ? "Change photo" : "Add a photo"}
             <input
               type="file"
@@ -43,7 +43,7 @@ export function PhotoControls({ vehicleId, hasPhoto }: { vehicleId: string; hasP
         </form>
         {hasPhoto && !pending && (
           <form action={removeVehiclePhoto.bind(null, vehicleId)}>
-            <button type="submit" className="text-steel hover:text-overdue">
+            <button type="submit" className="min-h-9 text-steel hover:text-overdue">
               Remove
             </button>
           </form>

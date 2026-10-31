@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Search, Share2, Users, X } from "lucide-react";
+import { Search, Share2, X } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { FEED_PAGE, listPosts } from "@/lib/community";
 import { DEFAULT_SORT, isPostSort, type PostSort } from "@/lib/post-sorts";
@@ -19,21 +19,15 @@ export default function CommunityPage({ searchParams }: PageProps<"/community">)
     <div className="mx-auto max-w-2xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold">
-            <Users className="h-6 w-6 text-redline" aria-hidden />
-            Community
-          </h1>
-          <p className="mt-1 text-sm text-steel">Builds and fresh mods from Revlog drivers.</p>
+          <h1 className="font-display text-4xl leading-none font-semibold">Community</h1>
+          <p className="mt-2 text-steel">Builds and fresh mods from Revlog drivers.</p>
         </div>
-        <Link
-          href="/community/new"
-          className="flex items-center gap-1 rounded-md bg-redline px-3 py-2 text-sm font-medium text-white hover:bg-redline-hover"
-        >
+        <Link href="/community/new" className="btn btn-primary">
           <Share2 className="h-4 w-4" aria-hidden />
           Share
         </Link>
       </div>
-      <Suspense fallback={<p className="mt-6 text-sm text-steel">Loading posts…</p>}>
+      <Suspense fallback={<FeedSkeleton />}>
         <Feed searchParams={searchParams} />
       </Suspense>
     </div>
@@ -72,34 +66,37 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
   const controls = (
     <>
       {/* A plain GET form, so searches are links you can refresh or share. */}
-      <form action="/community" role="search" className="relative mt-5">
-        <Search
-          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-steel"
-          aria-hidden
-        />
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          key={q}
-          maxLength={100}
-          placeholder="Search posts, cars, mods, or @usernames"
-          aria-label="Search the community"
-          className="w-full rounded-full border border-graphite bg-carbon py-2 pr-10 pl-9 text-sm outline-none focus:border-redline [&::-webkit-search-cancel-button]:hidden"
-        />
-        {tag && <input type="hidden" name="tag" value={tag} />}
-        {sort !== DEFAULT_SORT && <input type="hidden" name="sort" value={sort} />}
-        {q && (
-          <Link
-            href={feedHref({ tag, sort })}
-            aria-label="Clear search"
-            className="absolute top-1/2 right-3 -translate-y-1/2 text-steel hover:text-chalk"
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </Link>
-        )}
-      </form>
-      <nav aria-label="Filter by tag" className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-6 flex items-center gap-2">
+        <form action="/community" role="search" className="relative flex-1">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-steel"
+            aria-hidden
+          />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            key={q}
+            maxLength={100}
+            placeholder="Search posts, cars, mods, or @usernames"
+            aria-label="Search the community"
+            className="field pr-10 pl-9 text-sm [&::-webkit-search-cancel-button]:hidden"
+          />
+          {tag && <input type="hidden" name="tag" value={tag} />}
+          {sort !== DEFAULT_SORT && <input type="hidden" name="sort" value={sort} />}
+          {q && (
+            <Link
+              href={feedHref({ tag, sort })}
+              aria-label="Clear search"
+              className="icon-btn absolute top-1/2 right-0.5 -translate-y-1/2"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </Link>
+          )}
+        </form>
+        <SortMenu sort={sort} tag={tag} q={q} />
+      </div>
+      <nav aria-label="Filter by tag" className="mt-3 flex flex-wrap gap-1.5">
         {[{ value: undefined, label: "All" }, ...POST_TAGS].map((t) => {
           const active = t.value === tag;
           return (
@@ -107,16 +104,13 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
               key={t.label}
               href={feedHref({ q, tag: t.value, sort })}
               aria-current={active ? "page" : undefined}
-              className={`rounded-full border px-3 py-1 text-xs ${active ? "border-redline bg-redline/15 text-chalk" : "border-graphite text-steel hover:border-steel hover:text-chalk"}`}
+              className={`inline-flex min-h-8 items-center rounded-md border px-3 text-sm ${active ? "border-chalk/60 bg-graphite text-chalk" : "border-transparent text-steel hover:bg-graphite/60 hover:text-chalk"}`}
             >
               {t.label}
             </Link>
           );
         })}
       </nav>
-      <div className="mt-4">
-        <SortMenu sort={sort} tag={tag} q={q} />
-      </div>
     </>
   );
 
@@ -124,8 +118,8 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
     return (
       <>
         {controls}
-        <div className="mt-4 rounded-xl border border-dashed border-graphite p-10 text-center">
-          <p className="font-medium">
+        <div className="mt-6 rounded-lg border border-dashed border-graphite px-6 py-12 text-center">
+          <p className="font-display text-2xl leading-tight font-semibold">
             {page > 1
               ? "No more posts."
               : q
@@ -149,27 +143,37 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
   return (
     <>
       {controls}
-      <div className="mt-4 space-y-4">
+      <div className="mt-6 space-y-4">
         {feed.map((post) => (
           <PostCard key={post.id} post={post} signedIn={!!user} />
         ))}
       </div>
       {(page > 1 || feed.length === FEED_PAGE) && (
-        <nav aria-label="Pages" className="mt-6 flex justify-between text-sm text-steel">
+        <nav aria-label="Pages" className="mt-8 flex justify-between text-sm">
           {page > 1 ? (
-            <Link href={feedHref({ q, tag, sort, page: page - 1 })} className="hover:text-chalk">
+            <Link href={feedHref({ q, tag, sort, page: page - 1 })} className="btn">
               ← Previous
             </Link>
           ) : (
             <span />
           )}
           {feed.length === FEED_PAGE && (
-            <Link href={feedHref({ q, tag, sort, page: page + 1 })} className="hover:text-chalk">
+            <Link href={feedHref({ q, tag, sort, page: page + 1 })} className="btn">
               More posts →
             </Link>
           )}
         </nav>
       )}
     </>
+  );
+}
+
+function FeedSkeleton() {
+  return (
+    <div className="mt-6 space-y-4" aria-busy="true" aria-label="Loading posts">
+      <div className="skeleton h-10" />
+      <div className="skeleton h-96" />
+      <div className="skeleton h-96" />
+    </div>
   );
 }

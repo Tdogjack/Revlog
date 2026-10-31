@@ -24,10 +24,10 @@ export async function generateMetadata({
 export default function PostPage({ params, searchParams }: PageProps<"/community/[postId]">) {
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/community" className="text-sm text-steel hover:text-chalk">
+      <Link href="/community" className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
         ← Back to community
       </Link>
-      <Suspense fallback={<p className="mt-6 text-sm text-steel">Loading post…</p>}>
+      <Suspense fallback={<div className="skeleton mt-4 h-[32rem]" aria-busy="true" />}>
         <PostDetails params={params} searchParams={searchParams} />
       </Suspense>
     </div>
@@ -59,11 +59,11 @@ async function PostDetails({
       <PostCard post={post} link={false} signedIn={!!user} />
 
       {buildList.length > 0 && (
-        <section className="rounded-xl border border-graphite bg-panel p-5">
-          <h2 className="font-medium">Build list</h2>
+        <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+          <h2 className="font-display text-2xl leading-tight font-semibold">Build list</h2>
           <ul className="mt-3">
             {buildList.map((m) => (
-              <li key={m.id} className="border-t border-graphite py-2 text-sm">
+              <li key={m.id} className="border-t border-rule py-3 text-sm first:border-t-0">
                 <div className="flex items-baseline justify-between gap-3">
                   <span>{[m.brand, m.part].filter(Boolean).join(" ")}</span>
                   <span className="text-xs text-steel">{modCategoryLabel(m.category)}</span>
@@ -76,8 +76,8 @@ async function PostDetails({
       )}
 
       {post.kind === "mod" && sharedParts.length > 0 && (
-        <section className="rounded-xl border border-graphite bg-panel p-5">
-          <h2 className="font-medium">Parts</h2>
+        <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+          <h2 className="font-display text-2xl leading-tight font-semibold">Parts</h2>
           <SharedParts parts={sharedParts} />
         </section>
       )}
@@ -87,7 +87,7 @@ async function PostDetails({
           <div className="flex items-center gap-4">
             <Link
               href={`/community/new?vehicle=${post.vehicleId}&build=1`}
-              className="text-sm text-steel hover:text-chalk"
+              className="btn"
             >
               Update build
             </Link>

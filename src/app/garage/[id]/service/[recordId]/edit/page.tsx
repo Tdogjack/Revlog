@@ -39,10 +39,10 @@ async function EditService({ params }: Pick<Props, "params">) {
 
   return (
     <>
-      <Link href={`/garage/${car.id}`} className="text-sm text-steel hover:text-chalk">
+      <Link href={`/garage/${car.id}`} className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
-      <h1 className="mt-4 text-2xl font-semibold">Edit service</h1>
+      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Edit service</h1>
       <ServiceForm
         action={editServiceRecord.bind(null, car.id, record.id)}
         currentMileage={car.currentMileage}

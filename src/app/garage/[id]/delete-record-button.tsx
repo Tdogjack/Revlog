@@ -17,7 +17,12 @@ export function DeleteRecordButton({
         if (!confirm("Delete this service record?")) e.preventDefault();
       }}
     >
-      <button type="submit" aria-label="Delete record" className="text-steel hover:text-overdue">
+      <button
+        type="submit"
+        aria-label="Delete record"
+        title="Delete record"
+        className="icon-btn icon-btn-danger"
+      >
         <Trash2 className="h-4 w-4" aria-hidden />
       </button>
     </form>

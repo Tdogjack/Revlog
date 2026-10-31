@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "Share to the community · Revlog" };
 export default function NewPostPage({ searchParams }: PageProps<"/community/new">) {
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/community" className="text-sm text-steel hover:text-chalk">
+      <Link href="/community" className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
         ← Back to community
       </Link>
       <Suspense fallback={<p className="mt-6 text-sm text-steel">Loading…</p>}>
@@ -71,10 +71,10 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
   if (isBuild) {
     return (
       <>
-        <h1 className="mt-4 text-2xl font-semibold">
+        <h1 className="mt-4 font-display text-4xl leading-none font-semibold">
           {build ? "Update public build" : "Post public build"}
         </h1>
-        <p className="mt-1 text-sm text-steel">
+        <p className="mt-2 text-steel">
           {name}.{" "}
           {build
             ? "Changes show on your build post right away."
@@ -102,10 +102,10 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
 
   return (
     <>
-      <h1 className="mt-4 text-2xl font-semibold">
+      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">
         {mod ? "Share a new mod" : "Share to the community"}
       </h1>
-      <p className="mt-1 text-sm text-steel">
+      <p className="mt-2 text-steel">
         {mod ? `${modName} on your ${name}` : name}. Posts are public, with your username.
       </p>
       {!mod && (
@@ -140,8 +140,8 @@ async function ChooseCar({ userId }: { userId: string }) {
   const photoUrls = await signedPhotoUrls(cars.map((c) => c.photoPath));
   return (
     <>
-      <h1 className="mt-4 text-2xl font-semibold">Share to the community</h1>
-      <p className="mt-1 text-sm text-steel">
+      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Share to the community</h1>
+      <p className="mt-2 text-steel">
         Pick a car. Public builds and single mods are shared from the car&apos;s page.
       </p>
       {cars.length === 0 ? (
@@ -158,7 +158,7 @@ async function ChooseCar({ userId }: { userId: string }) {
             <li key={c.id}>
               <Link
                 href={`/community/new?vehicle=${c.id}`}
-                className="flex items-center gap-4 rounded-xl border border-graphite bg-panel p-4 hover:border-steel"
+                className="flex items-center gap-4 rounded-lg border border-graphite bg-panel p-3 transition-colors hover:border-steel"
               >
                 <VehiclePhoto
                   src={c.photoPath ? photoUrls.get(c.photoPath) : null}

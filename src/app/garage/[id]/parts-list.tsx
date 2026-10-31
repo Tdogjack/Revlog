@@ -21,7 +21,7 @@ import {
 } from "./parts/actions";
 
 const smallInput =
-  "mt-1 w-full rounded-md border border-graphite bg-carbon px-2 py-1.5 text-sm outline-none focus:border-redline";
+  "field mt-1 min-h-9 px-2 py-1.5 text-sm";
 
 function money(value: number, currency: string | null) {
   try {
@@ -115,14 +115,14 @@ function PartForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-redline px-2.5 py-1 text-xs font-medium text-white hover:bg-redline-hover disabled:opacity-60"
+          className="btn btn-primary min-h-8 px-2.5 text-xs"
         >
           {pending ? "Saving…" : submitLabel}
         </button>
         <button
           type="button"
           onClick={() => onDone()}
-          className="text-xs text-steel hover:text-chalk"
+          className="btn min-h-8 border-transparent px-2.5 text-xs text-steel hover:text-chalk"
         >
           Cancel
         </button>
@@ -221,7 +221,7 @@ function PartRow({ vehicleId, part }: { vehicleId: string; part: PartWithHistory
           </p>
           {error && <p className="mt-0.5 text-xs text-overdue">{error}</p>}
         </div>
-        <div className="flex shrink-0 items-center gap-2.5">
+        <div className="flex shrink-0 items-center">
           {part.url && (
             <button
               type="button"
@@ -234,7 +234,7 @@ function PartRow({ vehicleId, part }: { vehicleId: string; part: PartWithHistory
                   setCheckError(result?.error ?? null);
                 })
               }
-              className="text-steel hover:text-chalk disabled:opacity-50"
+              className="icon-btn disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} aria-hidden />
             </button>
@@ -242,8 +242,9 @@ function PartRow({ vehicleId, part }: { vehicleId: string; part: PartWithHistory
           <button
             type="button"
             aria-label="Edit part"
+            title="Edit part"
             onClick={() => setEditing(true)}
-            className="text-steel hover:text-chalk"
+            className="icon-btn"
           >
             <Pencil className="h-4 w-4" aria-hidden />
           </button>
@@ -256,7 +257,8 @@ function PartRow({ vehicleId, part }: { vehicleId: string; part: PartWithHistory
             <button
               type="submit"
               aria-label="Delete part"
-              className="text-steel hover:text-overdue"
+              title="Delete part"
+              className="icon-btn icon-btn-danger"
             >
               <Trash2 className="h-4 w-4" aria-hidden />
             </button>
@@ -319,7 +321,7 @@ export function PartsList({
             setAdding(true);
             setWarning(null);
           }}
-          className="mt-1 inline-flex items-center gap-1 text-xs text-steel hover:text-chalk"
+          className="mt-1 inline-flex min-h-9 items-center gap-1 text-xs text-steel hover:text-chalk"
         >
           <Plus className="h-3.5 w-3.5" aria-hidden />
           Add part
