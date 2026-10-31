@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   date,
+  index,
   integer,
   numeric,
   pgEnum,
@@ -293,6 +294,33 @@ export const postPhotos = pgTable(
     position: integer("position").notNull().default(0),
   },
   () => [ownerPolicy("post_photos")],
+).enableRLS();
+
+// One like per person per post.
+export const postLikes = pgTable(
+  "post_likes",
+  {
+    ...ownerColumns,
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("post_likes_post_user_idx").on(t.postId, t.userId),
+    ownerPolicy("post_likes"),
+  ],
+).enableRLS();
+
+export const postComments = pgTable(
+  "post_comments",
+  {
+    ...ownerColumns,
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+  },
+  (t) => [index("post_comments_post_idx").on(t.postId, t.createdAt), ownerPolicy("post_comments")],
 ).enableRLS();
 
 export type Vehicle = typeof vehicles.$inferSelect;

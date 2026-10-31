@@ -1,8 +1,17 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, inArray, lt } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, lt } from "drizzle-orm";
 import { db } from "@/db";
-import { mods, parts, postPhotos, posts, profiles, vehicles } from "@/db/schema";
+import {
+  mods,
+  parts,
+  postComments,
+  postLikes,
+  postPhotos,
+  posts,
+  profiles,
+  vehicles,
+} from "@/db/schema";
 import { getPhotosByIds } from "@/lib/gallery";
 import { getMod } from "@/lib/mods";
 import { supabaseUrl } from "@/lib/supabase/env";
@@ -42,7 +51,13 @@ const postFields = {
 };
 
 type PostRow = Awaited<ReturnType<typeof selectPosts>>[number];
-export type FeedPost = PostRow & { photos: { id: string; url: string }[] };
+export type FeedPost = PostRow & {
+  photos: { id: string; url: string }[];
+  likeCount: number;
+  commentCount: number;
+  // Whether the person viewing has liked it (false when signed out).
+  liked: boolean;
+};
 
 function selectPosts() {
   return db
@@ -53,23 +68,41 @@ function selectPosts() {
     .leftJoin(mods, eq(mods.id, posts.modId));
 }
 
-async function withPhotos(rows: PostRow[]): Promise<FeedPost[]> {
+// Adds each post's photos, like and comment counts, and the viewer's like.
+async function withExtras(rows: PostRow[], viewerId?: string): Promise<FeedPost[]> {
   if (rows.length === 0) return [];
-  const photoRows = await db
-    .select()
-    .from(postPhotos)
-    .where(
-      inArray(
-        postPhotos.postId,
-        rows.map((r) => r.id),
-      ),
-    )
-    .orderBy(asc(postPhotos.position));
+  const ids = rows.map((r) => r.id);
+  const [photoRows, likeRows, commentRows, mine] = await Promise.all([
+    db
+      .select()
+      .from(postPhotos)
+      .where(inArray(postPhotos.postId, ids))
+      .orderBy(asc(postPhotos.position)),
+    db
+      .select({ postId: postLikes.postId, n: count() })
+      .from(postLikes)
+      .where(inArray(postLikes.postId, ids))
+      .groupBy(postLikes.postId),
+    db
+      .select({ postId: postComments.postId, n: count() })
+      .from(postComments)
+      .where(inArray(postComments.postId, ids))
+      .groupBy(postComments.postId),
+    viewerId
+      ? db
+          .select({ postId: postLikes.postId })
+          .from(postLikes)
+          .where(and(inArray(postLikes.postId, ids), eq(postLikes.userId, viewerId)))
+      : [],
+  ]);
   return rows.map((r) => ({
     ...r,
     photos: photoRows
       .filter((p) => p.postId === r.id)
       .map((p) => ({ id: p.id, url: communityPhotoUrl(p.storagePath) })),
+    likeCount: likeRows.find((l) => l.postId === r.id)?.n ?? 0,
+    commentCount: commentRows.find((c) => c.postId === r.id)?.n ?? 0,
+    liked: mine.some((m) => m.postId === r.id),
   }));
 }
 
@@ -78,7 +111,8 @@ export async function listPosts({
   before,
   username,
   tag,
-}: { before?: Date; username?: string; tag?: string } = {}) {
+  viewerId,
+}: { before?: Date; username?: string; tag?: string; viewerId?: string } = {}) {
   const filters = [
     before ? lt(posts.createdAt, before) : undefined,
     username ? eq(profiles.username, username) : undefined,
@@ -88,13 +122,13 @@ export async function listPosts({
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(desc(posts.createdAt))
     .limit(FEED_PAGE);
-  return withPhotos(rows);
+  return withExtras(rows, viewerId);
 }
 
-export async function getPost(postId: string) {
+export async function getPost(postId: string, viewerId?: string) {
   if (!isUuid(postId)) return null;
   const rows = await selectPosts().where(eq(posts.id, postId)).limit(1);
-  const [post] = await withPhotos(rows);
+  const [post] = await withExtras(rows, viewerId);
   return post ?? null;
 }
 
@@ -356,4 +390,75 @@ export async function deletePost(userId: string, postId: string) {
     const supabase = await createClient();
     await supabase.storage.from(BUCKET).remove(files.map((f) => f.path));
   }
+}
+
+async function postExists(postId: string) {
+  if (!isUuid(postId)) return false;
+  const [row] = await db.select({ id: posts.id }).from(posts).where(eq(posts.id, postId));
+  return !!row;
+}
+
+// Likes or unlikes a post. Returns the new state, or null if the post is gone.
+export async function setLike(userId: string, postId: string, liked: boolean) {
+  if (!(await postExists(postId))) return null;
+  if (liked) {
+    await db.insert(postLikes).values({ userId, postId }).onConflictDoNothing();
+  } else {
+    await db
+      .delete(postLikes)
+      .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+  }
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(postLikes)
+    .where(eq(postLikes.postId, postId));
+  return { liked, likeCount: n };
+}
+
+export type PostComment = Awaited<ReturnType<typeof listComments>>[number];
+
+// Oldest first, so a thread reads top to bottom.
+export function listComments(postId: string) {
+  return db
+    .select({
+      id: postComments.id,
+      userId: postComments.userId,
+      body: postComments.body,
+      createdAt: postComments.createdAt,
+      username: profiles.username,
+    })
+    .from(postComments)
+    .innerJoin(profiles, eq(profiles.userId, postComments.userId))
+    .where(eq(postComments.postId, postId))
+    .orderBy(asc(postComments.createdAt));
+}
+
+export async function addComment(userId: string, postId: string, body: string) {
+  if (!(await postExists(postId))) return "That post wasn't found.";
+  await db.insert(postComments).values({ userId, postId, body });
+  return null;
+}
+
+// The commenter or the post's owner can remove a comment. Returns the post's
+// id once it's removed.
+export async function deleteComment(userId: string, commentId: string) {
+  if (!isUuid(commentId)) return null;
+  const [row] = await db
+    .select({ postId: postComments.postId, author: postComments.userId, owner: posts.userId })
+    .from(postComments)
+    .innerJoin(posts, eq(posts.id, postComments.postId))
+    .where(eq(postComments.id, commentId));
+  if (!row || (row.author !== userId && row.owner !== userId)) return null;
+  await db.delete(postComments).where(eq(postComments.id, commentId));
+  return row.postId;
+}
+
+// Comments someone left in the last day, for rate limiting.
+export async function countRecentComments(userId: string) {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(postComments)
+    .where(and(eq(postComments.userId, userId), gt(postComments.createdAt, since)));
+  return n;
 }

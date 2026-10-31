@@ -5,12 +5,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { posts } from "@/db/schema";
-import { requireUser } from "@/lib/auth";
+import { getUser, requireUser } from "@/lib/auth";
 import {
+  addComment,
   addPostPhoto,
+  countRecentComments,
   createPost,
+  deleteComment,
   deletePost,
   getBuildPostId,
+  setLike,
   updateBuildPost,
 } from "@/lib/community";
 import { readPhoto } from "@/lib/photos";
@@ -22,6 +26,7 @@ export type PostFormState =
   { error?: string; values?: Record<string, string>; postId?: string } | undefined;
 
 const POSTS_PER_DAY = 10;
+const COMMENTS_PER_DAY = 100;
 
 export async function sharePost(_prev: PostFormState, formData: FormData): Promise<PostFormState> {
   const user = await requireUser();
@@ -142,4 +147,43 @@ export async function removePost(postId: string, next: string) {
   revalidatePath("/community");
   if (next !== "/community") revalidatePath(next);
   redirect(next.startsWith("/garage/") ? next : "/community");
+}
+
+// Signed-out visitors get null, and the button sends them to log in.
+export async function toggleLike(postId: string, liked: boolean) {
+  const user = await getUser();
+  if (!user) return null;
+  const result = await setLike(user.id, postId, liked);
+  revalidatePath("/community");
+  revalidatePath(`/community/${postId}`);
+  return result;
+}
+
+export type CommentFormState = { error?: string; body?: string } | undefined;
+
+export async function postComment(
+  postId: string,
+  _prev: CommentFormState,
+  formData: FormData,
+): Promise<CommentFormState> {
+  const user = await requireUser();
+  if (!(await getProfile(user.id))) redirect(`/username?next=/community/${postId}`);
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body) return { error: "Write a comment first." };
+  if (body.length > 1000) return { error: "Keep comments under 1,000 characters.", body };
+  if ((await countRecentComments(user.id)) >= COMMENTS_PER_DAY)
+    return { error: "That's the comment limit for today. Try again tomorrow.", body };
+  const error = await addComment(user.id, postId, body);
+  if (error) return { error, body };
+  revalidatePath("/community");
+  revalidatePath(`/community/${postId}`);
+  return {};
+}
+
+export async function removeComment(commentId: string) {
+  const user = await requireUser();
+  const postId = await deleteComment(user.id, commentId);
+  if (!postId) return;
+  revalidatePath("/community");
+  revalidatePath(`/community/${postId}`);
 }

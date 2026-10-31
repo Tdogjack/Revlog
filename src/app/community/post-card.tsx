@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 import { PhotoGallery } from "@/components/photo-strip";
 import type { FeedPost } from "@/lib/community";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { postTagLabel, postTagTone } from "@/lib/post-tags";
 import { vehicleName } from "@/lib/vehicles";
+import { LikeButton } from "./like-button";
 
 export function timeAgo(date: Date, now = new Date()) {
   const minutes = Math.round((now.getTime() - date.getTime()) / 60_000);
@@ -25,8 +27,17 @@ export function postCarName(post: FeedPost) {
   return post.nickname ? `${post.nickname} (${full})` : full;
 }
 
-// One post in the feed. `link` makes the title open the post page.
-export function PostCard({ post, link = true }: { post: FeedPost; link?: boolean }) {
+// One post in the feed. `link` makes the title open the post page;
+// `signedIn` lets the like button work instead of asking to log in.
+export function PostCard({
+  post,
+  link = true,
+  signedIn,
+}: {
+  post: FeedPost;
+  link?: boolean;
+  signedIn: boolean;
+}) {
   const modName = post.modPart ? [post.modBrand, post.modPart].filter(Boolean).join(" ") : null;
   return (
     <article className="rounded-xl border border-graphite bg-panel p-5">
@@ -84,6 +95,22 @@ export function PostCard({ post, link = true }: { post: FeedPost; link?: boolean
           <PhotoGallery photos={post.photos} />
         </div>
       )}
+      <div className="mt-4 flex items-center gap-5">
+        <LikeButton
+          postId={post.id}
+          liked={post.liked}
+          likeCount={post.likeCount}
+          signedIn={signedIn}
+        />
+        <Link
+          href={`/community/${post.id}#comments`}
+          className="flex items-center gap-1.5 text-sm text-steel hover:text-chalk"
+          aria-label={`${post.commentCount} ${post.commentCount === 1 ? "comment" : "comments"}`}
+        >
+          <MessageCircle className="h-4 w-4" aria-hidden />
+          {post.commentCount > 0 && <span>{post.commentCount}</span>}
+        </Link>
+      </div>
     </article>
   );
 }

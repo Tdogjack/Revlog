@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Share2, Users } from "lucide-react";
+import { getUser } from "@/lib/auth";
 import { FEED_PAGE, listPosts } from "@/lib/community";
 import { isPostTag, POST_TAGS, postTagLabel } from "@/lib/post-tags";
 import { PostCard } from "./post-card";
@@ -41,9 +42,11 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
   const { before, tag: rawTag } = await searchParams;
   const tag = typeof rawTag === "string" && isPostTag(rawTag) ? rawTag : undefined;
   const beforeDate = typeof before === "string" ? new Date(before) : undefined;
+  const user = await getUser();
   const feed = await listPosts({
     before: beforeDate && !Number.isNaN(beforeDate.getTime()) ? beforeDate : undefined,
     tag,
+    viewerId: user?.id,
   });
   const chips = (
     <nav aria-label="Filter by tag" className="mt-5 flex flex-wrap gap-2">
@@ -89,7 +92,7 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
       {chips}
       <div className="mt-6 space-y-4">
         {feed.map((post) => (
-          <PostCard key={post.id} post={post} />
+          <PostCard key={post.id} post={post} signedIn={!!user} />
         ))}
       </div>
       {feed.length === FEED_PAGE && (

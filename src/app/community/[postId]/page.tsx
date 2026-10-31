@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getUser } from "@/lib/auth";
-import { getPost, listInstalledMods, listPostParts } from "@/lib/community";
+import { getPost, listComments, listInstalledMods, listPostParts } from "@/lib/community";
 import { modCategoryLabel } from "@/lib/mod-categories";
+import { Comments } from "../comments";
 import { DeletePostButton } from "../delete-post-button";
 import { PostCard, postCarName } from "../post-card";
 
@@ -38,11 +39,13 @@ async function PostDetails({
   searchParams,
 }: Pick<PageProps<"/community/[postId]">, "params" | "searchParams">) {
   const [{ postId }, { failed }] = await Promise.all([params, searchParams]);
-  const [post, user] = await Promise.all([getPost(postId), getUser()]);
+  const user = await getUser();
+  const post = await getPost(postId, user?.id);
   if (!post) notFound();
-  const [buildList, sharedParts] = await Promise.all([
+  const [buildList, sharedParts, comments] = await Promise.all([
     post.kind === "build" ? listInstalledMods(post.vehicleId) : [],
     listPostParts(post),
+    listComments(post.id),
   ]);
 
   return (
@@ -53,7 +56,7 @@ async function PostDetails({
           photo, or share again.
         </p>
       )}
-      <PostCard post={post} link={false} />
+      <PostCard post={post} link={false} signedIn={!!user} />
 
       {buildList.length > 0 && (
         <section className="rounded-xl border border-graphite bg-panel p-5">
@@ -78,6 +81,13 @@ async function PostDetails({
           <SharedParts parts={sharedParts} />
         </section>
       )}
+
+      <Comments
+        postId={post.id}
+        comments={comments}
+        viewerId={user?.id ?? null}
+        postOwnerId={post.userId}
+      />
 
       {user?.id === post.userId &&
         (post.tag === "build" ? (
