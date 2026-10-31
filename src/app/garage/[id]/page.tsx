@@ -56,6 +56,14 @@ function formatDate(isoDate: string) {
   });
 }
 
+function formatMonth(isoDate: string) {
+  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
   const { id } = await params;
   const user = await requireUser();
@@ -119,7 +127,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             {car.vin && <p className="font-mono text-xs text-steel">VIN {car.vin}</p>}
             {car.builtOn && (
-              <p className="font-mono text-xs text-steel">Built {formatDate(car.builtOn)}</p>
+              <p className="font-mono text-xs text-steel">Built {formatMonth(car.builtOn)}</p>
             )}
             <Link
               href={`/garage/${car.id}/edit`}

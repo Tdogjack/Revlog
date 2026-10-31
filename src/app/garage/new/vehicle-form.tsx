@@ -9,6 +9,21 @@ import { lookUpVin } from "./vin-actions";
 const inputClass =
   "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 function Field({
   label,
   name,
@@ -150,13 +165,36 @@ export function VehicleForm({
           required
           defaultValue={v.currentMileage}
         />
-        <Field
-          label="Manufacture date (optional)"
-          name="builtOn"
-          type="date"
-          defaultValue={v.builtOn}
-          hint="On the door jamb sticker. Only know the month? Pick the 1st."
-        />
+        <fieldset className="text-sm">
+          <legend className="text-steel">Built (optional)</legend>
+          <div className="grid grid-cols-[1fr_6rem] gap-2">
+            <select
+              name="builtMonth"
+              aria-label="Month built"
+              defaultValue={v.builtMonth ?? ""}
+              className={inputClass}
+            >
+              <option value="">Month</option>
+              {MONTHS.map((m, i) => (
+                <option key={m} value={String(i + 1).padStart(2, "0")}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <input
+              name="builtYear"
+              aria-label="Year built"
+              inputMode="numeric"
+              placeholder="2019"
+              maxLength={4}
+              defaultValue={v.builtYear}
+              className={inputClass}
+            />
+          </div>
+          <span className="mt-1 block text-xs text-steel">
+            On the door jamb sticker, like MFD 06/19.
+          </span>
+        </fieldset>
       </div>
 
       {error && (

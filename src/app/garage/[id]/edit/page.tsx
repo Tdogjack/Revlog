@@ -45,7 +45,8 @@ async function EditVehicle({ params }: Pick<Props, "params">) {
           nickname: car.nickname ?? "",
           vin: car.vin ?? "",
           currentMileage: String(car.currentMileage),
-          builtOn: car.builtOn ?? "",
+          builtYear: car.builtOn?.slice(0, 4) ?? "",
+          builtMonth: car.builtOn?.slice(5, 7) ?? "",
         }}
       />
     </>

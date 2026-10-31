@@ -43,10 +43,14 @@ export const vehicleInput = z.object({
   builtOn: z
     .string()
     .trim()
-    .refine((v) => v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v), "Pick a manufacture date.")
+    .refine(
+      (v) => v === "" || /^\d{4}-(0[1-9]|1[0-2])-01$/.test(v),
+      "Pick both the month and the 4-digit year it was built.",
+    )
+    .refine((v) => v === "" || v >= "1886-01-01", "Build year looks too low.")
     .refine(
       (v) => v === "" || v <= new Date().toISOString().slice(0, 10),
-      "Manufacture date can't be in the future.",
+      "Build date can't be in the future.",
     )
     .transform((v) => v || null),
 });

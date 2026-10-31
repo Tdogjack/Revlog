@@ -26,11 +26,18 @@ const vehicleFields = [
   "nickname",
   "vin",
   "currentMileage",
-  "builtOn",
+  "builtMonth",
+  "builtYear",
 ];
 
-const readVehicleFields = (formData: FormData) =>
-  Object.fromEntries(vehicleFields.map((k) => [k, String(formData.get(k) ?? "")]));
+// The build date is picked as a month and year, and stored as the 1st of that month.
+function readVehicleFields(formData: FormData) {
+  const raw = Object.fromEntries(vehicleFields.map((k) => [k, String(formData.get(k) ?? "")]));
+  const month = raw.builtMonth.trim();
+  const year = raw.builtYear.trim();
+  raw.builtOn = month || year ? `${year}-${month}-01` : "";
+  return raw;
+}
 
 export async function addVehicle(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();

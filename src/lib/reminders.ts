@@ -55,8 +55,8 @@ export function withLastService<
   };
 }
 
-// Where a never-logged time interval starts: the car's age. The build date
-// is exact when the owner entered it. Otherwise a VIN only gives the model
+// Where a never-logged time interval starts: the car's age. The build month
+// is used when the owner entered it. Otherwise a VIN only gives the model
 // year, not the build month, so this is January 1 of the model year (from
 // the VIN when there is one, else the stored year). That's the latest
 // plausible start, so a new car isn't flagged early. Cars newer than the
