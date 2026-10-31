@@ -14,7 +14,6 @@ import {
   Zap,
 } from "lucide-react";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
-import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
 import { getEmailSettings } from "@/lib/email-settings";
 import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
@@ -38,6 +37,7 @@ import { DeleteRecordButton } from "./delete-record-button";
 import { ModControls } from "./mod-controls";
 import { PartsList } from "./parts-list";
 import { PhotoControls } from "./photo-controls";
+import { ProfilePhoto } from "./profile-photo";
 import { RemoveCar } from "./remove-car";
 import { MileageEditor, ReminderControls } from "./reminder-controls";
 import { StatusBadge } from "@/components/status-badge";
@@ -217,7 +217,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       <title>{`${car.nickname ?? vehicleName(car)} · Revlog`}</title>
       <div className="mt-4 flex flex-col gap-5 rounded-xl border border-graphite bg-panel p-6 sm:flex-row sm:items-center">
         <div className="flex flex-col items-start gap-2">
-          <VehiclePhoto src={photoUrl} alt={vehicleName(car)} className="h-28 w-28" />
+          <ProfilePhoto src={photoUrl ?? null} alt={vehicleName(car)} />
           <PhotoControls vehicleId={car.id} hasPhoto={!!car.photoPath} />
         </div>
         <div className="flex-1">
