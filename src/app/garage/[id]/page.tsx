@@ -147,7 +147,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const renderRecord = (r: (typeof records)[number]) => (
     <li
       key={r.id}
-      className="flex gap-4 border-t border-graphite py-3 -mx-2 rounded-md px-2 transition-colors hover:bg-graphite/40"
+      className="flex gap-4 border-t border-graphite py-3 -mx-2 rounded-md px-2 hover:bg-graphite/40"
     >
       <div className="w-24 shrink-0 pt-0.5 font-mono text-xs text-steel">
         {formatDate(r.servicedOn)}
@@ -291,7 +291,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                       <li key={group[0].category} className="border-t border-graphite">
                         <details className="group/type">
                           <summary
-                            className={`${summaryClass} flex gap-4 py-3 -mx-2 rounded-md px-2 transition-colors hover:bg-graphite/40`}
+                            className={`${summaryClass} flex gap-4 py-3 -mx-2 rounded-md px-2 hover:bg-graphite/40`}
                           >
                             <div className="w-24 shrink-0 pt-0.5 font-mono text-xs text-steel">
                               {formatDate(group[0].servicedOn)}
@@ -382,7 +382,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                   {carMods.map((m) => (
                     <li
                       key={m.id}
-                      className="flex gap-4 border-t border-graphite py-3 -mx-2 rounded-md px-2 transition-colors hover:bg-graphite/40"
+                      className="flex gap-4 border-t border-graphite py-3 -mx-2 rounded-md px-2 hover:bg-graphite/40"
                     >
                       <details className="group min-w-0 flex-1">
                         <summary className={summaryClass}>
@@ -469,7 +469,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                 {carReminders.map(({ reminder: r, result }) => (
                   <li
                     key={r.id}
-                    className="flex gap-3 border-t border-graphite py-3 -mx-2 rounded-md px-2 transition-colors hover:bg-graphite/40"
+                    className="flex gap-3 border-t border-graphite py-3 -mx-2 rounded-md px-2 hover:bg-graphite/40"
                   >
                     <details className="group min-w-0 flex-1">
                       <summary className={summaryClass}>
