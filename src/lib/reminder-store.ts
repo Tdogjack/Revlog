@@ -49,11 +49,6 @@ export const reminderInput = z
 
 export type ReminderInputData = z.infer<typeof reminderInput>;
 
-export const markDoneInput = z.object({
-  doneOn: isoDate.refine((d) => d !== "", "Pick the date it was done."),
-  mileage: optionalWhole("mileage", 2_000_000),
-});
-
 export function listReminders(userId: string, vehicleId: string) {
   return db
     .select()

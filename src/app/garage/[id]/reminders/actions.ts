@@ -6,16 +6,13 @@ import { requireUser } from "@/lib/auth";
 import {
   createReminder,
   deleteReminder,
-  getReminder,
-  markDoneInput,
   reminderInput,
-  setReminderStart,
   updateReminder,
 } from "@/lib/reminder-store";
 import { categoryLabel } from "@/lib/service-categories";
 import { createServiceRecord } from "@/lib/service-records";
 import { listServiceTypes, resolveServiceType } from "@/lib/service-types";
-import { getVehicle, mileageInput, setVehicleMileage } from "@/lib/vehicles";
+import { mileageInput, setVehicleMileage } from "@/lib/vehicles";
 
 export type ReminderFormState = { error?: string; values?: Record<string, string> } | undefined;
 
@@ -100,47 +97,7 @@ export async function editReminder(
   redirect(`/garage/${vehicleId}`);
 }
 
-export type MarkDoneState = { error?: string; ok?: boolean } | undefined;
-
 // Logs the service on the chosen date, which resets the reminder.
-export async function completeReminder(
-  vehicleId: string,
-  reminderId: string,
-  _prev: MarkDoneState,
-  formData: FormData,
-): Promise<MarkDoneState> {
-  const user = await requireUser();
-  const parsed = markDoneInput.safeParse({
-    doneOn: formData.get("doneOn") ?? "",
-    mileage: formData.get("mileage") ?? "",
-  });
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
-
-  const [reminder, car] = await Promise.all([
-    getReminder(user.id, vehicleId, reminderId),
-    getVehicle(user.id, vehicleId),
-  ]);
-  if (!reminder || !car) return { error: "That reminder wasn't found." };
-
-  const { doneOn, mileage } = parsed.data;
-  if (reminder.serviceCategory) {
-    await createServiceRecord(user.id, vehicleId, {
-      category: reminder.serviceCategory,
-      title: reminder.task,
-      servicedOn: doneOn,
-      mileage: mileage ?? null,
-      cost: null,
-      shop: null,
-      notes: null,
-    });
-  } else {
-    await setReminderStart(user.id, reminderId, doneOn, mileage ?? car.currentMileage);
-  }
-
-  revalidatePath(`/garage/${vehicleId}`);
-  return { ok: true };
-}
-
 export async function removeReminder(vehicleId: string, reminderId: string) {
   const user = await requireUser();
   await deleteReminder(user.id, reminderId);

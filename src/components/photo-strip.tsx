@@ -124,7 +124,7 @@ export function PhotoStrip({
   );
 }
 
-function PhotoViewer({
+export function PhotoViewer({
   photos,
   index,
   onIndex,
