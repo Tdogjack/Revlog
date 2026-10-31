@@ -6,7 +6,13 @@ import { emailSettings, reminders, serviceRecords, vehicles } from "@/db/schema"
 import { sendEmail } from "@/lib/email";
 import { unsubscribeToken } from "@/lib/email-settings";
 import { reminderEmail, type ReminderEmailCar } from "@/lib/email-templates";
-import { describeDue, evaluateReminder, STATUS_RANK, withLastService } from "@/lib/reminders";
+import {
+  describeDue,
+  evaluateReminder,
+  STATUS_RANK,
+  withCarAgeStart,
+  withLastService,
+} from "@/lib/reminders";
 import { siteUrl } from "@/lib/site";
 import { vehicleName } from "@/lib/vehicles";
 
@@ -27,6 +33,7 @@ type Candidate = {
   intervalMonths: number | null;
   lastDoneOn: string | null;
   lastDoneMileage: number | null;
+  createdAt: Date;
   vehicleId: string;
   vehicle: {
     year: number;
@@ -35,6 +42,7 @@ type Candidate = {
     trim: string | null;
     nickname: string | null;
   };
+  vin: string | null;
   currentMileage: number;
 };
 
@@ -53,6 +61,7 @@ async function candidateReminders(): Promise<Candidate[]> {
       intervalMonths: reminders.intervalMonths,
       lastDoneOn: reminders.lastDoneOn,
       lastDoneMileage: reminders.lastDoneMileage,
+      createdAt: reminders.createdAt,
       reminderPercent: emailSettings.reminderPercent,
       vehicleId: reminders.vehicleId,
       year: vehicles.year,
@@ -60,6 +69,7 @@ async function candidateReminders(): Promise<Candidate[]> {
       model: vehicles.model,
       trim: vehicles.trim,
       nickname: vehicles.nickname,
+      vin: vehicles.vin,
       currentMileage: vehicles.currentMileage,
     })
     .from(reminders)
@@ -108,7 +118,10 @@ async function buildOutbox(today: Date) {
   const byUser = new Map<string, Outbox>();
   const ranked = candidates
     .map((c) => {
-      const reminder = withLastService(c, services);
+      const reminder = withCarAgeStart(withLastService(c, services), {
+        year: c.vehicle.year,
+        vin: c.vin,
+      });
       return {
         c,
         result: evaluateReminder(reminder, c.currentMileage, today, {

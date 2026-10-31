@@ -11,6 +11,7 @@ import { listAllReminders } from "@/lib/reminder-store";
 import {
   evaluateReminder,
   STATUS_RANK,
+  withCarAgeStart,
   withLastService,
   type ReminderStatus,
 } from "@/lib/reminders";
@@ -56,7 +57,7 @@ async function VehicleList() {
   for (const car of cars) {
     for (const r of allReminders.filter((r) => r.vehicleId === car.id)) {
       const { status } = evaluateReminder(
-        withLastService(r, serviceDates),
+        withCarAgeStart(withLastService(r, serviceDates), car),
         car.currentMileage,
         undefined,
         options,

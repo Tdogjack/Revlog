@@ -12,7 +12,13 @@ import { listMods } from "@/lib/mods";
 import { listPartsForVehicle } from "@/lib/parts";
 import { signedPhotoUrls } from "@/lib/photos";
 import { listReminders } from "@/lib/reminder-store";
-import { describeDue, evaluateReminder, STATUS_RANK, withLastService } from "@/lib/reminders";
+import {
+  describeDue,
+  evaluateReminder,
+  STATUS_RANK,
+  withCarAgeStart,
+  withLastService,
+} from "@/lib/reminders";
 import { categoryLabel } from "@/lib/service-categories";
 import { listServiceRecords } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
@@ -75,9 +81,10 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const buildPhotos = stripPhotos((p) => !p.modId && !p.serviceRecordId);
   const partsFor = (key: "modId" | "serviceRecordId", id: string) =>
     carParts.filter((p) => p[key] === id);
-  // Each reminder counts from its latest matching service record; most urgent first.
+  // Each reminder counts from its latest matching service record, or the
+  // car's age if it's never been done; most urgent first.
   const carReminders = reminderRows
-    .map((row) => withLastService(row, records))
+    .map((row) => withCarAgeStart(withLastService(row, records), car))
     .map((reminder) => ({
       reminder,
       result: evaluateReminder(reminder, car.currentMileage, undefined, {

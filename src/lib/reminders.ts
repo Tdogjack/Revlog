@@ -1,6 +1,8 @@
 // Pure reminder math, kept free of framework code so a future phone app
 // or the nightly reminder job can reuse it.
 
+import { vinModelYear } from "@/lib/vin-year";
+
 export type ReminderStatus = "ok" | "due_soon" | "overdue";
 
 export type ReminderInput = {
@@ -8,6 +10,8 @@ export type ReminderInput = {
   intervalMonths: number | null;
   lastDoneOn: string | null; // YYYY-MM-DD
   lastDoneMileage: number | null;
+  // When it's never been done, the date the time interval counts from.
+  startOn?: string | null; // YYYY-MM-DD
 };
 
 export type ReminderResult = {
@@ -49,6 +53,29 @@ export function withLastService<
     lastDoneOn: latest.servicedOn,
     lastDoneMileage: sameDayMileage ?? null,
   };
+}
+
+// Where a never-logged time interval starts: the car's age. A VIN only gives
+// the model year, not the build month, so this is January 1 of the model
+// year (from the VIN when there is one, else the stored year). That's the
+// latest plausible start, so a new car isn't flagged early. Cars newer than
+// the reminder, or with no usable year, count from the day it was added.
+export function carAgeStart(car: { year: number; vin: string | null }, addedOn: Date): string {
+  const added = addedOn.toISOString().slice(0, 10);
+  const year = vinModelYear(car.vin, car.year) ?? car.year;
+  if (!Number.isInteger(year) || year < 1886) return added;
+  const start = `${String(year).padStart(4, "0")}-01-01`;
+  return start < added ? start : added;
+}
+
+// Gives a never-logged time-based reminder its car-age starting point.
+// Run after withLastService, which sets lastDoneOn when there's a record.
+export function withCarAgeStart<R extends ReminderInput & { createdAt: Date }>(
+  reminder: R,
+  car: { year: number; vin: string | null },
+): R {
+  if (reminder.lastDoneOn != null || reminder.intervalMonths == null) return reminder;
+  return { ...reminder, startOn: carAgeStart(car, reminder.createdAt) };
 }
 
 const DUE_SOON_MILES = 500;
@@ -112,14 +139,14 @@ export function evaluateReminder(
     milesLeft = reminder.lastDoneMileage + reminder.intervalMiles - currentMileage;
   }
 
-  if (reminder.intervalMonths != null && reminder.lastDoneOn != null) {
-    const dueDate = addMonths(reminder.lastDoneOn, reminder.intervalMonths);
+  const timeFrom = reminder.lastDoneOn ?? reminder.startOn ?? null;
+  if (reminder.intervalMonths != null && timeFrom != null) {
+    const dueDate = addMonths(timeFrom, reminder.intervalMonths);
     daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / DAY_MS);
   }
 
-  // A time-only reminder that's never been done has nothing to count from,
-  // so it's due now.
-  if (milesLeft == null && daysLeft == null && reminder.lastDoneOn == null) {
+  // A time-only reminder with nothing to count from is due now.
+  if (milesLeft == null && daysLeft == null && timeFrom == null) {
     return { status: "overdue", milesLeft, daysLeft, neverDone: true };
   }
 
