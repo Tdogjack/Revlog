@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useActionState, useState } from "react";
 import { removeReminder, updateMileage } from "./reminders/actions";
 
-// "Mark done" opens Log service with this reminder's type filled in.
+// Edit and delete, shown once a reminder is opened.
 export function ReminderControls({
   vehicleId,
   reminderId,
@@ -14,7 +14,7 @@ export function ReminderControls({
   reminderId: string;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="mt-2 flex items-center gap-3">
       <Link
         href={`/garage/${vehicleId}/reminders/${reminderId}/edit`}
         aria-label="Edit reminder"
@@ -36,13 +36,6 @@ export function ReminderControls({
           <Trash2 className="h-4 w-4" aria-hidden />
         </button>
       </form>
-      <Link
-        href={`/garage/${vehicleId}/service/new?reminder=${reminderId}`}
-        className="flex items-center gap-1 rounded-md border border-graphite px-2 py-1 text-xs hover:border-steel"
-      >
-        <Check className="h-3.5 w-3.5" aria-hidden />
-        Mark done
-      </Link>
     </div>
   );
 }

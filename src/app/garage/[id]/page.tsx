@@ -1,7 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Bell, ChevronDown, Copy, Download, Pencil, Plus, Share2, Wrench, Zap } from "lucide-react";
+import {
+  Bell,
+  Check,
+  ChevronDown,
+  Copy,
+  Download,
+  Pencil,
+  Plus,
+  Share2,
+  Wrench,
+  Zap,
+} from "lucide-react";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
@@ -489,10 +500,18 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                           .filter(Boolean)
                           .join(" or ")}
                       </p>
+                      <ReminderControls vehicleId={car.id} reminderId={r.id} />
                     </details>
                     <div className="flex shrink-0 flex-col items-end gap-2">
                       <StatusBadge status={result.status} />
-                      <ReminderControls vehicleId={car.id} reminderId={r.id} />
+                      {/* Opens Log service with this reminder's type filled in. */}
+                      <Link
+                        href={`/garage/${car.id}/service/new?reminder=${r.id}`}
+                        className="flex items-center gap-1 rounded-md border border-graphite px-2 py-1 text-xs hover:border-steel"
+                      >
+                        <Check className="h-3.5 w-3.5" aria-hidden />
+                        Done
+                      </Link>
                     </div>
                   </li>
                 ))}
