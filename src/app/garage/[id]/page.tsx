@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Bell, Copy, Download, Pencil, Plus, Share2, Wrench, Zap } from "lucide-react";
+import { Bell, ChevronDown, Copy, Download, Pencil, Plus, Share2, Wrench, Zap } from "lucide-react";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
@@ -62,6 +62,23 @@ function formatMonth(isoDate: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+// Records and mods show one summary line; notes, parts, and photos open on click.
+const summaryClass = "cursor-pointer list-none [&::-webkit-details-marker]:hidden";
+
+function DetailsHint({ notes, parts, photos }: { notes: boolean; parts: number; photos: number }) {
+  const bits = [
+    notes && "notes",
+    parts > 0 && `${parts} ${parts === 1 ? "part" : "parts"}`,
+    photos > 0 && `${photos} ${photos === 1 ? "photo" : "photos"}`,
+  ].filter(Boolean);
+  return (
+    <p className="mt-1 flex items-center gap-1 text-xs text-steel group-hover:text-chalk">
+      <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden />
+      {bits.length > 0 ? bits.join(" · ") : "Add parts or photos"}
+    </p>
+  );
 }
 
 async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
@@ -181,26 +198,33 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                 </p>
                 <ol className="mt-4">
                   {records.map((r) => (
-                    <li key={r.id} className="flex gap-4 border-t border-graphite py-4">
-                      <div className="w-24 shrink-0 font-mono text-xs text-steel">
+                    <li key={r.id} className="flex gap-4 border-t border-graphite py-3">
+                      <div className="w-24 shrink-0 pt-0.5 font-mono text-xs text-steel">
                         {formatDate(r.servicedOn)}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium">{r.title}</p>
-                          <span className="rounded bg-graphite px-2 py-0.5 text-xs">
-                            {categoryLabel(r.category, customTypes)}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm text-steel">
-                          {[
-                            r.mileage != null && `${r.mileage.toLocaleString("en-US")} mi`,
-                            r.cost != null && money.format(Number(r.cost)),
-                            r.shop,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
+                      <details className="group min-w-0 flex-1">
+                        <summary className={summaryClass}>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium">{r.title}</p>
+                            <span className="rounded bg-graphite px-2 py-0.5 text-xs">
+                              {categoryLabel(r.category, customTypes)}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm text-steel">
+                            {[
+                              r.mileage != null && `${r.mileage.toLocaleString("en-US")} mi`,
+                              r.cost != null && money.format(Number(r.cost)),
+                              r.shop,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                          <DetailsHint
+                            notes={!!r.notes}
+                            parts={partsFor("serviceRecordId", r.id).length}
+                            photos={stripPhotos((p) => p.serviceRecordId === r.id).length}
+                          />
+                        </summary>
                         {r.notes && <p className="mt-2 whitespace-pre-line text-sm">{r.notes}</p>}
                         <PartsList
                           vehicleId={car.id}
@@ -216,7 +240,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                           max={PHOTO_LIMITS.record}
                           addLabel="Add receipt photos"
                         />
-                      </div>
+                      </details>
                       <div className="flex items-start gap-3">
                         <Link
                           href={`/garage/${car.id}/service/new?copy=${r.id}`}
@@ -294,24 +318,31 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                 </p>
                 <ul className="mt-4">
                   {carMods.map((m) => (
-                    <li key={m.id} className="flex gap-4 border-t border-graphite py-4">
-                      <div className="min-w-0 flex-1">
-                        <p
-                          className={`font-medium ${m.status === "removed" ? "text-steel line-through" : ""}`}
-                        >
-                          {m.brand ? `${m.brand} ${m.part}` : m.part}
-                        </p>
-                        <p className="mt-1 text-sm text-steel">
-                          {[
-                            modCategoryLabel(m.category),
-                            m.installedOn && formatDate(m.installedOn),
-                            m.installedMileage != null &&
-                              `${m.installedMileage.toLocaleString("en-US")} mi`,
-                            m.cost != null && money.format(Number(m.cost)),
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
+                    <li key={m.id} className="flex gap-4 border-t border-graphite py-3">
+                      <details className="group min-w-0 flex-1">
+                        <summary className={summaryClass}>
+                          <p
+                            className={`font-medium ${m.status === "removed" ? "text-steel line-through" : ""}`}
+                          >
+                            {m.brand ? `${m.brand} ${m.part}` : m.part}
+                          </p>
+                          <p className="mt-1 text-sm text-steel">
+                            {[
+                              modCategoryLabel(m.category),
+                              m.installedOn && formatDate(m.installedOn),
+                              m.installedMileage != null &&
+                                `${m.installedMileage.toLocaleString("en-US")} mi`,
+                              m.cost != null && money.format(Number(m.cost)),
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                          <DetailsHint
+                            notes={!!m.notes}
+                            parts={partsFor("modId", m.id).length}
+                            photos={stripPhotos((p) => p.modId === m.id).length}
+                          />
+                        </summary>
                         {m.notes && <p className="mt-2 whitespace-pre-line text-sm">{m.notes}</p>}
                         <PartsList
                           vehicleId={car.id}
@@ -327,7 +358,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                           max={PHOTO_LIMITS.mod}
                           addLabel="Add mod photos"
                         />
-                      </div>
+                      </details>
                       <div className="flex flex-col items-end gap-3">
                         <ModControls vehicleId={car.id} modId={m.id} status={m.status} />
                         {m.status === "installed" && (
