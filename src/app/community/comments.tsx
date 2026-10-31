@@ -40,10 +40,25 @@ export function Comments({
         Comments{comments.length > 0 && <span className="text-steel">{comments.length}</span>}
       </h2>
 
-      {comments.length === 0 ? (
-        <p className="mt-3 text-sm text-steel">No comments yet.</p>
+      {/* The box sits above the thread so it's reachable without scrolling. */}
+      {viewerId ? (
+        <CommentForm postId={postId} />
       ) : (
-        <ul className="mt-3">
+        <p className="mt-3 text-sm text-steel">
+          <Link
+            href={`/login?next=${encodeURIComponent(`/community/${postId}#comments`)}`}
+            className="font-medium text-chalk hover:text-redline"
+          >
+            Log in
+          </Link>{" "}
+          to comment.
+        </p>
+      )}
+
+      {comments.length === 0 ? (
+        <p className="mt-4 text-sm text-steel">No comments yet.</p>
+      ) : (
+        <ul className="mt-4 border-t border-graphite pt-3">
           {comments.map((c) => (
             <li key={c.id} className="border-t border-graphite py-3 first:border-t-0 first:pt-0">
               <div className="flex items-center gap-2 text-xs text-steel">
@@ -78,20 +93,6 @@ export function Comments({
           ))}
         </ul>
       )}
-
-      {viewerId ? (
-        <CommentForm postId={postId} />
-      ) : (
-        <p className="mt-4 text-sm text-steel">
-          <Link
-            href={`/login?next=${encodeURIComponent(`/community/${postId}#comments`)}`}
-            className="font-medium text-chalk hover:text-redline"
-          >
-            Log in
-          </Link>{" "}
-          to comment.
-        </p>
-      )}
     </section>
   );
 }
@@ -104,7 +105,7 @@ function CommentForm({ postId }: { postId: string }) {
 
   // React clears the form after each submit; a failed one puts the text back.
   return (
-    <form action={action} className="mt-4 space-y-2">
+    <form action={action} className="mt-3 space-y-2">
       <textarea
         name="body"
         rows={2}

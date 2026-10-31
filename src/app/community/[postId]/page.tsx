@@ -82,13 +82,6 @@ async function PostDetails({
         </section>
       )}
 
-      <Comments
-        postId={post.id}
-        comments={comments}
-        viewerId={user?.id ?? null}
-        postOwnerId={post.userId}
-      />
-
       {user?.id === post.userId &&
         (post.tag === "build" ? (
           <div className="flex items-center gap-4">
@@ -107,6 +100,13 @@ async function PostDetails({
         ) : (
           <DeletePostButton postId={post.id} />
         ))}
+
+      <Comments
+        postId={post.id}
+        comments={comments}
+        viewerId={user?.id ?? null}
+        postOwnerId={post.userId}
+      />
     </div>
   );
 }
