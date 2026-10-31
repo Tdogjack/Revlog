@@ -3,7 +3,7 @@ import { MessageCircle } from "lucide-react";
 import { PhotoGallery } from "@/components/photo-strip";
 import type { FeedPost } from "@/lib/community";
 import { modCategoryLabel } from "@/lib/mod-categories";
-import { postTagLabel, postTagTone } from "@/lib/post-tags";
+import { postTagLabel } from "@/lib/post-tags";
 import { vehicleName } from "@/lib/vehicles";
 import { LikeButton } from "./like-button";
 
@@ -40,7 +40,7 @@ export function PostCard({
 }) {
   const modName = post.modPart ? [post.modBrand, post.modPart].filter(Boolean).join(" ") : null;
   return (
-    <article className="rounded-xl border border-graphite bg-panel p-5">
+    <article className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-steel">
         <Link href={`/u/${post.username}`} className="font-medium text-chalk hover:text-redline">
           @{post.username}
@@ -57,13 +57,13 @@ export function PostCard({
         )}
         <Link
           href={`/community?tag=${post.tag}`}
-          className={`ml-auto rounded px-2 py-0.5 text-xs hover:opacity-80 ${postTagTone(post.tag)}`}
+          className="ml-auto rounded-md border border-graphite px-2 py-0.5 text-xs text-chalk hover:border-steel"
         >
           {postTagLabel(post.tag)}
         </Link>
       </div>
 
-      <h2 className="mt-3 text-lg font-semibold">
+      <h2 className="mt-3 font-display text-2xl leading-tight font-semibold sm:text-3xl">
         {link ? (
           <Link href={`/community/${post.id}`} className="hover:text-redline">
             {post.title}
@@ -78,7 +78,7 @@ export function PostCard({
         </p>
       )}
       {post.body && (
-        <p className={`mt-3 whitespace-pre-line text-sm ${link ? "line-clamp-4" : ""}`}>
+        <p className={`mt-3 max-w-prose whitespace-pre-line ${link ? "line-clamp-4" : ""}`}>
           {post.body}
         </p>
       )}
@@ -95,7 +95,7 @@ export function PostCard({
           <PhotoGallery photos={post.photos} />
         </div>
       )}
-      <div className="mt-4 flex items-center gap-5">
+      <div className="mt-3 -ml-2 flex items-center gap-1">
         <LikeButton
           postId={post.id}
           liked={post.liked}
@@ -104,7 +104,7 @@ export function PostCard({
         />
         <Link
           href={`/community/${post.id}#comments`}
-          className="flex items-center gap-1.5 text-sm text-steel hover:text-chalk"
+          className="flex min-h-9 items-center gap-1.5 rounded-md px-2 text-sm text-steel hover:bg-graphite hover:text-chalk"
           aria-label={`${post.commentCount} ${post.commentCount === 1 ? "comment" : "comments"}`}
         >
           <MessageCircle className="h-4 w-4" aria-hidden />

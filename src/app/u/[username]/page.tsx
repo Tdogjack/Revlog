@@ -31,8 +31,8 @@ async function ProfilePosts({ params }: Pick<PageProps<"/u/[username]">, "params
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">@{profile.username}</h1>
-      <p className="mt-1 text-sm text-steel">
+      <h1 className="font-display text-4xl leading-none font-semibold">@{profile.username}</h1>
+      <p className="mt-2 text-steel">
         {userPosts.length === 0
           ? "No posts yet."
           : `${userPosts.length}${userPosts.length === 20 ? "+" : ""} ${userPosts.length === 1 ? "post" : "posts"}`}

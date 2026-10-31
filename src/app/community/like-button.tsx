@@ -49,7 +49,7 @@ export function LikeButton({
       onClick={toggle}
       aria-pressed={liked}
       aria-label={liked ? "Unlike" : "Like"}
-      className={`flex items-center gap-1.5 text-sm ${liked ? "text-redline" : "text-steel hover:text-chalk"}`}
+      className={`flex min-h-9 items-center gap-1.5 rounded-md px-2 text-sm hover:bg-graphite ${liked ? "text-redline-hover" : "text-steel hover:text-chalk"}`}
     >
       <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} aria-hidden />
       {likeCount > 0 && <span>{likeCount}</span>}

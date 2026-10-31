@@ -18,7 +18,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-graphite">
-        <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-6">
+        <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
           <div className="flex items-center gap-6">
             <Link href="/garage" className="flex items-center gap-2 text-lg font-semibold">
               <Gauge className="h-5 w-5 text-redline" aria-hidden />
@@ -26,9 +26,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 Rev<span className="text-redline">log</span>
               </span>
             </Link>
-            <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-x-4 text-sm">
               {NAV.map((item) => (
-                <Link key={item.href} href={item.href} className="text-steel hover:text-chalk">
+                <Link key={item.href} href={item.href} className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
                   {item.label}
                 </Link>
               ))}
@@ -49,13 +49,13 @@ async function AccountMenu() {
   const user = await getUser();
   if (!user) {
     return (
-      <div className="flex items-center gap-4 text-sm">
-        <Link href="/login" className="text-steel hover:text-chalk">
+      <div className="flex items-center gap-x-4 text-sm">
+        <Link href="/login" className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
           Log in
         </Link>
         <Link
           href="/signup"
-          className="rounded-md bg-redline px-3 py-1.5 font-medium text-white hover:bg-redline-hover"
+          className="btn btn-primary"
         >
           Sign up
         </Link>
@@ -68,15 +68,15 @@ async function AccountMenu() {
   if (!profile) redirect("/username");
 
   return (
-    <div className="flex items-center gap-4 text-sm">
-      <Link href={`/u/${profile.username}`} className="text-steel hover:text-chalk">
+    <div className="flex items-center gap-x-4 text-sm">
+      <Link href={`/u/${profile.username}`} className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
         @{profile.username}
       </Link>
-      <Link href="/garage/settings" className="text-steel hover:text-chalk">
+      <Link href="/garage/settings" className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
         Settings
       </Link>
       <form action={signOut}>
-        <button type="submit" className="text-steel hover:text-chalk">
+        <button type="submit" className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
           Log out
         </button>
       </form>

@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { MessageCircle, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { PostComment } from "@/lib/community";
 import { postComment, removeComment, type CommentFormState } from "./actions";
 
-const inputClass =
-  "w-full rounded-md border border-graphite bg-carbon px-3 py-2 text-sm outline-none focus:border-redline";
+const inputClass = "field text-sm";
 
 function timeAgo(date: Date) {
   const minutes = Math.round((Date.now() - date.getTime()) / 60_000);
@@ -34,9 +33,8 @@ export function Comments({
   postOwnerId: string;
 }) {
   return (
-    <section id="comments" className="scroll-mt-20 rounded-xl border border-graphite bg-panel p-5">
-      <h2 className="flex items-center gap-2 font-medium">
-        <MessageCircle className="h-4 w-4 text-redline" aria-hidden />
+    <section id="comments" className="scroll-mt-20 rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+      <h2 className="flex items-baseline gap-2 font-display text-2xl leading-tight font-semibold">
         Comments{comments.length > 0 && <span className="text-steel">{comments.length}</span>}
       </h2>
 
@@ -58,9 +56,9 @@ export function Comments({
       {comments.length === 0 ? (
         <p className="mt-4 text-sm text-steel">No comments yet.</p>
       ) : (
-        <ul className="mt-4 border-t border-graphite pt-3">
+        <ul className="mt-5 border-t border-graphite pt-4">
           {comments.map((c) => (
-            <li key={c.id} className="border-t border-graphite py-3 first:border-t-0 first:pt-0">
+            <li key={c.id} className="border-t border-rule py-4 first:border-t-0 first:pt-0">
               <div className="flex items-center gap-2 text-xs text-steel">
                 <Link
                   href={`/u/${c.username}`}
@@ -81,14 +79,15 @@ export function Comments({
                     <button
                       type="submit"
                       aria-label="Delete comment"
-                      className="text-steel hover:text-overdue"
+                      title="Delete comment"
+                      className="icon-btn icon-btn-danger -my-2 h-8 w-8"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden />
                     </button>
                   </form>
                 )}
               </div>
-              <p className="mt-1 text-sm whitespace-pre-line">{c.body}</p>
+              <p className="mt-1 max-w-prose whitespace-pre-line">{c.body}</p>
             </li>
           ))}
         </ul>
@@ -123,7 +122,7 @@ function CommentForm({ postId }: { postId: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-redline px-3 py-1.5 text-sm font-medium text-white hover:bg-redline-hover disabled:opacity-60"
+        className="btn btn-primary"
       >
         {pending ? "Posting…" : "Comment"}
       </button>

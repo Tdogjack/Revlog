@@ -7,8 +7,7 @@ import { POST_TAGS } from "@/lib/post-tags";
 import { PHOTO_ACCEPT, resizeImage, toBrowserImage } from "@/lib/resize-image";
 import { uploadPostPhoto, type PostFormState } from "../actions";
 
-const inputClass =
-  "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
+const inputClass = "field mt-1";
 
 type SharePhoto = { id: string; url: string; fromMod: boolean };
 type PostPhoto = { id: string; url: string };
@@ -144,7 +143,7 @@ export function ShareForm({
   }
 
   return (
-    <form action={submit} className="mt-6 space-y-4 rounded-xl border border-graphite bg-panel p-6">
+    <form action={submit} className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6">
       <input type="hidden" name="vehicleId" value={vehicleId} />
       {modId && <input type="hidden" name="modId" value={modId} />}
       {picked.map((id) => (
@@ -158,7 +157,7 @@ export function ShareForm({
 
       {showTags && (
         <div className="text-sm">
-          <span className="text-steel">Tag</span>
+          <span className="field-label">Tag</span>
           <div className="mt-2 flex flex-wrap gap-2">
             {POST_TAGS.filter((t) => t.value !== "build").map((t) => (
               <label key={t.value} className="cursor-pointer">
@@ -169,7 +168,7 @@ export function ShareForm({
                   defaultChecked={(state?.values?.tag ?? defaultTag) === t.value}
                   className="peer sr-only"
                 />
-                <span className="block rounded-full border border-graphite px-3 py-1 text-xs text-steel peer-checked:border-redline peer-checked:bg-redline/15 peer-checked:text-chalk peer-focus-visible:ring-2 peer-focus-visible:ring-redline hover:border-steel">
+                <span className="block rounded-md border border-graphite px-3 py-1.5 text-sm text-steel peer-checked:border-chalk/60 peer-checked:bg-graphite peer-checked:text-chalk peer-focus-visible:ring-2 peer-focus-visible:ring-redline hover:border-steel">
                   {t.label}
                 </span>
               </label>
@@ -178,8 +177,8 @@ export function ShareForm({
         </div>
       )}
 
-      <label className="block text-sm">
-        <span className="text-steel">Title</span>
+      <label className="block">
+        <span className="field-label">Title</span>
         <input
           name="title"
           required
@@ -188,8 +187,8 @@ export function ShareForm({
           className={inputClass}
         />
       </label>
-      <label className="block text-sm">
-        <span className="text-steel">Tell the story (optional)</span>
+      <label className="block">
+        <span className="field-label">Tell the story (optional)</span>
         <textarea
           name="body"
           rows={5}
@@ -336,7 +335,7 @@ export function ShareForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-redline py-2.5 font-medium text-white hover:bg-redline-hover disabled:opacity-60"
+        className="btn btn-primary btn-lg w-full"
       >
         {pending ? (progress ?? "Posting…") : submitLabel}
       </button>

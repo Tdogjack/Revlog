@@ -43,8 +43,9 @@ export function SortMenu({ sort, tag, q }: { sort: PostSort; tag?: string; q?: s
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-1 rounded-full bg-redline/15 px-3 py-1.5 text-sm font-medium text-redline hover:bg-redline/25"
+        className="btn min-h-10"
       >
+        <span className="text-steel">Sort</span>
         {current.label}
         <ChevronDown
           className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
@@ -54,7 +55,7 @@ export function SortMenu({ sort, tag, q }: { sort: PostSort; tag?: string; q?: s
       {open && (
         <div
           role="menu"
-          className="absolute top-full left-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-graphite bg-panel py-1 shadow-xl"
+          className="absolute top-full right-0 z-20 mt-2 w-56 overflow-hidden rounded-lg border border-edge bg-panel py-1 shadow-xl shadow-black/40"
         >
           <p className="px-4 pt-2 pb-1 text-xs font-medium text-steel">Sort by</p>
           {POST_SORTS.map((s) => {

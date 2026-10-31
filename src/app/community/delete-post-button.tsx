@@ -23,7 +23,7 @@ export function DeletePostButton({
     >
       <button
         type="submit"
-        className="flex items-center gap-1 text-sm text-steel hover:text-overdue"
+        className="flex min-h-9 items-center gap-1 text-sm text-steel hover:text-overdue"
       >
         <Trash2 className="h-4 w-4" aria-hidden />
         {label}
