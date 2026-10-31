@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { getUser } from "@/lib/auth";
 import { listPosts } from "@/lib/community";
 import { getProfileByUsername } from "@/lib/profiles";
 import { normalizeUsername } from "@/lib/username-rules";
@@ -25,7 +26,8 @@ async function ProfilePosts({ params }: Pick<PageProps<"/u/[username]">, "params
   const username = normalizeUsername(decodeURIComponent((await params).username));
   const profile = await getProfileByUsername(username);
   if (!profile) notFound();
-  const userPosts = await listPosts({ username });
+  const user = await getUser();
+  const userPosts = await listPosts({ username, viewerId: user?.id });
 
   return (
     <>
@@ -37,7 +39,7 @@ async function ProfilePosts({ params }: Pick<PageProps<"/u/[username]">, "params
       </p>
       <div className="mt-6 space-y-4">
         {userPosts.map((post) => (
-          <PostCard key={post.id} post={post} />
+          <PostCard key={post.id} post={post} signedIn={!!user} />
         ))}
       </div>
     </>

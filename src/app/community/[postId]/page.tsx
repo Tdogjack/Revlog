@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getUser } from "@/lib/auth";
-import { getPost, listInstalledMods, listPostParts } from "@/lib/community";
+import { getPost, listComments, listInstalledMods, listPostParts } from "@/lib/community";
 import { modCategoryLabel } from "@/lib/mod-categories";
+import { Comments } from "../comments";
 import { DeletePostButton } from "../delete-post-button";
 import { PostCard, postCarName } from "../post-card";
 
@@ -38,11 +39,13 @@ async function PostDetails({
   searchParams,
 }: Pick<PageProps<"/community/[postId]">, "params" | "searchParams">) {
   const [{ postId }, { failed }] = await Promise.all([params, searchParams]);
-  const [post, user] = await Promise.all([getPost(postId), getUser()]);
+  const user = await getUser();
+  const post = await getPost(postId, user?.id);
   if (!post) notFound();
-  const [buildList, sharedParts] = await Promise.all([
+  const [buildList, sharedParts, comments] = await Promise.all([
     post.kind === "build" ? listInstalledMods(post.vehicleId) : [],
     listPostParts(post),
+    listComments(post.id),
   ]);
 
   return (
@@ -53,7 +56,7 @@ async function PostDetails({
           photo, or share again.
         </p>
       )}
-      <PostCard post={post} link={false} />
+      <PostCard post={post} link={false} signedIn={!!user} />
 
       {buildList.length > 0 && (
         <section className="rounded-xl border border-graphite bg-panel p-5">
@@ -79,15 +82,40 @@ async function PostDetails({
         </section>
       )}
 
-      {user?.id === post.userId && <DeletePostButton postId={post.id} />}
+      {user?.id === post.userId &&
+        (post.tag === "build" ? (
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/community/new?vehicle=${post.vehicleId}&build=1`}
+              className="text-sm text-steel hover:text-chalk"
+            >
+              Update build
+            </Link>
+            <DeletePostButton
+              postId={post.id}
+              label="Take down build"
+              confirmText="Take down your public build? The post and its shared photos are removed. You can post it again any time."
+            />
+          </div>
+        ) : (
+          <DeletePostButton postId={post.id} />
+        ))}
+
+      <Comments
+        postId={post.id}
+        comments={comments}
+        viewerId={user?.id ?? null}
+        postOwnerId={post.userId}
+      />
     </div>
   );
 }
 
 const money = (amount: string, currency: string | null) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "USD" }).format(
-    Number(amount),
-  );
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency || "USD",
+  }).format(Number(amount));
 
 function SharedParts({ parts }: { parts: Awaited<ReturnType<typeof listPostParts>> }) {
   if (parts.length === 0) return null;

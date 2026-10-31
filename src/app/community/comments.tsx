@@ -1,0 +1,132 @@
+"use client";
+
+import Link from "next/link";
+import { useActionState } from "react";
+import { MessageCircle, Trash2 } from "lucide-react";
+import type { PostComment } from "@/lib/community";
+import { postComment, removeComment, type CommentFormState } from "./actions";
+
+const inputClass =
+  "w-full rounded-md border border-graphite bg-carbon px-3 py-2 text-sm outline-none focus:border-redline";
+
+function timeAgo(date: Date) {
+  const minutes = Math.round((Date.now() - date.getTime()) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// A post's comment thread. Commenters can delete their own comments, and the
+// post's owner can delete any on their post.
+export function Comments({
+  postId,
+  comments,
+  viewerId,
+  postOwnerId,
+}: {
+  postId: string;
+  comments: PostComment[];
+  viewerId: string | null;
+  postOwnerId: string;
+}) {
+  return (
+    <section id="comments" className="scroll-mt-20 rounded-xl border border-graphite bg-panel p-5">
+      <h2 className="flex items-center gap-2 font-medium">
+        <MessageCircle className="h-4 w-4 text-redline" aria-hidden />
+        Comments{comments.length > 0 && <span className="text-steel">{comments.length}</span>}
+      </h2>
+
+      {/* The box sits above the thread so it's reachable without scrolling. */}
+      {viewerId ? (
+        <CommentForm postId={postId} />
+      ) : (
+        <p className="mt-3 text-sm text-steel">
+          <Link
+            href={`/login?next=${encodeURIComponent(`/community/${postId}#comments`)}`}
+            className="font-medium text-chalk hover:text-redline"
+          >
+            Log in
+          </Link>{" "}
+          to comment.
+        </p>
+      )}
+
+      {comments.length === 0 ? (
+        <p className="mt-4 text-sm text-steel">No comments yet.</p>
+      ) : (
+        <ul className="mt-4 border-t border-graphite pt-3">
+          {comments.map((c) => (
+            <li key={c.id} className="border-t border-graphite py-3 first:border-t-0 first:pt-0">
+              <div className="flex items-center gap-2 text-xs text-steel">
+                <Link
+                  href={`/u/${c.username}`}
+                  className="font-medium text-chalk hover:text-redline"
+                >
+                  @{c.username}
+                </Link>
+                <span aria-hidden>·</span>
+                <time dateTime={c.createdAt.toISOString()}>{timeAgo(c.createdAt)}</time>
+                {viewerId && (viewerId === c.userId || viewerId === postOwnerId) && (
+                  <form
+                    action={removeComment.bind(null, c.id)}
+                    onSubmit={(e) => {
+                      if (!confirm("Delete this comment?")) e.preventDefault();
+                    }}
+                    className="ml-auto"
+                  >
+                    <button
+                      type="submit"
+                      aria-label="Delete comment"
+                      className="text-steel hover:text-overdue"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  </form>
+                )}
+              </div>
+              <p className="mt-1 text-sm whitespace-pre-line">{c.body}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function CommentForm({ postId }: { postId: string }) {
+  const [state, action, pending] = useActionState<CommentFormState, FormData>(
+    postComment.bind(null, postId),
+    undefined,
+  );
+
+  // React clears the form after each submit; a failed one puts the text back.
+  return (
+    <form action={action} className="mt-3 space-y-2">
+      <textarea
+        name="body"
+        rows={2}
+        maxLength={1000}
+        required
+        placeholder="Add a comment…"
+        defaultValue={state?.body}
+        className={inputClass}
+      />
+      {state?.error && (
+        <p role="alert" className="text-xs text-overdue">
+          {state.error}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-md bg-redline px-3 py-1.5 text-sm font-medium text-white hover:bg-redline-hover disabled:opacity-60"
+      >
+        {pending ? "Posting…" : "Comment"}
+      </button>
+    </form>
+  );
+}

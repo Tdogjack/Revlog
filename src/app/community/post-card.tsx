@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { MessageCircle } from "lucide-react";
 import { PhotoGallery } from "@/components/photo-strip";
 import type { FeedPost } from "@/lib/community";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { postTagLabel, postTagTone } from "@/lib/post-tags";
 import { vehicleName } from "@/lib/vehicles";
+import { LikeButton } from "./like-button";
 
 export function timeAgo(date: Date, now = new Date()) {
   const minutes = Math.round((now.getTime() - date.getTime()) / 60_000);
@@ -25,8 +27,17 @@ export function postCarName(post: FeedPost) {
   return post.nickname ? `${post.nickname} (${full})` : full;
 }
 
-// One post in the feed. `link` makes the title open the post page.
-export function PostCard({ post, link = true }: { post: FeedPost; link?: boolean }) {
+// One post in the feed. `link` makes the title open the post page;
+// `signedIn` lets the like button work instead of asking to log in.
+export function PostCard({
+  post,
+  link = true,
+  signedIn,
+}: {
+  post: FeedPost;
+  link?: boolean;
+  signedIn: boolean;
+}) {
   const modName = post.modPart ? [post.modBrand, post.modPart].filter(Boolean).join(" ") : null;
   return (
     <article className="rounded-xl border border-graphite bg-panel p-5">
@@ -38,6 +49,12 @@ export function PostCard({ post, link = true }: { post: FeedPost; link?: boolean
         <span>{postCarName(post)}</span>
         <span aria-hidden>·</span>
         <time dateTime={post.createdAt.toISOString()}>{timeAgo(post.createdAt)}</time>
+        {post.tag === "build" && post.updatedAt.getTime() - post.createdAt.getTime() > 60_000 && (
+          <>
+            <span aria-hidden>·</span>
+            <time dateTime={post.updatedAt.toISOString()}>updated {timeAgo(post.updatedAt)}</time>
+          </>
+        )}
         <Link
           href={`/community?tag=${post.tag}`}
           className={`ml-auto rounded px-2 py-0.5 text-xs hover:opacity-80 ${postTagTone(post.tag)}`}
@@ -75,17 +92,25 @@ export function PostCard({ post, link = true }: { post: FeedPost; link?: boolean
       )}
       {post.photos.length > 0 && (
         <div className="mt-4">
-          <PhotoGallery photos={link ? post.photos.slice(0, 6) : post.photos} />
-          {link && post.photos.length > 6 && (
-            <Link
-              href={`/community/${post.id}`}
-              className="mt-2 block text-xs text-steel hover:text-chalk"
-            >
-              +{post.photos.length - 6} more photos
-            </Link>
-          )}
+          <PhotoGallery photos={post.photos} />
         </div>
       )}
+      <div className="mt-4 flex items-center gap-5">
+        <LikeButton
+          postId={post.id}
+          liked={post.liked}
+          likeCount={post.likeCount}
+          signedIn={signedIn}
+        />
+        <Link
+          href={`/community/${post.id}#comments`}
+          className="flex items-center gap-1.5 text-sm text-steel hover:text-chalk"
+          aria-label={`${post.commentCount} ${post.commentCount === 1 ? "comment" : "comments"}`}
+        >
+          <MessageCircle className="h-4 w-4" aria-hidden />
+          {post.commentCount > 0 && <span>{post.commentCount}</span>}
+        </Link>
+      </div>
     </article>
   );
 }

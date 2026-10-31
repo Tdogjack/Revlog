@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   date,
+  index,
   integer,
   numeric,
   pgEnum,
@@ -265,13 +266,20 @@ export const posts = pgTable(
     modId: uuid("mod_id").references(() => mods.id, { onDelete: "set null" }),
     kind: postKind("kind").notNull(),
     // What the post is about (see post-tags.ts); kind says whether it's tied to a mod.
+    // A "build" tag marks the car's public build, which is kept up to date.
     tag: text("tag").notNull().default("build"),
     title: text("title").notNull(),
     body: text("body"),
     // When on, the post lists the mod's (or build's) parts with their links.
     showParts: boolean("show_parts").notNull().default(false),
   },
-  () => [ownerPolicy("posts")],
+  (t) => [
+    // One public build per car.
+    uniqueIndex("posts_one_build_per_car_idx")
+      .on(t.vehicleId)
+      .where(sql`${t.tag} = 'build'`),
+    ownerPolicy("posts"),
+  ],
 ).enableRLS();
 
 // Public copies of photos attached to a post, in the community-photos bucket.
@@ -286,6 +294,33 @@ export const postPhotos = pgTable(
     position: integer("position").notNull().default(0),
   },
   () => [ownerPolicy("post_photos")],
+).enableRLS();
+
+// One like per person per post.
+export const postLikes = pgTable(
+  "post_likes",
+  {
+    ...ownerColumns,
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("post_likes_post_user_idx").on(t.postId, t.userId),
+    ownerPolicy("post_likes"),
+  ],
+).enableRLS();
+
+export const postComments = pgTable(
+  "post_comments",
+  {
+    ...ownerColumns,
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+  },
+  (t) => [index("post_comments_post_idx").on(t.postId, t.createdAt), ownerPolicy("post_comments")],
 ).enableRLS();
 
 export type Vehicle = typeof vehicles.$inferSelect;
