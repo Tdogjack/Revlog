@@ -40,6 +40,19 @@ export const vehicleInput = z.object({
     .refine((v) => v === "" || /^[A-HJ-NPR-Z0-9]{17}$/.test(v), "A VIN is 17 letters and numbers.")
     .transform((v) => v || null),
   currentMileage: wholeNumber("mileage", 0, 2_000_000),
+  builtOn: z
+    .string()
+    .trim()
+    .refine(
+      (v) => v === "" || /^\d{4}-(0[1-9]|1[0-2])-01$/.test(v),
+      "Pick both the month and the 4-digit year it was built.",
+    )
+    .refine((v) => v === "" || v >= "1886-01-01", "Build year looks too low.")
+    .refine(
+      (v) => v === "" || v <= new Date().toISOString().slice(0, 10),
+      "Build date can't be in the future.",
+    )
+    .transform((v) => v || null),
 });
 
 export type VehicleInput = z.infer<typeof vehicleInput>;
@@ -110,6 +123,16 @@ export async function createVehicle(userId: string, input: VehicleInput) {
     .values({ ...input, userId })
     .returning({ id: vehicles.id });
   return vehicle;
+}
+
+export async function updateVehicle(userId: string, id: string, input: VehicleInput) {
+  if (!uuidPattern.test(id)) return false;
+  const updated = await db
+    .update(vehicles)
+    .set(input)
+    .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)))
+    .returning({ id: vehicles.id });
+  return updated.length > 0;
 }
 
 export const mileageInput = wholeNumber("mileage", 0, 2_000_000);

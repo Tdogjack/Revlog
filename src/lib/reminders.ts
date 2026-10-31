@@ -55,13 +55,18 @@ export function withLastService<
   };
 }
 
-// Where a never-logged time interval starts: the car's age. A VIN only gives
-// the model year, not the build month, so this is January 1 of the model
-// year (from the VIN when there is one, else the stored year). That's the
-// latest plausible start, so a new car isn't flagged early. Cars newer than
-// the reminder, or with no usable year, count from the day it was added.
-export function carAgeStart(car: { year: number; vin: string | null }, addedOn: Date): string {
+// Where a never-logged time interval starts: the car's age. The build month
+// is used when the owner entered it. Otherwise a VIN only gives the model
+// year, not the build month, so this is January 1 of the model year (from
+// the VIN when there is one, else the stored year). That's the latest
+// plausible start, so a new car isn't flagged early. Cars newer than the
+// reminder, or with no usable year, count from the day it was added.
+export function carAgeStart(
+  car: { year: number; vin: string | null; builtOn?: string | null },
+  addedOn: Date,
+): string {
   const added = addedOn.toISOString().slice(0, 10);
+  if (car.builtOn) return car.builtOn < added ? car.builtOn : added;
   const year = vinModelYear(car.vin, car.year) ?? car.year;
   if (!Number.isInteger(year) || year < 1886) return added;
   const start = `${String(year).padStart(4, "0")}-01-01`;
@@ -72,7 +77,7 @@ export function carAgeStart(car: { year: number; vin: string | null }, addedOn: 
 // Run after withLastService, which sets lastDoneOn when there's a record.
 export function withCarAgeStart<R extends ReminderInput & { createdAt: Date }>(
   reminder: R,
-  car: { year: number; vin: string | null },
+  car: { year: number; vin: string | null; builtOn?: string | null },
 ): R {
   if (reminder.lastDoneOn != null || reminder.intervalMonths == null) return reminder;
   return { ...reminder, startOn: carAgeStart(car, reminder.createdAt) };

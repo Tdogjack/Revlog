@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { PartsFieldset } from "@/components/parts-fieldset";
 import type { PartRow } from "@/lib/part-rows";
 import { ServiceTypeSelect } from "@/components/service-type-select";
@@ -18,6 +18,7 @@ export function ServiceForm({
   customTypes,
   initial = {},
   initialParts = [],
+  mileageTypes,
   submitLabel = "Save record",
 }: {
   action: (prev: ServiceFormState, formData: FormData) => Promise<ServiceFormState>;
@@ -25,10 +26,14 @@ export function ServiceForm({
   customTypes: CustomType[];
   initial?: Record<string, string>;
   initialParts?: PartRow[];
+  // When logging, these types need a mileage and fill in the car's current one if blank.
+  mileageTypes?: string[];
   submitLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const v = state?.values ?? initial;
+  const [category, setCategory] = useState(v.category || "oil");
+  const needsMileage = mileageTypes?.includes(category) ?? false;
   const dateRef = useRef<HTMLInputElement>(null);
 
   // Fill in today's date after load, in the user's own time zone.
@@ -48,6 +53,7 @@ export function ServiceForm({
           customTypes={customTypes}
           defaultValue={v.category || "oil"}
           defaultNewType={v.newType}
+          onChange={setCategory}
           className={inputClass}
         />
         <label className="block text-sm">
@@ -75,7 +81,7 @@ export function ServiceForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm">
-          <span className="text-steel">Mileage (optional)</span>
+          <span className="text-steel">{needsMileage ? "Mileage" : "Mileage (optional)"}</span>
           <input
             name="mileage"
             inputMode="numeric"
@@ -83,6 +89,11 @@ export function ServiceForm({
             defaultValue={v.mileage}
             className={inputClass}
           />
+          {needsMileage && (
+            <span className="mt-1 block text-xs text-steel">
+              Leave blank to use the current {currentMileage.toLocaleString("en-US")} mi.
+            </span>
+          )}
         </label>
         <label className="block text-sm">
           <span className="text-steel">Cost (optional)</span>

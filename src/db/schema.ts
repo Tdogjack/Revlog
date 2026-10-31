@@ -51,6 +51,8 @@ export const vehicles = pgTable(
     vin: text("vin"),
     currentMileage: integer("current_mileage").notNull().default(0),
     photoPath: text("photo_path"),
+    // Build date from the door jamb sticker, when the owner knows it.
+    builtOn: date("built_on"),
     // Favorites list first; then the user's own order (null until they reorder).
     favorite: boolean("favorite").notNull().default(false),
     position: integer("position"),

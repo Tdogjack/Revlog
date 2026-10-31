@@ -3,11 +3,26 @@
 import { startTransition, useActionState, useRef, useState, useTransition } from "react";
 import { PhotoPicker } from "@/components/photo-picker";
 import { withResizedPhoto } from "@/lib/resize-image";
-import { addVehicle } from "../actions";
+import type { FormState } from "../actions";
 import { lookUpVin } from "./vin-actions";
 
 const inputClass =
   "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 function Field({
   label,
@@ -30,10 +45,22 @@ function Field({
   );
 }
 
-export function VehicleForm() {
-  const [state, formAction, pending] = useActionState(addVehicle, undefined);
+// Used for both adding and editing; `initial` holds an existing car's values.
+// Editing leaves the photo to the car page's own controls.
+export function VehicleForm({
+  action,
+  initial,
+  submitLabel = "Add to garage",
+  pendingLabel = "Adding…",
+}: {
+  action: (prev: FormState, formData: FormData) => Promise<FormState>;
+  initial?: Record<string, string>;
+  submitLabel?: string;
+  pendingLabel?: string;
+}) {
+  const [state, formAction, pending] = useActionState(action, undefined);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const v = state?.values ?? {};
+  const v = state?.values ?? initial ?? {};
   const error = photoError ?? state?.error;
   const formRef = useRef<HTMLFormElement>(null);
   const [looking, startLookup] = useTransition();
@@ -79,7 +106,7 @@ export function VehicleForm() {
       className="mt-6 space-y-4 rounded-xl border border-graphite bg-panel p-6"
     >
       {/* The form resets after each submit, so remount the picker to clear its preview too. */}
-      <PhotoPicker key={state?.error ?? "initial"} />
+      {!initial && <PhotoPicker key={state?.error ?? "initial"} />}
       <div>
         <div className="flex items-end gap-2">
           <div className="flex-1">
@@ -129,14 +156,46 @@ export function VehicleForm() {
           defaultValue={v.nickname}
         />
       </div>
-      <Field
-        label="Current mileage"
-        name="currentMileage"
-        inputMode="numeric"
-        placeholder="48,210"
-        required
-        defaultValue={v.currentMileage}
-      />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Current mileage"
+          name="currentMileage"
+          inputMode="numeric"
+          placeholder="48,210"
+          required
+          defaultValue={v.currentMileage}
+        />
+        <fieldset className="text-sm">
+          <legend className="text-steel">Built (optional)</legend>
+          <div className="grid grid-cols-[1fr_6rem] gap-2">
+            <select
+              name="builtMonth"
+              aria-label="Month built"
+              defaultValue={v.builtMonth ?? ""}
+              className={inputClass}
+            >
+              <option value="">Month</option>
+              {MONTHS.map((m, i) => (
+                <option key={m} value={String(i + 1).padStart(2, "0")}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <input
+              name="builtYear"
+              aria-label="Year built"
+              inputMode="numeric"
+              placeholder="2019"
+              maxLength={4}
+              defaultValue={v.builtYear}
+              className={inputClass}
+            />
+          </div>
+          <span className="mt-1 block text-xs text-steel">
+            On the door jamb sticker, like MFD 06/19.
+          </span>
+        </fieldset>
+      </div>
 
       {error && (
         <p role="alert" className="text-sm text-overdue">
@@ -149,7 +208,7 @@ export function VehicleForm() {
         disabled={pending}
         className="w-full rounded-md bg-redline py-2.5 font-medium text-white hover:bg-redline-hover disabled:opacity-60"
       >
-        {pending ? "Adding…" : "Add to garage"}
+        {pending ? pendingLabel : submitLabel}
       </button>
     </form>
   );

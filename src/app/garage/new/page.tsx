@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { addVehicle } from "../actions";
 import { VehicleForm } from "./vehicle-form";
 
 export const metadata: Metadata = { title: "Add a car · Revlog" };
@@ -11,7 +12,7 @@ export default function NewVehiclePage() {
         ← Back to garage
       </Link>
       <h1 className="mt-4 text-2xl font-semibold">Add a car</h1>
-      <VehicleForm />
+      <VehicleForm action={addVehicle} />
     </div>
   );
 }

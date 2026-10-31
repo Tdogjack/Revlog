@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowDown, ArrowUp, Car, Plus, Star } from "lucide-react";
+import { ArrowDown, ArrowUp, Car, Pencil, Plus, Star } from "lucide-react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
 import { getEmailSettings } from "@/lib/email-settings";
@@ -88,37 +88,37 @@ async function VehicleList() {
   }
 
   return (
-    <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="mt-8 space-y-4">
       {cars.map((car, i) => (
         <li key={car.id} className="relative">
           <Link
             href={`/garage/${car.id}`}
-            className={`block rounded-xl border bg-panel p-5 pr-12 hover:border-steel ${car.favorite ? "border-redline/50" : "border-graphite"}`}
+            className={`flex items-center gap-4 rounded-xl border bg-panel p-4 pr-14 hover:border-steel sm:gap-6 sm:p-6 sm:pr-16 ${car.favorite ? "border-redline/50" : "border-graphite"}`}
           >
-            <div className="flex items-center gap-4">
-              <VehiclePhoto
-                src={car.photoPath ? photos.get(car.photoPath) : null}
-                alt={vehicleName(car)}
-                className="h-16 w-16"
-              />
-              <div className="min-w-0">
-                <p className="truncate font-medium">{car.nickname ?? vehicleName(car)}</p>
-                {car.nickname && (
-                  <p className="mt-0.5 truncate text-sm text-steel">{vehicleName(car)}</p>
-                )}
-              </div>
-            </div>
-            <div className="mt-4 flex items-center justify-between gap-2">
-              <p className="font-mono text-xs text-steel">
-                {car.currentMileage.toLocaleString("en-US")} mi
+            <VehiclePhoto
+              src={car.photoPath ? photos.get(car.photoPath) : null}
+              alt={vehicleName(car)}
+              className="h-24 w-24 sm:h-36 sm:w-36"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-lg font-semibold sm:text-xl">
+                {car.nickname ?? vehicleName(car)}
               </p>
-              {(() => {
-                const u = urgency.get(car.id);
-                if (!u) return null;
-                if (u.status === "ok") return <StatusBadge status="ok" label="All caught up" />;
-                const label = u.status === "overdue" ? "overdue" : "due soon";
-                return <StatusBadge status={u.status} label={`${u.count} ${label}`} />;
-              })()}
+              {car.nickname && (
+                <p className="mt-0.5 truncate text-sm text-steel">{vehicleName(car)}</p>
+              )}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <p className="font-mono text-sm text-steel">
+                  {car.currentMileage.toLocaleString("en-US")} mi
+                </p>
+                {(() => {
+                  const u = urgency.get(car.id);
+                  if (!u) return null;
+                  if (u.status === "ok") return <StatusBadge status="ok" label="All caught up" />;
+                  const label = u.status === "overdue" ? "overdue" : "due soon";
+                  return <StatusBadge status={u.status} label={`${u.count} ${label}`} />;
+                })()}
+              </div>
             </div>
           </Link>
           <CardControls
@@ -133,7 +133,7 @@ async function VehicleList() {
   );
 }
 
-// Favorite and reorder buttons, kept outside the card link so they don't open the car.
+// Favorite, edit, and reorder buttons, kept outside the card link so they don't open the car.
 function CardControls({
   vehicleId,
   favorite,
@@ -159,6 +159,14 @@ function CardControls({
           <Star className={`h-4 w-4 ${favorite ? "fill-redline" : ""}`} aria-hidden />
         </button>
       </form>
+      <Link
+        href={`/garage/${vehicleId}/edit`}
+        aria-label="Edit car"
+        title="Edit car"
+        className={button}
+      >
+        <Pencil className="h-4 w-4" aria-hidden />
+      </Link>
       {canMoveUp && (
         <form action={reorderVehicle.bind(null, vehicleId, "up")}>
           <button type="submit" aria-label="Move up" title="Move up" className={button}>

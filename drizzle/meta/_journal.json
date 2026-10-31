@@ -71,6 +71,13 @@
       "when": 1793268695750,
       "tag": "0009_garage_order_post_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793406180754,
+      "tag": "0010_vehicle_built_on",
+      "breakpoints": true
     }
   ]
 }

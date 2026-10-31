@@ -11,20 +11,37 @@ import {
   moveVehicle,
   setVehicleFavorite,
   setVehiclePhoto,
+  updateVehicle,
   vehicleInput,
   vehicleName,
 } from "@/lib/vehicles";
 
 export type FormState = { error?: string; values?: Record<string, string> } | undefined;
 
+const vehicleFields = [
+  "year",
+  "make",
+  "model",
+  "trim",
+  "nickname",
+  "vin",
+  "currentMileage",
+  "builtMonth",
+  "builtYear",
+];
+
+// The build date is picked as a month and year, and stored as the 1st of that month.
+function readVehicleFields(formData: FormData) {
+  const raw = Object.fromEntries(vehicleFields.map((k) => [k, String(formData.get(k) ?? "")]));
+  const month = raw.builtMonth.trim();
+  const year = raw.builtYear.trim();
+  raw.builtOn = month || year ? `${year}-${month}-01` : "";
+  return raw;
+}
+
 export async function addVehicle(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
-  const raw = Object.fromEntries(
-    ["year", "make", "model", "trim", "nickname", "vin", "currentMileage"].map((k) => [
-      k,
-      String(formData.get(k) ?? ""),
-    ]),
-  );
+  const raw = readVehicleFields(formData);
 
   const parsed = vehicleInput.safeParse(raw);
   if (!parsed.success) {
@@ -47,6 +64,27 @@ export async function addVehicle(_prev: FormState, formData: FormData): Promise<
   }
 
   redirect(`/garage/${vehicle.id}`);
+}
+
+export async function editVehicle(
+  vehicleId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireUser();
+  const raw = readVehicleFields(formData);
+
+  const parsed = vehicleInput.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message, values: raw };
+  }
+
+  const found = await updateVehicle(user.id, vehicleId, parsed.data);
+  if (!found) return { error: "That car wasn't found.", values: raw };
+
+  revalidatePath("/garage");
+  revalidatePath(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}`);
 }
 
 export type PhotoState = { error?: string; ok?: boolean } | undefined;
