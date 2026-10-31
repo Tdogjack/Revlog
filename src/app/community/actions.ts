@@ -6,7 +6,13 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { posts } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
-import { addPostPhoto, createPost, deletePost } from "@/lib/community";
+import {
+  addPostPhoto,
+  createPost,
+  deletePost,
+  getBuildPostId,
+  updateBuildPost,
+} from "@/lib/community";
 import { readPhoto } from "@/lib/photos";
 import { isPostTag } from "@/lib/post-tags";
 import { getProfile } from "@/lib/profiles";
@@ -25,20 +31,15 @@ export async function sharePost(_prev: PostFormState, formData: FormData): Promi
   const modId = String(formData.get("modId") ?? "") || null;
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
+  // The build tag is only for the car's public build, which saveBuild handles.
   const rawTag = String(formData.get("tag") ?? "");
-  const tag = isPostTag(rawTag) ? rawTag : modId ? "mod" : "build";
+  const tag = isPostTag(rawTag) && rawTag !== "build" ? rawTag : modId ? "mod" : "progress";
   const values = { title, body, tag };
   if (!isUuid(vehicleId) || (modId && !isUuid(modId))) return { error: "Pick a car to share." };
-  if (!title) return { error: "Give your post a title.", values };
-  if (title.length > 120) return { error: "Keep the title under 120 characters.", values };
-  if (body.length > 4000) return { error: "Keep the post under 4,000 characters.", values };
+  const invalid = checkText(title, body);
+  if (invalid) return { error: invalid, values };
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const [{ n }] = await db
-    .select({ n: count() })
-    .from(posts)
-    .where(and(eq(posts.userId, user.id), gt(posts.createdAt, since)));
-  if (n >= POSTS_PER_DAY)
+  if (await atDailyLimit(user.id))
     return { error: "That's the limit for today. Try again tomorrow.", values };
 
   const result = await createPost(user.id, {
@@ -57,6 +58,70 @@ export async function sharePost(_prev: PostFormState, formData: FormData): Promi
   return { postId: result.id };
 }
 
+// Posts the car's public build, or updates it if the car already has one.
+export async function saveBuild(_prev: PostFormState, formData: FormData): Promise<PostFormState> {
+  const user = await requireUser();
+  if (!(await getProfile(user.id))) redirect("/username?next=/community");
+
+  const vehicleId = String(formData.get("vehicleId") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  const values = { title, body };
+  if (!isUuid(vehicleId)) return { error: "Pick a car to share." };
+  const invalid = checkText(title, body);
+  if (invalid) return { error: invalid, values };
+  const showParts = formData.get("showParts") === "on";
+  const photoIds = formData.getAll("photoIds").map(String);
+
+  const existing = await getBuildPostId(user.id, vehicleId);
+  if (existing) {
+    const error = await updateBuildPost(user.id, existing, {
+      title,
+      body: body || null,
+      showParts,
+      keepPhotoIds: formData.getAll("keepPhotoIds").map(String),
+      photoIds,
+    });
+    if (error) return { error, values };
+    revalidatePath("/community");
+    revalidatePath(`/community/${existing}`);
+    revalidatePath(`/garage/${vehicleId}`);
+    return { postId: existing };
+  }
+
+  if (await atDailyLimit(user.id))
+    return { error: "That's the limit for today. Try again tomorrow.", values };
+  const result = await createPost(user.id, {
+    vehicleId,
+    modId: null,
+    title,
+    body: body || null,
+    photoIds,
+    showParts,
+    tag: "build",
+  });
+  if ("error" in result) return { error: result.error, values };
+  revalidatePath("/community");
+  revalidatePath(`/garage/${vehicleId}`);
+  return { postId: result.id };
+}
+
+function checkText(title: string, body: string) {
+  if (!title) return "Give your post a title.";
+  if (title.length > 120) return "Keep the title under 120 characters.";
+  if (body.length > 4000) return "Keep the post under 4,000 characters.";
+  return null;
+}
+
+async function atDailyLimit(userId: string) {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(posts)
+    .where(and(eq(posts.userId, userId), gt(posts.createdAt, since)));
+  return n >= POSTS_PER_DAY;
+}
+
 // One new photo per call, so each request stays under the upload size limit.
 export async function uploadPostPhoto(postId: string, formData: FormData) {
   const user = await requireUser();
@@ -69,9 +134,12 @@ export async function uploadPostPhoto(postId: string, formData: FormData) {
   return {};
 }
 
-export async function removePost(postId: string) {
+// `next` is where to land afterwards: the feed, or the car's page when a build
+// is taken down from the garage.
+export async function removePost(postId: string, next: string) {
   const user = await requireUser();
   await deletePost(user.id, postId);
   revalidatePath("/community");
-  redirect("/community");
+  if (next !== "/community") revalidatePath(next);
+  redirect(next.startsWith("/garage/") ? next : "/community");
 }

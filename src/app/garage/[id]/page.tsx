@@ -14,7 +14,9 @@ import {
   Zap,
 } from "lucide-react";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
+import { DeletePostButton } from "@/app/community/delete-post-button";
 import { requireUser } from "@/lib/auth";
+import { getBuildPostId } from "@/lib/community";
 import { getEmailSettings } from "@/lib/email-settings";
 import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
 import { modCategoryLabel } from "@/lib/mod-categories";
@@ -55,7 +57,10 @@ export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
   );
 }
 
-const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const money = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
 
 // Stored as YYYY-MM-DD; format in UTC so the day never shifts.
 function formatDate(isoDate: string) {
@@ -106,7 +111,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
 
-  const [records, carMods, reminderRows, customTypes, carParts, gallery, settings] =
+  const [records, carMods, reminderRows, customTypes, carParts, gallery, settings, buildPostId] =
     await Promise.all([
       listServiceRecords(user.id, car.id),
       listMods(user.id, car.id),
@@ -115,6 +120,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       listPartsForVehicle(user.id, car.id),
       listPhotosForVehicle(user.id, car.id),
       getEmailSettings(user.id),
+      getBuildPostId(user.id, car.id),
     ]);
   const photos = await signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]);
   const stripPhotos = (match: (p: (typeof gallery)[number]) => boolean): StripPhoto[] =>
@@ -336,11 +342,11 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
               </h2>
               <div className="flex items-center gap-2">
                 <Link
-                  href={`/community/new?vehicle=${car.id}`}
+                  href={`/community/new?vehicle=${car.id}&build=1`}
                   className="flex items-center gap-1 rounded-md border border-graphite px-3 py-1.5 text-sm font-medium hover:border-steel"
                 >
                   <Share2 className="h-4 w-4" aria-hidden />
-                  Share build
+                  {buildPostId ? "Update public build" : "Post public build"}
                 </Link>
                 <Link
                   href={`/garage/${car.id}/mods/new`}
@@ -351,6 +357,21 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                 </Link>
               </div>
             </div>
+
+            {buildPostId && (
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-steel">
+                <span>Your public build is live.</span>
+                <Link href={`/community/${buildPostId}`} className="hover:text-chalk">
+                  View post
+                </Link>
+                <DeletePostButton
+                  postId={buildPostId}
+                  next={`/garage/${car.id}`}
+                  label="Take down"
+                  confirmText="Take down your public build? The post and its shared photos are removed. You can post it again any time."
+                />
+              </div>
+            )}
 
             <div className="mt-4">
               <PhotoStrip

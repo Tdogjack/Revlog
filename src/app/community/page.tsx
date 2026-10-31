@@ -27,7 +27,7 @@ export default function CommunityPage({ searchParams }: PageProps<"/community">)
           className="flex items-center gap-1 rounded-md bg-redline px-3 py-2 text-sm font-medium text-white hover:bg-redline-hover"
         >
           <Share2 className="h-4 w-4" aria-hidden />
-          Share your build
+          Share
         </Link>
       </div>
       <Suspense fallback={<p className="mt-6 text-sm text-steel">Loading posts…</p>}>

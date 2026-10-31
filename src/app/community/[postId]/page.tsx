@@ -79,15 +79,33 @@ async function PostDetails({
         </section>
       )}
 
-      {user?.id === post.userId && <DeletePostButton postId={post.id} />}
+      {user?.id === post.userId &&
+        (post.tag === "build" ? (
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/community/new?vehicle=${post.vehicleId}&build=1`}
+              className="text-sm text-steel hover:text-chalk"
+            >
+              Update build
+            </Link>
+            <DeletePostButton
+              postId={post.id}
+              label="Take down build"
+              confirmText="Take down your public build? The post and its shared photos are removed. You can post it again any time."
+            />
+          </div>
+        ) : (
+          <DeletePostButton postId={post.id} />
+        ))}
     </div>
   );
 }
 
 const money = (amount: string, currency: string | null) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "USD" }).format(
-    Number(amount),
-  );
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency || "USD",
+  }).format(Number(amount));
 
 function SharedParts({ parts }: { parts: Awaited<ReturnType<typeof listPostParts>> }) {
   if (parts.length === 0) return null;

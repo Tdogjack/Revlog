@@ -265,13 +265,20 @@ export const posts = pgTable(
     modId: uuid("mod_id").references(() => mods.id, { onDelete: "set null" }),
     kind: postKind("kind").notNull(),
     // What the post is about (see post-tags.ts); kind says whether it's tied to a mod.
+    // A "build" tag marks the car's public build, which is kept up to date.
     tag: text("tag").notNull().default("build"),
     title: text("title").notNull(),
     body: text("body"),
     // When on, the post lists the mod's (or build's) parts with their links.
     showParts: boolean("show_parts").notNull().default(false),
   },
-  () => [ownerPolicy("posts")],
+  (t) => [
+    // One public build per car.
+    uniqueIndex("posts_one_build_per_car_idx")
+      .on(t.vehicleId)
+      .where(sql`${t.tag} = 'build'`),
+    ownerPolicy("posts"),
+  ],
 ).enableRLS();
 
 // Public copies of photos attached to a post, in the community-photos bucket.

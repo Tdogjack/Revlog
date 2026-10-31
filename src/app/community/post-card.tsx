@@ -38,6 +38,12 @@ export function PostCard({ post, link = true }: { post: FeedPost; link?: boolean
         <span>{postCarName(post)}</span>
         <span aria-hidden>·</span>
         <time dateTime={post.createdAt.toISOString()}>{timeAgo(post.createdAt)}</time>
+        {post.tag === "build" && post.updatedAt.getTime() - post.createdAt.getTime() > 60_000 && (
+          <>
+            <span aria-hidden>·</span>
+            <time dateTime={post.updatedAt.toISOString()}>updated {timeAgo(post.updatedAt)}</time>
+          </>
+        )}
         <Link
           href={`/community?tag=${post.tag}`}
           className={`ml-auto rounded px-2 py-0.5 text-xs hover:opacity-80 ${postTagTone(post.tag)}`}
@@ -75,15 +81,7 @@ export function PostCard({ post, link = true }: { post: FeedPost; link?: boolean
       )}
       {post.photos.length > 0 && (
         <div className="mt-4">
-          <PhotoGallery photos={link ? post.photos.slice(0, 6) : post.photos} />
-          {link && post.photos.length > 6 && (
-            <Link
-              href={`/community/${post.id}`}
-              className="mt-2 block text-xs text-steel hover:text-chalk"
-            >
-              +{post.photos.length - 6} more photos
-            </Link>
-          )}
+          <PhotoGallery photos={post.photos} />
         </div>
       )}
     </article>

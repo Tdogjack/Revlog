@@ -78,6 +78,13 @@
       "when": 1793406180754,
       "tag": "0010_vehicle_built_on",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793485693254,
+      "tag": "0011_one_build_per_car",
+      "breakpoints": true
     }
   ]
 }

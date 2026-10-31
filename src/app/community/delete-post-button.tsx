@@ -3,12 +3,22 @@
 import { Trash2 } from "lucide-react";
 import { removePost } from "./actions";
 
-export function DeletePostButton({ postId }: { postId: string }) {
+export function DeletePostButton({
+  postId,
+  next = "/community",
+  label = "Delete post",
+  confirmText = "Delete this post? Its shared photos are removed too.",
+}: {
+  postId: string;
+  next?: string;
+  label?: string;
+  confirmText?: string;
+}) {
   return (
     <form
-      action={removePost.bind(null, postId)}
+      action={removePost.bind(null, postId, next)}
       onSubmit={(e) => {
-        if (!confirm("Delete this post? Its shared photos are removed too.")) e.preventDefault();
+        if (!confirm(confirmText)) e.preventDefault();
       }}
     >
       <button
@@ -16,7 +26,7 @@ export function DeletePostButton({ postId }: { postId: string }) {
         className="flex items-center gap-1 text-sm text-steel hover:text-overdue"
       >
         <Trash2 className="h-4 w-4" aria-hidden />
-        Delete post
+        {label}
       </button>
     </form>
   );

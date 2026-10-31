@@ -26,6 +26,7 @@ const postFields = {
   title: posts.title,
   body: posts.body,
   createdAt: posts.createdAt,
+  updatedAt: posts.updatedAt,
   vehicleId: posts.vehicleId,
   modId: posts.modId,
   showParts: posts.showParts,
@@ -100,10 +101,25 @@ export async function getPost(postId: string) {
 // The car's installed mods, shown under build posts so the list stays current.
 export function listInstalledMods(vehicleId: string) {
   return db
-    .select({ id: mods.id, brand: mods.brand, part: mods.part, category: mods.category })
+    .select({
+      id: mods.id,
+      brand: mods.brand,
+      part: mods.part,
+      category: mods.category,
+    })
     .from(mods)
     .where(and(eq(mods.vehicleId, vehicleId), eq(mods.status, "installed")))
     .orderBy(asc(mods.installedOn), asc(mods.createdAt));
+}
+
+// The car's public build post, if it has one.
+export async function getBuildPostId(userId: string, vehicleId: string) {
+  const [row] = await db
+    .select({ id: posts.id })
+    .from(posts)
+    .where(and(eq(posts.userId, userId), eq(posts.vehicleId, vehicleId), eq(posts.tag, "build")))
+    .limit(1);
+  return row?.id ?? null;
 }
 
 export type NewPost = {
@@ -164,6 +180,45 @@ export async function countShareableParts(userId: string, vehicleId: string, mod
   return rows.length;
 }
 
+// Only photos of this car (never receipts) can be shared.
+async function shareableGaragePhotos(
+  userId: string,
+  vehicleId: string,
+  ids: string[],
+  max: number,
+) {
+  if (max <= 0) return [];
+  return (await getPhotosByIds(userId, ids.slice(0, max))).filter(
+    (p) => p.vehicleId === vehicleId && !p.serviceRecordId,
+  );
+}
+
+// Shared photos are copied to the public bucket; the originals stay private.
+async function copyToPost(
+  userId: string,
+  postId: string,
+  chosen: { storagePath: string }[],
+  startAt: number,
+) {
+  const supabase = await createClient();
+  const copies: { storagePath: string; position: number }[] = [];
+  for (const [i, photo] of chosen.entries()) {
+    const ext = photo.storagePath.split(".").pop() ?? "webp";
+    const target = `${userId}/${postId}/${randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("vehicle-photos")
+      .copy(photo.storagePath, target, { destinationBucket: BUCKET });
+    if (!error) copies.push({ storagePath: target, position: startAt + i });
+  }
+  if (copies.length) {
+    await db.insert(postPhotos).values(copies.map((c) => ({ ...c, userId, postId })));
+  }
+}
+
+const isUniqueViolation = (err: unknown) =>
+  (err as { code?: string })?.code === "23505" ||
+  (err as { cause?: { code?: string } })?.cause?.code === "23505";
+
 // Returns the new post's id, or an error message.
 export async function createPost(
   userId: string,
@@ -173,40 +228,90 @@ export async function createPost(
   if (input.modId && !(await getMod(userId, input.vehicleId, input.modId))) {
     return { error: "That mod wasn't found." };
   }
-  // Only photos of this car (never receipts) can be shared.
-  const chosen = (await getPhotosByIds(userId, input.photoIds.slice(0, MAX_POST_PHOTOS))).filter(
-    (p) => p.vehicleId === input.vehicleId && !p.serviceRecordId,
+  if (input.tag === "build" && input.modId) return { error: "Builds are shared from the car." };
+  const chosen = await shareableGaragePhotos(
+    userId,
+    input.vehicleId,
+    input.photoIds,
+    MAX_POST_PHOTOS,
   );
 
-  const [post] = await db
-    .insert(posts)
-    .values({
-      userId,
-      vehicleId: input.vehicleId,
-      modId: input.modId,
-      kind: input.modId ? "mod" : "build",
-      tag: input.tag,
-      title: input.title,
-      body: input.body,
-      showParts: input.showParts,
-    })
-    .returning({ id: posts.id });
+  let post: { id: string };
+  try {
+    [post] = await db
+      .insert(posts)
+      .values({
+        userId,
+        vehicleId: input.vehicleId,
+        modId: input.modId,
+        kind: input.modId ? "mod" : "build",
+        tag: input.tag,
+        title: input.title,
+        body: input.body,
+        showParts: input.showParts,
+      })
+      .returning({ id: posts.id });
+  } catch (err) {
+    if (isUniqueViolation(err)) return { error: "This car already has a public build." };
+    throw err;
+  }
 
-  // Shared photos are copied to the public bucket; the originals stay private.
-  const supabase = await createClient();
-  const copies: { storagePath: string; position: number }[] = [];
-  for (const [position, photo] of chosen.entries()) {
-    const ext = photo.storagePath.split(".").pop() ?? "webp";
-    const target = `${userId}/${post.id}/${randomUUID()}.${ext}`;
-    const { error } = await supabase.storage
-      .from("vehicle-photos")
-      .copy(photo.storagePath, target, { destinationBucket: BUCKET });
-    if (!error) copies.push({ storagePath: target, position });
-  }
-  if (copies.length) {
-    await db.insert(postPhotos).values(copies.map((c) => ({ ...c, userId, postId: post.id })));
-  }
+  await copyToPost(userId, post.id, chosen, 0);
   return { id: post.id };
+}
+
+export type BuildUpdate = {
+  title: string;
+  body: string | null;
+  showParts: boolean;
+  // Photos already on the post to keep, in order; the rest are removed.
+  keepPhotoIds: string[];
+  // Garage photos to add after the kept ones.
+  photoIds: string[];
+};
+
+// Edits a public build in place. Returns an error message, or null.
+export async function updateBuildPost(userId: string, postId: string, input: BuildUpdate) {
+  if (!isUuid(postId)) return "That build wasn't found.";
+  const [post] = await db
+    .select({ id: posts.id, vehicleId: posts.vehicleId })
+    .from(posts)
+    .where(and(eq(posts.id, postId), eq(posts.userId, userId), eq(posts.tag, "build")));
+  if (!post) return "That build wasn't found.";
+
+  const current = await db
+    .select({ id: postPhotos.id, storagePath: postPhotos.storagePath })
+    .from(postPhotos)
+    .where(eq(postPhotos.postId, postId))
+    .orderBy(asc(postPhotos.position));
+  const kept = current.filter((p) => input.keepPhotoIds.includes(p.id));
+  const dropped = current.filter((p) => !input.keepPhotoIds.includes(p.id));
+  const chosen = await shareableGaragePhotos(
+    userId,
+    post.vehicleId,
+    input.photoIds,
+    MAX_POST_PHOTOS - kept.length,
+  );
+
+  await db
+    .update(posts)
+    .set({ title: input.title, body: input.body, showParts: input.showParts })
+    .where(eq(posts.id, postId));
+  if (dropped.length) {
+    await db.delete(postPhotos).where(
+      inArray(
+        postPhotos.id,
+        dropped.map((p) => p.id),
+      ),
+    );
+    const supabase = await createClient();
+    await supabase.storage.from(BUCKET).remove(dropped.map((p) => p.storagePath));
+  }
+  for (const [position, photo] of kept.entries()) {
+    await db.update(postPhotos).set({ position }).where(eq(postPhotos.id, photo.id));
+  }
+  await copyToPost(userId, postId, chosen, kept.length);
+  return null;
 }
 
 // A photo uploaded just for a post (not saved to the garage). Returns an
