@@ -7,7 +7,7 @@ import { POST_SORTS, type PostSort } from "@/lib/post-sorts";
 
 // The feed's "Sort by" dropdown. Each option is a link, so the choice lives in
 // the URL and survives refreshes and sharing.
-export function SortMenu({ sort, tag }: { sort: PostSort; tag?: string }) {
+export function SortMenu({ sort, tag, q }: { sort: PostSort; tag?: string; q?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = POST_SORTS.find((s) => s.value === sort) ?? POST_SORTS[0];
@@ -30,6 +30,7 @@ export function SortMenu({ sort, tag }: { sort: PostSort; tag?: string }) {
 
   const href = (value: PostSort) => {
     const query = new URLSearchParams();
+    if (q) query.set("q", q);
     if (tag) query.set("tag", tag);
     query.set("sort", value);
     return `/community?${query}`;

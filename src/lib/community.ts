@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, asc, count, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   mods,
@@ -129,23 +129,55 @@ function sortOrder(sort: PostSort) {
   }
 }
 
+// Every word has to show up somewhere: the title, story, username, car, or mod.
+function searchFilter(q: string) {
+  const words = q
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.replace(/^@/, ""))
+    .filter(Boolean)
+    .slice(0, 8);
+  if (words.length === 0) return undefined;
+  return and(
+    ...words.map((word) => {
+      // Typed % and _ match themselves, not any text.
+      const pattern = `%${word.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      return or(
+        ilike(posts.title, pattern),
+        ilike(posts.body, pattern),
+        ilike(profiles.username, pattern),
+        ilike(vehicles.make, pattern),
+        ilike(vehicles.model, pattern),
+        ilike(vehicles.trim, pattern),
+        ilike(vehicles.nickname, pattern),
+        ilike(sql`${vehicles.year}::text`, pattern),
+        ilike(mods.brand, pattern),
+        ilike(mods.part, pattern),
+      );
+    }),
+  );
+}
+
 // One page of posts in the chosen order (newest first by default).
 export async function listPosts({
   sort = "new",
   page = 1,
   username,
   tag,
+  q,
   viewerId,
 }: {
   sort?: PostSort;
   page?: number;
   username?: string;
   tag?: string;
+  q?: string;
   viewerId?: string;
 } = {}) {
   const filters = [
     username ? eq(profiles.username, username) : undefined,
     tag ? eq(posts.tag, tag) : undefined,
+    q ? searchFilter(q) : undefined,
     sort === "rising" ? sql`${posts.createdAt} > now() - interval '3 days'` : undefined,
   ].filter((f) => f !== undefined);
   const rows = await selectPosts()
