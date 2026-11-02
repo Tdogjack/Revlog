@@ -2,7 +2,7 @@ import "server-only";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { vehicles } from "@/db/schema";
+import { mileageReadings, vehicles } from "@/db/schema";
 
 // The database connection bypasses row-level security, so every query here
 // must filter by the signed-in user's id.
@@ -117,31 +117,84 @@ export async function getVehicle(userId: string, id: string) {
   return vehicle ?? null;
 }
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+const utcToday = () => new Date().toISOString().slice(0, 10);
+
+// Saves the odometer for the graph; a second reading on the same day replaces the first.
+function recordReading(tx: Tx, userId: string, vehicleId: string, mileage: number, readOn: string) {
+  return tx
+    .insert(mileageReadings)
+    .values({ userId, vehicleId, mileage, readOn })
+    .onConflictDoUpdate({
+      target: [mileageReadings.vehicleId, mileageReadings.readOn],
+      set: { mileage },
+    });
+}
+
 export async function createVehicle(userId: string, input: VehicleInput) {
-  const [vehicle] = await db
-    .insert(vehicles)
-    .values({ ...input, userId })
-    .returning({ id: vehicles.id });
-  return vehicle;
+  return db.transaction(async (tx) => {
+    const [vehicle] = await tx
+      .insert(vehicles)
+      .values({ ...input, userId })
+      .returning({ id: vehicles.id });
+    await recordReading(tx, userId, vehicle.id, input.currentMileage, utcToday());
+    return vehicle;
+  });
 }
 
 export async function updateVehicle(userId: string, id: string, input: VehicleInput) {
   if (!uuidPattern.test(id)) return false;
-  const updated = await db
-    .update(vehicles)
-    .set(input)
-    .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)))
-    .returning({ id: vehicles.id });
-  return updated.length > 0;
+  return db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ currentMileage: vehicles.currentMileage })
+      .from(vehicles)
+      .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)))
+      .limit(1);
+    if (!before) return false;
+    await tx
+      .update(vehicles)
+      .set(input)
+      .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)));
+    if (before.currentMileage !== input.currentMileage) {
+      await recordReading(tx, userId, id, input.currentMileage, utcToday());
+    }
+    return true;
+  });
 }
 
 export const mileageInput = wholeNumber("mileage", 0, 2_000_000);
 
-export async function setVehicleMileage(userId: string, id: string, currentMileage: number) {
-  await db
-    .update(vehicles)
-    .set({ currentMileage })
-    .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)));
+// `readOn` is the owner's local date when the browser sends one.
+export async function setVehicleMileage(
+  userId: string,
+  id: string,
+  currentMileage: number,
+  readOn = utcToday(),
+) {
+  await db.transaction(async (tx) => {
+    const updated = await tx
+      .update(vehicles)
+      .set({ currentMileage })
+      .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)))
+      .returning({ id: vehicles.id });
+    if (updated.length > 0) await recordReading(tx, userId, id, currentMileage, readOn);
+  });
+}
+
+export function listMileageReadings(userId: string, vehicleId?: string) {
+  return db
+    .select({
+      vehicleId: mileageReadings.vehicleId,
+      readOn: mileageReadings.readOn,
+      mileage: mileageReadings.mileage,
+    })
+    .from(mileageReadings)
+    .where(
+      vehicleId
+        ? and(eq(mileageReadings.userId, userId), eq(mileageReadings.vehicleId, vehicleId))
+        : eq(mileageReadings.userId, userId),
+    );
 }
 
 // Returns the previous photo path so the caller can delete the old file.

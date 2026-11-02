@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Pencil, Trash2 } from "lucide-react";
 import { useActionState, useState } from "react";
+import { localToday } from "@/lib/local-date";
 import { removeReminder, updateMileage } from "./reminders/actions";
 
 // Edit and delete, shown once a reminder is opened.
@@ -83,6 +84,7 @@ export function MileageEditor({
 
   return (
     <form action={formAction} className="flex flex-col gap-1">
+      <input type="hidden" name="readOn" value={localToday()} />
       <div className="flex items-center gap-2">
         <input
           name="currentMileage"

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { mods, vehicles } from "@/db/schema";
@@ -70,6 +70,21 @@ export function listMods(userId: string, vehicleId: string) {
       desc(mods.installedOn),
       desc(mods.createdAt),
     );
+}
+
+// Install dates and mileage for every mod that went on a car, across all of a user's cars.
+export function listModInstalls(userId: string) {
+  return db
+    .select({
+      id: mods.id,
+      part: mods.part,
+      brand: mods.brand,
+      vehicleId: mods.vehicleId,
+      installedOn: mods.installedOn,
+      installedMileage: mods.installedMileage,
+    })
+    .from(mods)
+    .where(and(eq(mods.userId, userId), ne(mods.status, "planned"), isNotNull(mods.installedOn)));
 }
 
 export async function createMod(userId: string, vehicleId: string, input: ModInput) {

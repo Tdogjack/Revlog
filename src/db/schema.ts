@@ -79,6 +79,24 @@ export const serviceRecords = pgTable(
   () => [ownerPolicy("service_records")],
 ).enableRLS();
 
+// Odometer readings over time, one per car per day, for the mileage graph.
+// Written whenever the owner sets the car's mileage.
+export const mileageReadings = pgTable(
+  "mileage_readings",
+  {
+    ...ownerColumns,
+    vehicleId: uuid("vehicle_id")
+      .notNull()
+      .references(() => vehicles.id, { onDelete: "cascade" }),
+    readOn: date("read_on").notNull(),
+    mileage: integer("mileage").notNull(),
+  },
+  (t) => [
+    uniqueIndex("mileage_readings_vehicle_day_idx").on(t.vehicleId, t.readOn),
+    ownerPolicy("mileage_readings"),
+  ],
+).enableRLS();
+
 // User-created service types, like "Transmission fluid". Service records and
 // reminders refer to a type by key: a built-in slug ("oil") or one of these ids.
 export const serviceTypes = pgTable(
@@ -328,6 +346,7 @@ export type ServiceRecord = typeof serviceRecords.$inferSelect;
 export type Mod = typeof mods.$inferSelect;
 export type Reminder = typeof reminders.$inferSelect;
 export type ServiceType = typeof serviceTypes.$inferSelect;
+export type MileageReading = typeof mileageReadings.$inferSelect;
 export type Part = typeof parts.$inferSelect;
 export type PartPrice = typeof partPrices.$inferSelect;
 export type Attachment = typeof attachments.$inferSelect;

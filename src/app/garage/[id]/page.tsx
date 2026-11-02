@@ -9,6 +9,7 @@ import { getBuildPostId } from "@/lib/community";
 import { getEmailSettings } from "@/lib/email-settings";
 import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
 import { modCategoryLabel } from "@/lib/mod-categories";
+import { buildMileageTimeline } from "@/lib/mileage-timeline";
 import { listMods } from "@/lib/mods";
 import { listPartsForVehicle } from "@/lib/parts";
 import { signedPhotoUrls } from "@/lib/photos";
@@ -23,7 +24,7 @@ import {
 import { categoryLabel } from "@/lib/service-categories";
 import { listServiceRecords } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
-import { getVehicle, vehicleName } from "@/lib/vehicles";
+import { getVehicle, listMileageReadings, vehicleName } from "@/lib/vehicles";
 import { DeleteRecordButton } from "./delete-record-button";
 import { ModControls } from "./mod-controls";
 import { PartsList } from "./parts-list";
@@ -31,6 +32,7 @@ import { PhotoControls } from "./photo-controls";
 import { ProfilePhoto } from "./profile-photo";
 import { RemoveCar } from "./remove-car";
 import { MileageEditor, ReminderControls } from "./reminder-controls";
+import { MileageChart } from "@/components/mileage-chart";
 import { StatusBadge } from "@/components/status-badge";
 
 export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
@@ -108,8 +110,17 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
 
-  const [records, carMods, reminderRows, customTypes, carParts, gallery, settings, buildPostId] =
-    await Promise.all([
+  const [
+    records,
+    carMods,
+    reminderRows,
+    customTypes,
+    carParts,
+    gallery,
+    settings,
+    buildPostId,
+    readings,
+  ] = await Promise.all([
       listServiceRecords(user.id, car.id),
       listMods(user.id, car.id),
       listReminders(user.id, car.id),
@@ -118,6 +129,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       listPhotosForVehicle(user.id, car.id),
       getEmailSettings(user.id),
       getBuildPostId(user.id, car.id),
+      listMileageReadings(user.id, car.id),
     ]);
   const photos = await signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]);
   const stripPhotos = (match: (p: (typeof gallery)[number]) => boolean): StripPhoto[] =>
@@ -146,6 +158,40 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const installed = carMods.filter((m) => m.status === "installed");
   const installedSpent = sumCost(installed);
   const plannedCost = sumCost(carMods.filter((m) => m.status === "planned"));
+  const timeline = buildMileageTimeline(
+    [
+      ...readings.map((r) => ({
+        key: `reading-${r.readOn}`,
+        kind: "reading" as const,
+        date: r.readOn,
+        mileage: r.mileage,
+        label: "Odometer updated",
+      })),
+      ...records.map((r) => ({
+        key: `service-${r.id}`,
+        kind: "service" as const,
+        date: r.servicedOn,
+        mileage: r.mileage,
+        label: r.title,
+        href: `/garage/${car.id}/service/${r.id}/edit`,
+      })),
+      ...carMods.flatMap((m) =>
+        m.status !== "planned" && m.installedOn
+          ? [
+              {
+                key: `mod-${m.id}`,
+                kind: "mod" as const,
+                date: m.installedOn,
+                mileage: m.installedMileage,
+                label: m.brand ? `${m.brand} ${m.part}` : m.part,
+                href: `/garage/${car.id}/mods/${m.id}/edit`,
+              },
+            ]
+          : [],
+      ),
+    ],
+    car.currentMileage,
+  );
 
   const renderRecord = (r: (typeof records)[number]) => (
     <li
@@ -247,7 +293,20 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
         </div>
       </header>
 
-      <div className="mt-8 grid items-start gap-6 md:grid-cols-3">
+      <section className={`${panelClass} mt-8`}>
+        <h2 className={headingClass}>Mileage</h2>
+        {timeline ? (
+          <div className="mt-4">
+            <MileageChart timeline={timeline} />
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-steel">
+            Update the odometer or log a service with its mileage to start the graph.
+          </p>
+        )}
+      </section>
+
+      <div className="mt-6 grid items-start gap-6 md:grid-cols-3">
         <div className="space-y-6 md:col-span-2">
           <section className={panelClass}>
             <div className={sectionHeadClass}>

@@ -1,0 +1,122 @@
+// Turns odometer readings, service records, and installed mods into an
+// odometer-over-time trace. The line runs through every entry with a known
+// mileage; entries without one sit on the line by date.
+
+export type TimelineEventKind = "service" | "mod" | "reading";
+
+export type TimelineEvent = {
+  key: string;
+  kind: TimelineEventKind;
+  date: string; // YYYY-MM-DD
+  mileage: number | null;
+  label: string;
+  href?: string;
+};
+
+export type TimelinePoint = { t: number; miles: number };
+
+export type PlacedEvent = TimelineEvent & { t: number; miles: number; estimated: boolean };
+
+export type MileageTimeline = {
+  line: TimelinePoint[];
+  events: PlacedEvent[];
+  start: number;
+  end: number;
+  minMiles: number;
+  maxMiles: number;
+};
+
+export const DAY = 86_400_000;
+const toTime = (isoDate: string) => Date.parse(`${isoDate}T00:00:00Z`);
+
+export function buildMileageTimeline(
+  events: TimelineEvent[],
+  currentMileage: number,
+  today = new Date().toISOString().slice(0, 10),
+): MileageTimeline | null {
+  const dated = events
+    .filter((e) => !Number.isNaN(toTime(e.date)))
+    .map((e) => ({ ...e, t: toTime(e.date) }))
+    .sort((a, b) => a.t - b.t || (a.mileage ?? 0) - (b.mileage ?? 0));
+
+  const line: TimelinePoint[] = dated
+    .filter((e) => e.mileage != null)
+    .map((e) => ({ t: e.t, miles: e.mileage! }));
+  // A higher odometer than anything dated means it changed since; show it as of today.
+  const last = line[line.length - 1];
+  if (!last || currentMileage > last.miles) {
+    line.push({ t: Math.max(toTime(today), last?.t ?? 0), miles: currentMileage });
+  }
+  if (line.length < 2 || line[line.length - 1].t === line[0].t) return null;
+
+  const start = line[0].t;
+  const end = line[line.length - 1].t;
+  const placed = dated
+    .filter((e) => e.t >= start && e.t <= end)
+    .map((e) =>
+      e.mileage != null
+        ? { ...e, miles: e.mileage, estimated: false }
+        : { ...e, miles: milesAt(line, e.t), estimated: true },
+    );
+
+  const miles = line.map((p) => p.miles);
+  return {
+    line,
+    events: placed,
+    start,
+    end,
+    minMiles: Math.min(...miles),
+    maxMiles: Math.max(...miles),
+  };
+}
+
+// Odometer reading on the line at time t, straight between neighbors.
+export function milesAt(line: TimelinePoint[], t: number) {
+  const next = line.findIndex((p) => p.t >= t);
+  if (next === -1) return line[line.length - 1].miles;
+  if (next === 0) return line[0].miles;
+  const a = line[next - 1];
+  const b = line[next];
+  return Math.round(a.miles + ((b.miles - a.miles) * (t - a.t)) / (b.t - a.t));
+}
+
+// Average miles per month between two points, or null under a month apart.
+export function milesPerMonth(a: TimelinePoint, b: TimelinePoint) {
+  const months = (b.t - a.t) / (DAY * 30.44);
+  return months >= 1 ? Math.round((b.miles - a.miles) / months) : null;
+}
+
+// Three or four round gridline values covering the mileage range.
+export function mileageTicks(min: number, max: number) {
+  const span = Math.max(max - min, 100);
+  const raw = span / 3;
+  const pow = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw)!;
+  const lo = Math.floor(min / step) * step;
+  const hi = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(v);
+  return ticks;
+}
+
+// First-of-month dates for x-axis labels: whole years over long spans,
+// otherwise every few months so there are about five labels.
+export function timeTicks(start: number, end: number) {
+  const months = (end - start) / (DAY * 30.44);
+  const step = months > 30 ? 12 : Math.max(1, Math.ceil(months / 5));
+  const from = new Date(start);
+  let y = from.getUTCFullYear();
+  let m = from.getUTCMonth() + 1;
+  if (step === 12) {
+    y += 1;
+    m = 0;
+  }
+  const ticks: number[] = [];
+  for (;;) {
+    const t = Date.UTC(y, m, 1);
+    if (t > end) break;
+    if (t >= start) ticks.push(t);
+    m += step;
+  }
+  return { ticks, yearly: step === 12 };
+}
