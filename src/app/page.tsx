@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Gauge } from "lucide-react";
 import { OdometerDemo } from "@/components/odometer-demo";
+import { SignedInSwitch } from "@/components/signed-in-switch";
 import { SiteFooter } from "@/components/site-footer";
 
 // What's in the log, grouped the way a driver thinks about it.
@@ -59,12 +60,23 @@ export default function Home() {
             <Link href="/community" className="hidden px-2 py-2 text-steel hover:text-chalk sm:block">
               Community
             </Link>
-            <Link href="/login" className="px-2 py-2 text-steel hover:text-chalk">
-              Log in
-            </Link>
-            <Link href="/signup" className="btn btn-primary">
-              Sign up
-            </Link>
+            <SignedInSwitch
+              signedIn={
+                <Link href="/garage" className="btn btn-primary">
+                  Your garage
+                </Link>
+              }
+              signedOut={
+                <>
+                  <Link href="/login" className="px-2 py-2 text-steel hover:text-chalk">
+                    Log in
+                  </Link>
+                  <Link href="/signup" className="btn btn-primary">
+                    Sign up
+                  </Link>
+                </>
+              }
+            />
           </div>
         </nav>
       </header>
@@ -81,9 +93,18 @@ export default function Home() {
               this Civic.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href="/signup" className="btn btn-primary btn-lg px-5">
-                Start your garage
-              </Link>
+              <SignedInSwitch
+                signedIn={
+                  <Link href="/garage" className="btn btn-primary btn-lg px-5">
+                    Go to your garage
+                  </Link>
+                }
+                signedOut={
+                  <Link href="/signup" className="btn btn-primary btn-lg px-5">
+                    Start your garage
+                  </Link>
+                }
+              />
               <Link href="/community" className="btn btn-lg px-5">
                 Browse builds
               </Link>
@@ -156,9 +177,18 @@ export default function Home() {
             <h2 className="max-w-2xl font-display text-4xl leading-none font-semibold sm:text-6xl">
               Add your first car. It takes about a minute.
             </h2>
-            <Link href="/signup" className="btn btn-primary btn-lg shrink-0 px-6">
-              Create your account
-            </Link>
+            <SignedInSwitch
+              signedIn={
+                <Link href="/garage" className="btn btn-primary btn-lg shrink-0 px-6">
+                  Go to your garage
+                </Link>
+              }
+              signedOut={
+                <Link href="/signup" className="btn btn-primary btn-lg shrink-0 px-6">
+                  Create your account
+                </Link>
+              }
+            />
           </div>
         </section>
       </main>
