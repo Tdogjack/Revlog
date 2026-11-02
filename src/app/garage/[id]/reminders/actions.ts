@@ -114,7 +114,10 @@ export async function updateMileage(
   const user = await requireUser();
   const parsed = mileageInput.safeParse(formData.get("currentMileage"));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  await setVehicleMileage(user.id, vehicleId, parsed.data);
+  const readOn = formData.get("readOn");
+  const localDate =
+    typeof readOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(readOn) ? readOn : undefined;
+  await setVehicleMileage(user.id, vehicleId, parsed.data, localDate);
   revalidatePath(`/garage/${vehicleId}`);
   return undefined;
 }

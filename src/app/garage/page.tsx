@@ -5,7 +5,10 @@ import { ArrowDown, ArrowUp, Car, Pencil, Plus, Star } from "lucide-react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
 import { getEmailSettings } from "@/lib/email-settings";
+import { MileageChart } from "@/components/mileage-chart";
 import { StatusBadge } from "@/components/status-badge";
+import { buildMileageTimeline } from "@/lib/mileage-timeline";
+import { listModInstalls } from "@/lib/mods";
 import { signedPhotoUrls } from "@/lib/photos";
 import { listAllReminders } from "@/lib/reminder-store";
 import {
@@ -16,7 +19,7 @@ import {
   type ReminderStatus,
 } from "@/lib/reminders";
 import { listServiceDates } from "@/lib/service-records";
-import { listVehicles, vehicleName } from "@/lib/vehicles";
+import { listMileageReadings, listVehicles, vehicleName } from "@/lib/vehicles";
 import { reorderVehicle, toggleFavorite } from "./actions";
 
 export const metadata: Metadata = { title: "Your garage · Revlog" };
@@ -41,11 +44,13 @@ export default function GaragePage() {
 async function VehicleList() {
   const user = await requireUser();
   const cars = await listVehicles(user.id);
-  const [photos, allReminders, serviceDates, settings] = await Promise.all([
+  const [photos, allReminders, serviceDates, settings, modInstalls, readings] = await Promise.all([
     signedPhotoUrls(cars.map((c) => c.photoPath)),
     listAllReminders(user.id),
     listServiceDates(user.id),
     getEmailSettings(user.id),
+    listModInstalls(user.id),
+    listMileageReadings(user.id),
   ]);
   const options = { dueSoonPercent: settings.reminderPercent };
 
@@ -68,6 +73,47 @@ async function VehicleList() {
     }
   }
 
+  // A small odometer trace for each car with enough history to draw one.
+  const timelines = new Map(
+    cars.map((car) => [
+      car.id,
+      buildMileageTimeline(
+        [
+          ...readings
+            .filter((r) => r.vehicleId === car.id)
+            .map((r) => ({
+              key: `reading-${r.readOn}`,
+              kind: "reading" as const,
+              date: r.readOn,
+              mileage: r.mileage,
+              label: "Odometer updated",
+            })),
+          ...serviceDates
+            .filter((r) => r.vehicleId === car.id)
+            .map((r) => ({
+              key: `service-${r.id}`,
+              kind: "service" as const,
+              date: r.servicedOn,
+              mileage: r.mileage,
+              label: r.title,
+              href: `/garage/${car.id}/service/${r.id}/edit`,
+            })),
+          ...modInstalls
+            .filter((m) => m.vehicleId === car.id)
+            .map((m) => ({
+              key: `mod-${m.id}`,
+              kind: "mod" as const,
+              date: m.installedOn!,
+              mileage: m.installedMileage,
+              label: m.brand ? `${m.brand} ${m.part}` : m.part,
+              href: `/garage/${car.id}/mods/${m.id}/edit`,
+            })),
+        ],
+        car.currentMileage,
+      ),
+    ]),
+  );
+
   if (cars.length === 0) {
     return (
       <div className="mt-8 rounded-lg border border-dashed border-graphite px-6 py-12 text-center">
@@ -85,39 +131,51 @@ async function VehicleList() {
     <ul className="mt-8 space-y-3">
       {cars.map((car, i) => (
         <li key={car.id} className="relative">
-          <Link
-            href={`/garage/${car.id}`}
-            className="group flex items-center gap-4 rounded-lg border border-graphite bg-panel p-3 pr-14 transition-colors hover:border-steel sm:gap-6 sm:pr-16"
-          >
-            <VehiclePhoto
-              src={car.photoPath ? photos.get(car.photoPath) : null}
-              alt={vehicleName(car)}
-              className="aspect-[4/3] w-28 rounded-md sm:w-56"
-            />
-            <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
-              <p className="line-clamp-2 font-display text-2xl leading-tight font-semibold sm:text-3xl">
-                {car.nickname ?? vehicleName(car)}
-              </p>
-              {car.nickname && (
-                <p className="mt-0.5 truncate text-sm text-steel">{vehicleName(car)}</p>
-              )}
-              <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-2">
-                <p className="text-steel">
-                  <span className="readout text-xl text-chalk">
-                    {car.currentMileage.toLocaleString("en-US")}
-                  </span>{" "}
-                  <span className="text-xs">mi</span>
+          {/* The link covers the photo and name; the graph beside it is its own control. */}
+          <div className="flex gap-4 rounded-lg border border-graphite bg-panel p-3 pr-14 transition-colors has-[>a:hover]:border-steel sm:gap-6 sm:pr-16">
+            <Link
+              href={`/garage/${car.id}`}
+              className="group flex min-w-0 flex-1 items-center gap-4 rounded-md sm:gap-6 lg:flex-none"
+            >
+              <VehiclePhoto
+                src={car.photoPath ? photos.get(car.photoPath) : null}
+                alt={vehicleName(car)}
+                className="aspect-[4/3] w-28 shrink-0 rounded-md sm:w-56"
+              />
+              <div className="flex min-w-0 flex-1 flex-col justify-center py-1 lg:w-56 lg:flex-none">
+                <p className="line-clamp-2 font-display text-2xl leading-tight font-semibold sm:text-3xl">
+                  {car.nickname ?? vehicleName(car)}
                 </p>
-                {(() => {
-                  const u = urgency.get(car.id);
-                  if (!u) return null;
-                  if (u.status === "ok") return <StatusBadge status="ok" label="All caught up" />;
-                  const label = u.status === "overdue" ? "overdue" : "due soon";
-                  return <StatusBadge status={u.status} label={`${u.count} ${label}`} />;
-                })()}
+                {car.nickname && (
+                  <p className="mt-0.5 truncate text-sm text-steel">{vehicleName(car)}</p>
+                )}
+                <div className="mt-3 flex flex-wrap items-baseline gap-x-5 gap-y-2">
+                  <p className="text-steel">
+                    <span className="readout text-xl text-chalk">
+                      {car.currentMileage.toLocaleString("en-US")}
+                    </span>{" "}
+                    <span className="text-xs">mi</span>
+                  </p>
+                  {(() => {
+                    const u = urgency.get(car.id);
+                    if (!u) return null;
+                    if (u.status === "ok") return <StatusBadge status="ok" label="All caught up" />;
+                    const label = u.status === "overdue" ? "overdue" : "due soon";
+                    return <StatusBadge status={u.status} label={`${u.count} ${label}`} />;
+                  })()}
+                </div>
               </div>
-            </div>
-          </Link>
+            </Link>
+            {(() => {
+              const timeline = timelines.get(car.id);
+              if (!timeline) return null;
+              return (
+                <div className="hidden min-w-0 flex-1 border-l border-rule py-1 pl-6 lg:block">
+                  <MileageChart timeline={timeline} compact />
+                </div>
+              );
+            })()}
+          </div>
           <CardControls
             vehicleId={car.id}
             favorite={car.favorite}

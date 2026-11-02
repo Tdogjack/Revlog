@@ -62,6 +62,8 @@ export function listServiceRecords(userId: string, vehicleId: string) {
 export function listServiceDates(userId: string) {
   return db
     .select({
+      id: serviceRecords.id,
+      title: serviceRecords.title,
       vehicleId: serviceRecords.vehicleId,
       category: serviceRecords.category,
       servicedOn: serviceRecords.servicedOn,
