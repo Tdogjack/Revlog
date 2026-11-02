@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { PHOTO_LIMITS } from "@/lib/gallery";
 import { toPartRows } from "@/lib/part-rows";
 import { listPartsForParent } from "@/lib/parts";
 import { listReminders } from "@/lib/reminder-store";
@@ -96,6 +97,7 @@ async function NewService({ params, searchParams }: Pick<Props, "params" | "sear
               : undefined
         }
         initialParts={toPartRows(sourceParts, { keepIds: false })}
+        photos={{ vehicleId: car.id, max: PHOTO_LIMITS.record }}
       />
     </>
   );

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { PHOTO_LIMITS } from "@/lib/gallery";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
 import { addMod } from "../actions";
 import { ModForm } from "./mod-form";
@@ -31,7 +32,11 @@ async function NewMod({ params }: Pick<PageProps<"/garage/[id]/mods/new">, "para
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
       <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Add a mod</h1>
-      <ModForm action={addMod.bind(null, car.id)} currentMileage={car.currentMileage} />
+      <ModForm
+        action={addMod.bind(null, car.id)}
+        currentMileage={car.currentMileage}
+        photos={{ vehicleId: car.id, max: PHOTO_LIMITS.mod }}
+      />
     </>
   );
 }

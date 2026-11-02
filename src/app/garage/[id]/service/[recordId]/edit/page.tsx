@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { PHOTO_LIMITS, signedPhotosFor } from "@/lib/gallery";
 import { toPartRows } from "@/lib/part-rows";
 import { listPartsForParent } from "@/lib/parts";
 import { getServiceRecord } from "@/lib/service-records";
@@ -15,18 +16,19 @@ export const metadata: Metadata = { title: "Edit service · Revlog" };
 
 type Props = PageProps<"/garage/[id]/service/[recordId]/edit">;
 
-export default function EditServicePage({ params }: Props) {
+export default function EditServicePage({ params, searchParams }: Props) {
   return (
     <div className="mx-auto max-w-xl">
       <Suspense fallback={<p className="text-sm text-steel">Loading…</p>}>
-        <EditService params={params} />
+        <EditService params={params} searchParams={searchParams} />
       </Suspense>
     </div>
   );
 }
 
-async function EditService({ params }: Pick<Props, "params">) {
-  const { id, recordId } = await params;
+async function EditService({ params, searchParams }: Pick<Props, "params" | "searchParams">) {
+  const [{ id, recordId }, { photos: photoStatus }] = await Promise.all([params, searchParams]);
+  const failed = photoStatus === "failed";
   const user = await requireUser();
   const [car, customTypes] = await Promise.all([
     getVehicle(user.id, id),
@@ -35,7 +37,10 @@ async function EditService({ params }: Pick<Props, "params">) {
   if (!car) notFound();
   const record = await getServiceRecord(user.id, car.id, recordId);
   if (!record) notFound();
-  const recordParts = await listPartsForParent(user.id, { serviceRecordId: record.id });
+  const [recordParts, recordPhotos] = await Promise.all([
+    listPartsForParent(user.id, { serviceRecordId: record.id }),
+    signedPhotosFor(user.id, car.id, { kind: "record", id: record.id }),
+  ]);
 
   return (
     <>
@@ -43,12 +48,22 @@ async function EditService({ params }: Pick<Props, "params">) {
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
       <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Edit service</h1>
+      {failed && (
+        <p role="alert" className="mt-2 rounded-md bg-graphite px-3 py-2 text-sm">
+          Saved, but some photos didn&apos;t upload. Add them again below.
+        </p>
+      )}
       <ServiceForm
         action={editServiceRecord.bind(null, car.id, record.id)}
         currentMileage={car.currentMileage}
         customTypes={customTypes}
         submitLabel="Save changes"
         initialParts={toPartRows(recordParts)}
+        photos={{
+          vehicleId: car.id,
+          max: PHOTO_LIMITS.record,
+          target: { id: record.id, photos: recordPhotos },
+        }}
         initial={{
           category: record.category,
           title: record.title,

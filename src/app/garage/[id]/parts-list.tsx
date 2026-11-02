@@ -4,16 +4,14 @@ import {
   ExternalLink,
   LineChart,
   Pencil,
-  Plus,
   RefreshCw,
   Trash2,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
 import { useActionState, useState, useTransition } from "react";
-import type { PartParent, PartWithHistory } from "@/lib/parts";
+import type { PartWithHistory } from "@/lib/parts";
 import {
-  addPart,
   editPart,
   refreshPartPrice,
   removePart,
@@ -270,63 +268,30 @@ function PartRow({ vehicleId, part }: { vehicleId: string; part: PartWithHistory
 }
 
 // Parts used (service records) or used/wanted (mods), with links and prices.
+// New parts are added from the service and mod forms.
 export function PartsList({
   vehicleId,
-  parent,
   parts,
   label,
 }: {
   vehicleId: string;
-  parent: PartParent;
   parts: PartWithHistory[];
   label: string;
 }) {
-  const [adding, setAdding] = useState(false);
-  const [warning, setWarning] = useState<string | null>(null);
   const total = parts.reduce((sum, p) => sum + (p.price ? Number(p.price) * p.quantity : 0), 0);
+  if (parts.length === 0) return null;
 
   return (
     <div className="mt-3 border-l-2 border-graphite pl-3">
-      {parts.length > 0 && (
-        <>
-          <p className="text-xs text-steel">
-            {label} · {parts.length} {parts.length === 1 ? "part" : "parts"}
-            {total > 0 && ` · ${money(total, parts[0].currency)}`}
-          </p>
-          <ul className="divide-y divide-graphite">
-            {parts.map((p) => (
-              <PartRow key={p.id} vehicleId={vehicleId} part={p} />
-            ))}
-          </ul>
-        </>
-      )}
-      {warning && (
-        <p className="mt-1 text-xs text-due">
-          Saved, but {warning.charAt(0).toLowerCase() + warning.slice(1)}
-        </p>
-      )}
-      {adding ? (
-        <PartForm
-          action={addPart.bind(null, vehicleId, parent)}
-          submitLabel="Add part"
-          onDone={(w) => {
-            setAdding(false);
-            setWarning(w ?? null);
-          }}
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setAdding(true);
-            setWarning(null);
-          }}
-          className="mt-1 inline-flex min-h-9 items-center gap-1 text-xs text-steel hover:text-chalk"
-        >
-          <Plus className="h-3.5 w-3.5" aria-hidden />
-          Add part
-        </button>
-      )}
+      <p className="text-xs text-steel">
+        {label} · {parts.length} {parts.length === 1 ? "part" : "parts"}
+        {total > 0 && ` · ${money(total, parts[0].currency)}`}
+      </p>
+      <ul className="divide-y divide-graphite">
+        {parts.map((p) => (
+          <PartRow key={p.id} vehicleId={vehicleId} part={p} />
+        ))}
+      </ul>
     </div>
   );
 }

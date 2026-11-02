@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { PHOTO_LIMITS, signedPhotosFor } from "@/lib/gallery";
 import { getMod } from "@/lib/mods";
 import { toPartRows } from "@/lib/part-rows";
 import { listPartsForParent } from "@/lib/parts";
@@ -14,24 +15,28 @@ export const metadata: Metadata = { title: "Edit mod · Revlog" };
 
 type Props = PageProps<"/garage/[id]/mods/[modId]/edit">;
 
-export default function EditModPage({ params }: Props) {
+export default function EditModPage({ params, searchParams }: Props) {
   return (
     <div className="mx-auto max-w-xl">
       <Suspense fallback={<p className="text-sm text-steel">Loading…</p>}>
-        <EditMod params={params} />
+        <EditMod params={params} searchParams={searchParams} />
       </Suspense>
     </div>
   );
 }
 
-async function EditMod({ params }: Pick<Props, "params">) {
-  const { id, modId } = await params;
+async function EditMod({ params, searchParams }: Pick<Props, "params" | "searchParams">) {
+  const [{ id, modId }, { photos: photoStatus }] = await Promise.all([params, searchParams]);
+  const failed = photoStatus === "failed";
   const user = await requireUser();
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
   const mod = await getMod(user.id, car.id, modId);
   if (!mod) notFound();
-  const modParts = await listPartsForParent(user.id, { modId: mod.id });
+  const [modParts, modPhotos] = await Promise.all([
+    listPartsForParent(user.id, { modId: mod.id }),
+    signedPhotosFor(user.id, car.id, { kind: "mod", id: mod.id }),
+  ]);
 
   return (
     <>
@@ -39,11 +44,21 @@ async function EditMod({ params }: Pick<Props, "params">) {
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
       <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Edit mod</h1>
+      {failed && (
+        <p role="alert" className="mt-2 rounded-md bg-graphite px-3 py-2 text-sm">
+          Saved, but some photos didn&apos;t upload. Add them again below.
+        </p>
+      )}
       <ModForm
         action={editMod.bind(null, car.id, mod.id)}
         currentMileage={car.currentMileage}
         submitLabel="Save changes"
         initialParts={toPartRows(modParts)}
+        photos={{
+          vehicleId: car.id,
+          max: PHOTO_LIMITS.mod,
+          target: { id: mod.id, photos: modPhotos },
+        }}
         initial={{
           part: mod.part,
           brand: mod.brand ?? "",

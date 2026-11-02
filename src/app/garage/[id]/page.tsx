@@ -82,6 +82,8 @@ const rowClass =
   "-mx-3 rounded-md border-t border-rule px-3 py-4 first:border-t-0 hover:bg-graphite/40";
 const dateClass = "shrink-0 pt-0.5 text-sm text-steel tabular-nums sm:w-24";
 
+// Records always open, since their edit and copy buttons live inside; without
+// notes, parts, or photos the hint just says so.
 function DetailsHint({ notes, parts, photos }: { notes: boolean; parts: number; photos: number }) {
   const bits = [
     notes && "notes",
@@ -91,7 +93,7 @@ function DetailsHint({ notes, parts, photos }: { notes: boolean; parts: number; 
   return (
     <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
       <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden />
-      {bits.length > 0 ? bits.join(" · ") : "Add parts or photos"}
+      {bits.length > 0 ? bits.join(" · ") : "Options"}
     </p>
   );
 }
@@ -193,70 +195,75 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
     car.currentMileage,
   );
 
-  const renderRecord = (r: (typeof records)[number]) => (
-    <li
-      key={r.id}
-      className={`${rowClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}
-    >
-      <div className={dateClass}>{formatDate(r.servicedOn)}</div>
-      <details className="group min-w-0 flex-1">
-        <summary className={summaryClass}>
-          <div className="flex flex-wrap items-baseline gap-x-2">
-            <p className="font-medium">{r.title}</p>
-            <p className="text-sm text-steel">{categoryLabel(r.category, customTypes)}</p>
-          </div>
-          <p className="mt-1 text-sm text-steel">
-            {[
-              r.mileage != null && `${r.mileage.toLocaleString("en-US")} mi`,
-              r.cost != null && money.format(Number(r.cost)),
-              r.shop,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-          <DetailsHint
-            notes={!!r.notes}
-            parts={partsFor("serviceRecordId", r.id).length}
-            photos={stripPhotos((p) => p.serviceRecordId === r.id).length}
+  const renderRecord = (r: (typeof records)[number]) => {
+    const recordPhotos = stripPhotos((p) => p.serviceRecordId === r.id);
+    return (
+      <li
+        key={r.id}
+        className={`${rowClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}
+      >
+        <div className={dateClass}>{formatDate(r.servicedOn)}</div>
+        <details className="group min-w-0 flex-1">
+          <summary className={summaryClass}>
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <p className="font-medium">{r.title}</p>
+              <p className="text-sm text-steel">{categoryLabel(r.category, customTypes)}</p>
+            </div>
+            <p className="mt-1 text-sm text-steel">
+              {[
+                r.mileage != null && `${r.mileage.toLocaleString("en-US")} mi`,
+                r.cost != null && money.format(Number(r.cost)),
+                r.shop,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+            <DetailsHint
+              notes={!!r.notes}
+              parts={partsFor("serviceRecordId", r.id).length}
+              photos={recordPhotos.length}
+            />
+          </summary>
+          {r.notes && <p className="mt-2 whitespace-pre-line text-sm">{r.notes}</p>}
+          <PartsList
+            vehicleId={car.id}
+            parts={partsFor("serviceRecordId", r.id)}
+            label="Parts used"
           />
-        </summary>
-        {r.notes && <p className="mt-2 whitespace-pre-line text-sm">{r.notes}</p>}
-        <PartsList
-          vehicleId={car.id}
-          parent={{ serviceRecordId: r.id }}
-          parts={partsFor("serviceRecordId", r.id)}
-          label="Parts used"
-        />
-        <PhotoStrip
-          vehicleId={car.id}
-          kind="record"
-          targetId={r.id}
-          photos={stripPhotos((p) => p.serviceRecordId === r.id)}
-          max={PHOTO_LIMITS.record}
-          addLabel="Add receipt photos"
-        />
-        <div className="mt-2 -ml-2 flex items-center">
-          <Link
-            href={`/garage/${car.id}/service/new?copy=${r.id}`}
-            aria-label="Copy record"
-            title="Log again (copies parts too)"
-            className="icon-btn"
-          >
-            <Copy className="h-4 w-4" aria-hidden />
-          </Link>
-          <Link
-            href={`/garage/${car.id}/service/${r.id}/edit`}
-            aria-label="Edit record"
-            title="Edit record"
-            className="icon-btn"
-          >
-            <Pencil className="h-4 w-4" aria-hidden />
-          </Link>
-          <DeleteRecordButton vehicleId={car.id} recordId={r.id} />
-        </div>
-      </details>
-    </li>
-  );
+          {recordPhotos.length > 0 && (
+            <PhotoStrip
+              vehicleId={car.id}
+              kind="record"
+              targetId={r.id}
+              photos={recordPhotos}
+              max={PHOTO_LIMITS.record}
+              addLabel="Add receipt photos"
+              canAdd={false}
+            />
+          )}
+          <div className="mt-2 -ml-2 flex items-center">
+            <Link
+              href={`/garage/${car.id}/service/new?copy=${r.id}`}
+              aria-label="Copy record"
+              title="Log again (copies parts too)"
+              className="icon-btn"
+            >
+              <Copy className="h-4 w-4" aria-hidden />
+            </Link>
+            <Link
+              href={`/garage/${car.id}/service/${r.id}/edit`}
+              aria-label="Edit record"
+              title="Edit record"
+              className="icon-btn"
+            >
+              <Pencil className="h-4 w-4" aria-hidden />
+            </Link>
+            <DeleteRecordButton vehicleId={car.id} recordId={r.id} />
+          </div>
+        </details>
+      </li>
+    );
+  };
 
   return (
     <>
@@ -453,62 +460,77 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
             ) : (
               <>
                 <ul className="mt-4">
-                  {carMods.map((m) => (
-                    <li key={m.id} className={`${rowClass} flex flex-col gap-2 sm:flex-row sm:gap-4`}>
-                      <details className="group min-w-0 flex-1">
-                        <summary className={summaryClass}>
-                          <p
-                            className={`font-medium ${m.status === "removed" ? "text-steel line-through" : ""}`}
-                          >
-                            {m.brand ? `${m.brand} ${m.part}` : m.part}
-                          </p>
-                          <p className="mt-1 text-sm text-steel">
-                            {[
-                              modCategoryLabel(m.category),
-                              m.installedOn && formatDate(m.installedOn),
-                              m.installedMileage != null &&
-                                `${m.installedMileage.toLocaleString("en-US")} mi`,
-                              m.cost != null && money.format(Number(m.cost)),
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
-                          <DetailsHint
-                            notes={!!m.notes}
-                            parts={partsFor("modId", m.id).length}
-                            photos={stripPhotos((p) => p.modId === m.id).length}
-                          />
-                        </summary>
-                        {m.notes && <p className="mt-2 whitespace-pre-line text-sm">{m.notes}</p>}
-                        <PartsList
-                          vehicleId={car.id}
-                          parent={{ modId: m.id }}
-                          parts={partsFor("modId", m.id)}
-                          label={m.status === "planned" ? "Parts wanted" : "Parts used"}
-                        />
-                        <PhotoStrip
-                          vehicleId={car.id}
-                          kind="mod"
-                          targetId={m.id}
-                          photos={stripPhotos((p) => p.modId === m.id)}
-                          max={PHOTO_LIMITS.mod}
-                          addLabel="Add mod photos"
-                        />
-                      </details>
-                      <div className="-ml-1 flex items-center gap-1 sm:ml-0 sm:flex-col sm:items-end">
-                        <ModControls vehicleId={car.id} modId={m.id} status={m.status} />
-                        {m.status === "installed" && (
-                          <Link
-                            href={`/community/new?vehicle=${car.id}&mod=${m.id}`}
-                            className="flex min-h-9 items-center gap-1 px-1 text-xs text-steel hover:text-chalk"
-                          >
-                            <Share2 className="h-3.5 w-3.5" aria-hidden />
-                            Share
-                          </Link>
+                  {carMods.map((m) => {
+                    const modParts = partsFor("modId", m.id);
+                    const modPhotos = stripPhotos((p) => p.modId === m.id);
+                    const summary = (
+                      <>
+                        <p
+                          className={`font-medium ${m.status === "removed" ? "text-steel line-through" : ""}`}
+                        >
+                          {m.brand ? `${m.brand} ${m.part}` : m.part}
+                        </p>
+                        <p className="mt-1 text-sm text-steel">
+                          {[
+                            modCategoryLabel(m.category),
+                            m.installedOn && formatDate(m.installedOn),
+                            m.installedMileage != null &&
+                              `${m.installedMileage.toLocaleString("en-US")} mi`,
+                            m.cost != null && money.format(Number(m.cost)),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </>
+                    );
+                    return (
+                      <li key={m.id} className={`${rowClass} flex flex-col gap-2 sm:flex-row sm:gap-4`}>
+                        {m.notes || modParts.length > 0 || modPhotos.length > 0 ? (
+                          <details className="group min-w-0 flex-1">
+                            <summary className={summaryClass}>
+                              {summary}
+                              <DetailsHint
+                                notes={!!m.notes}
+                                parts={modParts.length}
+                                photos={modPhotos.length}
+                              />
+                            </summary>
+                            {m.notes && <p className="mt-2 whitespace-pre-line text-sm">{m.notes}</p>}
+                            <PartsList
+                              vehicleId={car.id}
+                              parts={modParts}
+                              label={m.status === "planned" ? "Parts wanted" : "Parts used"}
+                            />
+                            {modPhotos.length > 0 && (
+                              <PhotoStrip
+                                vehicleId={car.id}
+                                kind="mod"
+                                targetId={m.id}
+                                photos={modPhotos}
+                                max={PHOTO_LIMITS.mod}
+                                addLabel="Add mod photos"
+                                canAdd={false}
+                              />
+                            )}
+                          </details>
+                        ) : (
+                          <div className="min-w-0 flex-1">{summary}</div>
                         )}
-                      </div>
-                    </li>
-                  ))}
+                        <div className="-ml-1 flex items-center gap-1 sm:ml-0 sm:flex-col sm:items-end">
+                          <ModControls vehicleId={car.id} modId={m.id} status={m.status} />
+                          {m.status === "installed" && (
+                            <Link
+                              href={`/community/new?vehicle=${car.id}&mod=${m.id}`}
+                              className="flex min-h-9 items-center gap-1 px-1 text-xs text-steel hover:text-chalk"
+                            >
+                              <Share2 className="h-3.5 w-3.5" aria-hidden />
+                              Share
+                            </Link>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </>
             )}

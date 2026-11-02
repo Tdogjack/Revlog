@@ -1,6 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  FormPhotosField,
+  uploadQueued,
+  type FormPhotos,
+  type QueuedPhoto,
+} from "@/components/form-photos";
 import { PartsFieldset } from "@/components/parts-fieldset";
 import type { PartRow } from "@/lib/part-rows";
 import { ServiceTypeSelect } from "@/components/service-type-select";
@@ -18,6 +25,7 @@ export function ServiceForm({
   initial = {},
   initialParts = [],
   mileageTypes,
+  photos,
   submitLabel = "Save record",
 }: {
   action: (prev: ServiceFormState, formData: FormData) => Promise<ServiceFormState>;
@@ -27,9 +35,29 @@ export function ServiceForm({
   initialParts?: PartRow[];
   // When logging, these types need a mileage and fill in the car's current one if blank.
   mileageTypes?: string[];
+  photos: FormPhotos;
   submitLabel?: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const router = useRouter();
+  const [queued, setQueued] = useState<QueuedPhoto[]>([]);
+  const [state, formAction, pending] = useActionState(
+    async (prev: ServiceFormState, fd: FormData) => {
+      if (queued.length > 0) fd.set("stay", "1");
+      const result = await action(prev, fd);
+      if (result?.savedId) {
+        const ok = await uploadQueued(photos.vehicleId, "record", result.savedId, queued);
+        router.push(
+          ok
+            ? `/garage/${photos.vehicleId}`
+            : `/garage/${photos.vehicleId}/service/${result.savedId}/edit?photos=failed`,
+        );
+      }
+      return result;
+    },
+    undefined,
+  );
+  // Stays busy while the new record's photos upload and the page changes.
+  const busy = pending || !!state?.savedId;
   const v = state?.values ?? initial;
   const [category, setCategory] = useState(v.category || "oil");
   const needsMileage = mileageTypes?.includes(category) ?? false;
@@ -124,6 +152,15 @@ export function ServiceForm({
 
       <PartsFieldset initial={initialParts} label="Parts used (optional)" />
 
+      <FormPhotosField
+        photos={photos}
+        kind="record"
+        label="Photos (optional)"
+        hint={`Receipts, invoices, or the work itself. Up to ${photos.max}.`}
+        queued={queued}
+        onQueue={setQueued}
+      />
+
       {state?.error && (
         <p role="alert" className="text-sm text-overdue">
           {state.error}
@@ -132,10 +169,10 @@ export function ServiceForm({
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={busy}
         className="btn btn-primary btn-lg w-full"
       >
-        {pending ? "Saving…" : submitLabel}
+        {busy ? (queued.length > 0 ? "Saving and uploading photos…" : "Saving…") : submitLabel}
       </button>
     </form>
   );
