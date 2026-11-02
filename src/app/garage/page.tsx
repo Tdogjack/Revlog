@@ -131,12 +131,11 @@ async function VehicleList() {
     <ul className="mt-8 space-y-3">
       {cars.map((car, i) => (
         <li key={car.id} className="relative">
-          {/* The link covers the photo and name; the graph beside it is its own control. */}
-          <div className="flex gap-4 rounded-lg border border-graphite bg-panel p-3 pr-14 transition-colors has-[>a:hover]:border-steel sm:gap-6 sm:pr-16">
-            <Link
-              href={`/garage/${car.id}`}
-              className="group flex min-w-0 flex-1 items-center gap-4 rounded-md sm:gap-6 lg:flex-none"
-            >
+          <Link
+            href={`/garage/${car.id}`}
+            className="group flex gap-4 rounded-lg border border-graphite bg-panel p-3 pr-14 transition-colors hover:border-steel sm:gap-6 sm:pr-16"
+          >
+            <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6 lg:flex-none">
               <VehiclePhoto
                 src={car.photoPath ? photos.get(car.photoPath) : null}
                 alt={vehicleName(car)}
@@ -165,7 +164,7 @@ async function VehicleList() {
                   })()}
                 </div>
               </div>
-            </Link>
+            </div>
             {(() => {
               const timeline = timelines.get(car.id);
               if (!timeline) return null;
@@ -175,7 +174,7 @@ async function VehicleList() {
                 </div>
               );
             })()}
-          </div>
+          </Link>
           <CardControls
             vehicleId={car.id}
             favorite={car.favorite}
