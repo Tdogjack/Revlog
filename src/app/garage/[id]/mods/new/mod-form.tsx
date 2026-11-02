@@ -1,6 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  FormPhotosField,
+  uploadQueued,
+  type FormPhotos,
+  type QueuedPhoto,
+} from "@/components/form-photos";
 import { PartsFieldset } from "@/components/parts-fieldset";
 import type { PartRow } from "@/lib/part-rows";
 import { localToday } from "@/lib/local-date";
@@ -15,15 +22,36 @@ export function ModForm({
   currentMileage,
   initial,
   initialParts = [],
+  photos,
   submitLabel = "Save mod",
 }: {
   action: (prev: ModFormState, formData: FormData) => Promise<ModFormState>;
   currentMileage: number;
   initial?: Record<string, string>;
   initialParts?: PartRow[];
+  photos: FormPhotos;
   submitLabel?: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const router = useRouter();
+  const [queued, setQueued] = useState<QueuedPhoto[]>([]);
+  const [state, formAction, pending] = useActionState(
+    async (prev: ModFormState, fd: FormData) => {
+      if (queued.length > 0) fd.set("stay", "1");
+      const result = await action(prev, fd);
+      if (result?.savedId) {
+        const ok = await uploadQueued(photos.vehicleId, "mod", result.savedId, queued);
+        router.push(
+          ok
+            ? `/garage/${photos.vehicleId}`
+            : `/garage/${photos.vehicleId}/mods/${result.savedId}/edit?photos=failed`,
+        );
+      }
+      return result;
+    },
+    undefined,
+  );
+  // Stays busy while the new mod's photos upload and the page changes.
+  const busy = pending || !!state?.savedId;
   const v = state?.values ?? initial ?? {};
   const [status, setStatus] = useState(v.status || "installed");
   const dateRef = useRef<HTMLInputElement>(null);
@@ -145,6 +173,15 @@ export function ModForm({
         label={status === "planned" ? "Parts wanted (optional)" : "Parts used (optional)"}
       />
 
+      <FormPhotosField
+        photos={photos}
+        kind="mod"
+        label="Photos (optional)"
+        hint={`Before and after, or the parts themselves. Up to ${photos.max}.`}
+        queued={queued}
+        onQueue={setQueued}
+      />
+
       {state?.error && (
         <p role="alert" className="text-sm text-overdue">
           {state.error}
@@ -153,10 +190,10 @@ export function ModForm({
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={busy}
         className="btn btn-primary btn-lg w-full"
       >
-        {pending ? "Saving…" : submitLabel}
+        {busy ? (queued.length > 0 ? "Saving and uploading photos…" : "Saving…") : submitLabel}
       </button>
     </form>
   );

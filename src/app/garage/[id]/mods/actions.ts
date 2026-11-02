@@ -14,7 +14,8 @@ import {
 } from "@/lib/mods";
 import { parsePartRows, settlePartsCost, syncParts } from "@/lib/parts";
 
-export type ModFormState = { error?: string; values?: Record<string, string> } | undefined;
+export type ModFormState =
+  { error?: string; values?: Record<string, string>; savedId?: string } | undefined;
 
 const FIELDS = [
   "part",
@@ -47,6 +48,8 @@ export async function addMod(
   const toCheck = await syncParts(user.id, vehicleId, parent, partRows.rows);
   await settlePartsCost(user.id, parent, toCheck, parsed.data.cost != null);
 
+  // With photos waiting, the form uploads them to the new mod, then leaves.
+  if (formData.get("stay")) return { savedId: mod.id };
   redirect(`/garage/${vehicleId}`);
 }
 

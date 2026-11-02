@@ -3,7 +3,7 @@ import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { photos } from "@/db/schema";
 import { getMod } from "@/lib/mods";
-import { deleteVehiclePhoto, uploadVehiclePhoto } from "@/lib/photos";
+import { deleteVehiclePhoto, signedPhotoUrls, uploadVehiclePhoto } from "@/lib/photos";
 import { getServiceRecord } from "@/lib/service-records";
 import { createClient } from "@/lib/supabase/server";
 import { getVehicle, isUuid } from "@/lib/vehicles";
@@ -31,6 +31,20 @@ export function listPhotosForVehicle(userId: string, vehicleId: string) {
     .from(photos)
     .where(and(eq(photos.userId, userId), eq(photos.vehicleId, vehicleId)))
     .orderBy(asc(photos.createdAt));
+}
+
+// One mod's or record's photos with viewable links, for its edit form.
+export async function signedPhotosFor(userId: string, vehicleId: string, target: PhotoTarget) {
+  const rows = await db
+    .select()
+    .from(photos)
+    .where(and(eq(photos.userId, userId), eq(photos.vehicleId, vehicleId), targetFilter(target)))
+    .orderBy(asc(photos.createdAt));
+  const urls = await signedPhotoUrls(rows.map((r) => r.storagePath));
+  return rows.flatMap((r) => {
+    const url = urls.get(r.storagePath);
+    return url ? [{ id: r.id, url }] : [];
+  });
 }
 
 // Checks the car, mod, or record belongs to the user and has room left.

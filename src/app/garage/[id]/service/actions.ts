@@ -16,7 +16,8 @@ import {
 import { listServiceTypes, resolveServiceType } from "@/lib/service-types";
 import { getVehicle } from "@/lib/vehicles";
 
-export type ServiceFormState = { error?: string; values?: Record<string, string> } | undefined;
+export type ServiceFormState =
+  { error?: string; values?: Record<string, string>; savedId?: string } | undefined;
 
 const FIELDS = [
   "category",
@@ -103,6 +104,8 @@ async function logService(
     }
   }
 
+  // With photos waiting, the form uploads them to the new record, then leaves.
+  if (formData.get("stay")) return { savedId: record.id };
   redirect(`/garage/${vehicleId}`);
 }
 

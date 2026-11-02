@@ -15,6 +15,8 @@ type Props = {
   max: number;
   addLabel: string;
   size?: "large" | "small";
+  // Off where photos are only viewed and removed, like the car page's records.
+  canAdd?: boolean;
 };
 
 // A row (or grid) of photos with multi-select upload and a full-size viewer.
@@ -26,13 +28,14 @@ export function PhotoStrip({
   max,
   addLabel,
   size = "small",
+  canAdd = true,
 }: Props) {
   const [pending, startTransition] = useTransition();
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const room = max - photos.length;
+  const room = canAdd ? max - photos.length : 0;
 
   function upload(files: File[]) {
     setError(null);
