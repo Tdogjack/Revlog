@@ -6,6 +6,7 @@ import { signOut } from "@/app/(auth)/actions";
 import { SiteFooter } from "@/components/site-footer";
 import { getUser } from "@/lib/auth";
 import { getProfile } from "@/lib/profiles";
+import { listVehicles, vehicleName } from "@/lib/vehicles";
 
 const NAV = [
   { href: "/garage", label: "Garage" },
@@ -19,7 +20,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex flex-1 flex-col">
       <header className="border-b border-graphite">
         <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
-          <div className="flex items-center gap-6">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-1">
             <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
               <Gauge className="h-5 w-5 text-redline" aria-hidden />
               <span>
@@ -33,6 +34,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Link>
               ))}
             </div>
+            <Suspense fallback={null}>
+              <CarLinks />
+            </Suspense>
           </div>
           <Suspense fallback={null}>
             <AccountMenu />
@@ -41,6 +45,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">{children}</main>
       <SiteFooter />
+    </div>
+  );
+}
+
+// Jump straight to a car without stopping at the garage. On phones the cars
+// get their own row that scrolls sideways.
+async function CarLinks() {
+  const user = await getUser();
+  if (!user) return null;
+  const cars = await listVehicles(user.id);
+  if (cars.length === 0) return null;
+
+  return (
+    <div className="flex basis-full items-center gap-x-4 overflow-x-auto text-sm md:basis-auto md:border-l md:border-graphite md:pl-6">
+      {cars.map((car) => (
+        <Link
+          key={car.id}
+          href={`/garage/${car.id}`}
+          title={vehicleName(car)}
+          className="inline-flex min-h-9 max-w-48 shrink-0 items-center text-steel hover:text-chalk"
+        >
+          <span className="truncate">{car.nickname ?? `${car.make} ${car.model}`}</span>
+        </Link>
+      ))}
     </div>
   );
 }
