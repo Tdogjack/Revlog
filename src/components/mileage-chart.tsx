@@ -38,13 +38,12 @@ type RangeId = (typeof RANGES)[number]["id"];
 const MERGE_PX = 16;
 const MARGIN = { top: 14, right: 14, bottom: 28, left: 46 };
 const MARGIN_COMPACT = { top: 10, right: 10, bottom: 20, left: 34 };
-const POP_W = 256;
 
 type Cluster = { key: string; x: number; y: number; events: PlacedEvent[] };
 
-// The odometer graph: drag across it to read the mileage on any date and tap
-// a marker to list what was done there. The car page's full version can also
-// narrow by time or type; the compact one fills its box on the garage card.
+// The odometer graph: drag across it to read the mileage on any date, tap a
+// marker to list what was done there, and narrow by time or type. The compact
+// version on the garage card is display only, so the whole card stays a link.
 export function MileageChart({
   timeline,
   compact = false,
@@ -182,18 +181,8 @@ export function MileageChart({
       ? fullDate(readT)
       : null;
 
-  // On the card the list floats just below the marker, over the cards beneath,
-  // so it never runs off the top of the page.
-  const floating =
-    compact && selectedCluster
-      ? {
-          left: Math.min(Math.max(selectedCluster.x - POP_W / 2, 0), Math.max(width - POP_W, 0)),
-          top: selectedCluster.y + 16,
-        }
-      : undefined;
-
   const header = compact ? (
-    <p aria-live="polite" className="flex min-w-0 items-baseline gap-2 text-xs text-steel">
+    <p className="flex min-w-0 items-baseline gap-2 text-xs text-steel">
       <span className="readout shrink-0 text-base leading-none text-chalk">{mi(readMiles)} mi</span>
       <span className="truncate">
         {summary ??
@@ -245,7 +234,11 @@ export function MileageChart({
   );
 
   return (
-    <div ref={root} className={compact ? "flex h-full flex-col" : undefined}>
+    <div
+      ref={root}
+      className={compact ? "pointer-events-none flex h-full flex-col" : undefined}
+      aria-hidden={compact || undefined}
+    >
       {header}
 
       <div
@@ -330,39 +323,44 @@ export function MileageChart({
                   )}
                 </>
               )}
-              <rect
-                x={M.left}
-                y={M.top}
-                width={plotW}
-                height={plotH}
-                fill="transparent"
-                className="touch-pan-y"
-                onPointerMove={onMove}
-                onPointerDown={onMove}
-                onPointerLeave={onLeave}
-                onClick={() => hovered && setSelected(hovered.events[0].key)}
-              />
+              {!compact && (
+                <rect
+                  x={M.left}
+                  y={M.top}
+                  width={plotW}
+                  height={plotH}
+                  fill="transparent"
+                  className="touch-pan-y"
+                  onPointerMove={onMove}
+                  onPointerDown={onMove}
+                  onPointerLeave={onLeave}
+                  onClick={() => hovered && setSelected(hovered.events[0].key)}
+                />
+              )}
             </svg>
-            {clusters.map((c) => (
-              <ClusterMarker
-                key={c.key}
-                cluster={c}
-                active={selectedCluster?.key === c.key || hovered?.key === c.key}
-                onSelect={() =>
-                  setSelected(selectedCluster?.key === c.key ? null : c.events[0].key)
-                }
-                onHover={(on) => {
-                  setHoverCluster(on ? c.key : null);
-                  setHoverT(on ? tAt(c.x) : null);
-                }}
-              />
-            ))}
-            {floating && selectedCluster && (
-              <ClusterList
-                cluster={selectedCluster}
-                onClose={() => setSelected(null)}
-                floating={floating}
-              />
+            {clusters.map((c) =>
+              compact ? (
+                <span
+                  key={c.key}
+                  className="absolute flex -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: c.x, top: c.y }}
+                >
+                  <MarkerFace cluster={c} active={false} />
+                </span>
+              ) : (
+                <ClusterMarker
+                  key={c.key}
+                  cluster={c}
+                  active={selectedCluster?.key === c.key || hovered?.key === c.key}
+                  onSelect={() =>
+                    setSelected(selectedCluster?.key === c.key ? null : c.events[0].key)
+                  }
+                  onHover={(on) => {
+                    setHoverCluster(on ? c.key : null);
+                    setHoverT(on ? tAt(c.x) : null);
+                  }}
+                />
+              ),
             )}
           </>
         )}
@@ -463,14 +461,10 @@ function ClusterMarker({
   onHover: (on: boolean) => void;
 }) {
   const { events } = cluster;
-  const kinds = new Set(events.map((e) => e.kind));
-  const only = kinds.size === 1 ? events[0].kind : null;
   const label =
     events.length === 1
       ? `${kindLabel(events[0].kind)}: ${events[0].label}, ${fullDate(events[0].t)}, ${events[0].estimated ? "about " : ""}${mi(events[0].miles)} mi`
       : `${events.length} entries, ${clusterDate(cluster)}. Show list`;
-  const border =
-    only === "service" ? "border-chart-service" : only === "mod" ? "border-chart-mods" : "border-chalk/70";
 
   return (
     <button
@@ -485,45 +479,42 @@ function ClusterMarker({
       className="absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md"
       style={{ left: cluster.x, top: cluster.y }}
     >
-      {events.length === 1 ? (
-        <span className={`flex rounded transition-transform ${active ? "scale-150" : ""}`}>
-          <Shape kind={events[0].kind} size={events[0].kind === "mod" ? 12 : 10} />
-        </span>
-      ) : (
-        <span
-          className={`readout flex h-5 min-w-5 items-center justify-center rounded border-2 bg-carbon px-1 text-xs leading-none text-chalk ${border} ${active ? "bg-graphite" : ""}`}
-        >
-          {events.length}
-        </span>
-      )}
+      <MarkerFace cluster={cluster} active={active} />
     </button>
   );
 }
 
+// A lone entry's shape, or a count box for a group: bordered in the series
+// color when every entry is the same type, white when mixed.
+function MarkerFace({ cluster, active }: { cluster: Cluster; active: boolean }) {
+  const { events } = cluster;
+  if (events.length === 1) {
+    return (
+      <span className={`flex rounded transition-transform ${active ? "scale-150" : ""}`}>
+        <Shape kind={events[0].kind} size={events[0].kind === "mod" ? 12 : 10} />
+      </span>
+    );
+  }
+  const kinds = new Set(events.map((e) => e.kind));
+  const only = kinds.size === 1 ? events[0].kind : null;
+  const border =
+    only === "service" ? "border-chart-service" : only === "mod" ? "border-chart-mods" : "border-chalk/70";
+  return (
+    <span
+      className={`readout flex h-5 min-w-5 items-center justify-center rounded border-2 bg-carbon px-1 text-xs leading-none text-chalk ${border} ${active ? "bg-graphite" : ""}`}
+    >
+      {events.length}
+    </span>
+  );
+}
+
 // Everything logged at one spot on the graph, with links to edit each entry.
-// On the garage card it floats over the graph instead of sitting below it.
-function ClusterList({
-  cluster,
-  onClose,
-  floating,
-}: {
-  cluster: Cluster;
-  onClose: () => void;
-  floating?: { left: number; top: number };
-}) {
+function ClusterList({ cluster, onClose }: { cluster: Cluster; onClose: () => void }) {
   const { events } = cluster;
   const lo = Math.min(...events.map((e) => e.miles));
   const hi = Math.max(...events.map((e) => e.miles));
   return (
-    <div
-      className={
-        floating
-          ? "absolute z-20 max-h-64 w-64 overflow-y-auto rounded-md border border-edge bg-carbon p-3 shadow-lg"
-          : "mt-3 rounded-md border border-graphite bg-carbon/60 p-4"
-      }
-      style={floating}
-      aria-live="polite"
-    >
+    <div className="mt-3 rounded-md border border-graphite bg-carbon/60 p-4" aria-live="polite">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-medium">{clusterDate(cluster)}</p>
