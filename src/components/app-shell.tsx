@@ -20,7 +20,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="border-b border-graphite">
         <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
           <div className="flex items-center gap-6">
-            <Link href="/garage" className="flex items-center gap-2 text-lg font-semibold">
+            <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
               <Gauge className="h-5 w-5 text-redline" aria-hidden />
               <span>
                 Rev<span className="text-redline">log</span>
