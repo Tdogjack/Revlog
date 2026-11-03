@@ -1,21 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Check, RotateCcw } from "lucide-react";
+import { MileageChart } from "@/components/mileage-chart";
 import { StatusBadge } from "@/components/status-badge";
+import { daysBefore, demoEvents, demoTrackCar } from "@/lib/demo-garage";
+import { buildMileageTimeline, DAY } from "@/lib/mileage-timeline";
 import type { ReminderStatus } from "@/lib/reminders";
+import { useToday } from "@/lib/use-today";
 
 const START_MILES = 48_210;
 const MAX_DRIVE = 8_000;
 // Revlog's default "due soon" window when no percent is set.
 const DUE_SOON_MILES = 500;
+// The M3's usual pace, so driving also moves the graph's calendar ahead.
+const MILES_PER_DAY = 15.4;
+// How far past the last mile driven the dashed projection runs.
+const AHEAD_DAYS = 120;
 
 type DemoReminder = { task: string; every: number; lastAt: number };
 
 const START_REMINDERS: DemoReminder[] = [
   { task: "Oil change", every: 5_000, lastAt: 43_620 },
-  { task: "Brake fluid", every: 30_000, lastAt: 20_400 },
-  { task: "Tire rotation", every: 7_500, lastAt: 45_100 },
+  { task: "Brake fluid", every: 20_000, lastAt: 31_200 },
+  { task: "Diff fluid", every: 15_000, lastAt: 38_540 },
   { task: "Spark plugs", every: 60_000, lastAt: 0 },
 ];
 
@@ -41,33 +49,86 @@ const textTone: Record<ReminderStatus, string> = {
   overdue: "text-overdue",
 };
 
+type Done = { task: string; miles: number; date: string };
+
 // A playable slice of a car page: drive miles with the slider and watch the
-// reminders count down, then mark one done to reset it from today's miles.
+// reminders count down and the graph grow, then mark one done to reset it
+// from today's miles.
 export function OdometerDemo() {
+  const today = useToday();
   const [driven, setDriven] = useState(0);
   const [reminders, setReminders] = useState(START_REMINDERS);
+  const [done, setDone] = useState<Done[]>([]);
   const miles = START_MILES + driven;
   const results = reminders.map((r) => ({ r, ...evaluate(r, miles) }));
   const overdue = results.filter((x) => x.status === "overdue").length;
   const dueSoon = results.filter((x) => x.status === "due_soon").length;
+  // Driving takes as long as it would at the usual pace.
+  const drivenTo = today ? daysBefore(today, -Math.round(driven / MILES_PER_DAY)) : null;
+
+  const history = useMemo(() => (today ? demoEvents(demoTrackCar(today)) : []), [today]);
+  // Where the dashed line ends with the slider all the way over. The graph
+  // keeps this frame the whole time, so it doesn't rescale while you drag.
+  const frame = useMemo(() => {
+    if (!today) return null;
+    const end = Date.parse(`${today}T00:00:00Z`) + (MAX_DRIVE / MILES_PER_DAY + AHEAD_DAYS) * DAY;
+    return { end, maxMiles: Math.round(START_MILES + MAX_DRIVE + AHEAD_DAYS * MILES_PER_DAY) };
+  }, [today]);
+  const timeline = useMemo(() => {
+    if (!today || !drivenTo || !frame) return null;
+    const built = buildMileageTimeline(
+      [
+        ...history,
+        { key: "reading-today", kind: "reading", date: today, mileage: START_MILES, label: "Odometer updated" },
+        ...done.map((d, i) => ({
+          key: `done-${i}`,
+          kind: "service" as const,
+          date: d.date,
+          mileage: d.miles,
+          label: d.task,
+        })),
+      ],
+      miles,
+      drivenTo,
+      reminders.map((r) => ({
+        key: `due-${r.task}`,
+        label: r.task,
+        dueMiles: r.lastAt + r.every,
+        dueOn: null,
+      })),
+    );
+    if (!built?.projection) return built;
+    // Run the projection to the frame's edge, dropping reminders past it.
+    const [last, next] = built.projection;
+    const rate = (next.miles - last.miles) / (next.t - last.t);
+    const edge = { t: frame.end, miles: Math.round(last.miles + rate * (frame.end - last.t)) };
+    return {
+      ...built,
+      projection: [last, edge],
+      events: built.events.filter((e) => e.t <= frame.end),
+      maxMiles: Math.max(built.maxMiles, edge.miles),
+    };
+  }, [today, drivenTo, frame, history, done, miles, reminders]);
 
   function markDone(task: string) {
     setReminders((rs) => rs.map((r) => (r.task === task ? { ...r, lastAt: miles } : r)));
+    if (drivenTo) setDone((d) => [...d, { task, miles, date: drivenTo }]);
   }
 
   function reset() {
     setDriven(0);
     setReminders(START_REMINDERS);
+    setDone([]);
   }
 
   return (
-    <div className="rounded-lg border border-graphite bg-panel">
-      <div className="border-b border-graphite p-5 sm:p-6">
-        <p className="text-sm text-steel">Track toy, 2019 Honda Civic Si</p>
+    <div className="grid rounded-lg border border-graphite bg-panel [grid-template-areas:'odo'_'drive'_'graph'_'list'_'foot'] lg:grid-cols-[26rem_minmax(0,1fr)] lg:[grid-template-areas:'odo_graph'_'drive_graph'_'list_graph'_'foot_foot']">
+      <div className="border-b border-graphite p-5 [grid-area:odo] sm:p-6 lg:border-r">
+        <p className="text-sm text-steel">Track toy, 2011 BMW M3</p>
         <Odometer miles={miles} />
       </div>
 
-      <div className="border-b border-graphite p-5 sm:p-6">
+      <div className="border-b border-graphite p-5 [grid-area:drive] sm:p-6 lg:border-r">
         <label htmlFor="drive" className="flex items-baseline justify-between text-sm">
           <span className="field-label">Drive it</span>
           <span className="text-steel tabular-nums">+{driven.toLocaleString("en-US")} mi</span>
@@ -84,7 +145,15 @@ export function OdometerDemo() {
         />
       </div>
 
-      <ul className="px-5 sm:px-6">
+      <div className="min-w-0 border-b border-graphite p-5 [grid-area:graph] sm:p-6">
+        {timeline ? (
+          <MileageChart timeline={timeline} frame={frame ?? undefined} />
+        ) : (
+          <div className="skeleton h-[18rem] w-full" aria-hidden />
+        )}
+      </div>
+
+      <ul className="border-b border-graphite px-5 [grid-area:list] sm:px-6 lg:border-r lg:border-b-0">
         {results.map(({ r, status, used, text }) => (
           <li
             key={r.task}
@@ -117,7 +186,7 @@ export function OdometerDemo() {
         ))}
       </ul>
 
-      <div className="flex items-center justify-between gap-3 border-t border-graphite py-2 pr-2 pl-5 sm:pl-6">
+      <div className="flex items-center justify-between gap-3 py-2 pr-2 pl-5 [grid-area:foot] sm:pl-6 lg:border-t lg:border-graphite">
         <p aria-live="polite" className="py-2 text-sm text-steel">
           {overdue + dueSoon === 0
           ? "Everything's on track. Keep driving."

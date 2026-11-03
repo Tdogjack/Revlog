@@ -53,9 +53,13 @@ type Cluster = { key: string; x: number; y: number; events: PlacedEvent[] };
 export function MileageChart({
   timeline,
   compact = false,
+  frame,
 }: {
   timeline: MileageTimeline;
   compact?: boolean;
+  // Holds the axes at least this far out, so a timeline that changes live
+  // (the landing page slider) grows inside a steady frame instead of rescaling.
+  frame?: { end: number; maxMiles: number };
 }) {
   const root = useRef<HTMLDivElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
@@ -112,7 +116,10 @@ export function MileageChart({
   const view = useMemo(() => {
     const days = RANGES.find((r) => r.id === range)!.days;
     const start = Math.max(timeline.start, timeline.end - days * DAY);
-    const end = projection ? projection[projection.length - 1].t : timeline.end;
+    const end = Math.max(
+      projection ? projection[projection.length - 1].t : timeline.end,
+      frame?.end ?? 0,
+    );
     // Enter from the left edge when the range cuts the line.
     const line: TimelinePoint[] = [
       ...(start > timeline.start ? [{ t: start, miles: milesAt(timeline.line, start) }] : []),
@@ -120,11 +127,11 @@ export function MileageChart({
     ];
     const ahead = projection ?? [];
     const miles = [...line, ...ahead].map((p) => p.miles);
-    const ticks = mileageTicks(Math.min(...miles), Math.max(...miles));
+    const ticks = mileageTicks(Math.min(...miles), Math.max(...miles, frame?.maxMiles ?? 0));
     // Logged line plus the projection, for reading mileage anywhere on the graph.
     const full = [...line, ...ahead.slice(1)];
     return { start, end, line, full, ticks, lo: ticks[0], hi: ticks[ticks.length - 1] };
-  }, [timeline, range, projection]);
+  }, [timeline, range, projection, frame?.end, frame?.maxMiles]);
 
   const plotW = Math.max(width - M.left - M.right, 1);
   const plotH = height - M.top - M.bottom;
