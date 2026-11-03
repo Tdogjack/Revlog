@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import { addPhoto, deletePhoto, type PhotoTarget } from "@/lib/gallery";
 import { readPhoto } from "@/lib/photos";
 import { isUuid } from "@/lib/vehicles";
@@ -20,6 +21,7 @@ export async function uploadPhoto(
   formData: FormData,
 ): Promise<{ error?: string }> {
   const user = await requireUser();
+  if (!(await isEmailVerified(user.id))) return { error: CONFIRM_EMAIL_FIRST };
   const target = readTarget(kind, targetId);
   if (!target) return { error: "That photo doesn't have a place to go." };
   const photo = readPhoto(formData);

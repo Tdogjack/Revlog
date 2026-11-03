@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { isEmailVerified } from "@/lib/email-verification";
 import { PHOTO_LIMITS, signedPhotosFor } from "@/lib/gallery";
 import { getMod } from "@/lib/mods";
 import { toPartRows } from "@/lib/part-rows";
@@ -29,6 +30,7 @@ async function EditMod({ params, searchParams }: Pick<Props, "params" | "searchP
   const [{ id, modId }, { photos: photoStatus }] = await Promise.all([params, searchParams]);
   const failed = photoStatus === "failed";
   const user = await requireUser();
+  const photosLocked = !(await isEmailVerified(user.id));
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
   const mod = await getMod(user.id, car.id, modId);
@@ -57,6 +59,7 @@ async function EditMod({ params, searchParams }: Pick<Props, "params" | "searchP
         photos={{
           vehicleId: car.id,
           max: PHOTO_LIMITS.mod,
+          locked: photosLocked,
           target: { id: mod.id, photos: modPhotos },
         }}
         initial={{

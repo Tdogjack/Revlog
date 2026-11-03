@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 import { uploadPhoto } from "@/app/garage/[id]/photos/actions";
+import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
 import { PHOTO_ACCEPT, resizeImage } from "@/lib/resize-image";
 
@@ -12,6 +13,8 @@ export type FormPhotos = {
   vehicleId: string;
   max: number;
   target?: { id: string; photos: StripPhoto[] };
+  // Set until the account's email is confirmed; uploads are blocked until then.
+  locked?: boolean;
 };
 
 export type QueuedPhoto = { key: number; file: File; url: string };
@@ -60,7 +63,11 @@ export function FormPhotosField({
     <div>
       <span className="field-label block">{label}</span>
       {hint && <span className="field-hint mt-0.5">{hint}</span>}
-      {photos.target ? (
+      {photos.locked ? (
+        <div className="mt-1">
+          <ConfirmEmailNote />
+        </div>
+      ) : photos.target ? (
         <PhotoStrip
           vehicleId={photos.vehicleId}
           kind={kind}

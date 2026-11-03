@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useRef, useState, useTransition } from "react";
+import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import { PhotoPicker } from "@/components/photo-picker";
 import { withResizedPhoto } from "@/lib/resize-image";
 import type { FormState } from "../actions";
@@ -51,11 +52,14 @@ export function VehicleForm({
   initial,
   submitLabel = "Add to garage",
   pendingLabel = "Adding…",
+  canUpload = true,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   initial?: Record<string, string>;
   submitLabel?: string;
   pendingLabel?: string;
+  // False until the account's email is confirmed.
+  canUpload?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -105,7 +109,12 @@ export function VehicleForm({
       className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6"
     >
       {/* The form resets after each submit, so remount the picker to clear its preview too. */}
-      {!initial && <PhotoPicker key={state?.error ?? "initial"} />}
+      {!initial &&
+        (canUpload ? (
+          <PhotoPicker key={state?.error ?? "initial"} />
+        ) : (
+          <ConfirmEmailNote action="add a photo" />
+        ))}
       <div>
         <div className="flex items-end gap-2">
           <div className="flex-1">

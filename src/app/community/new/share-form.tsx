@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, ImagePlus, X } from "lucide-react";
+import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import { POST_TAGS } from "@/lib/post-tags";
 import { PHOTO_ACCEPT, resizeImage, toBrowserImage } from "@/lib/resize-image";
 import { uploadPostPhoto, type PostFormState } from "../actions";
@@ -28,6 +29,7 @@ export function ShareForm({
   defaultBody,
   defaultShowParts = false,
   submitLabel = "Post to community",
+  canUpload = true,
 }: {
   action: (prev: PostFormState, formData: FormData) => Promise<PostFormState>;
   vehicleId: string;
@@ -45,6 +47,8 @@ export function ShareForm({
   defaultBody?: string;
   defaultShowParts?: boolean;
   submitLabel?: string;
+  // False until the account's email is confirmed.
+  canUpload?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -285,7 +289,7 @@ export function ShareForm({
               </button>
             </div>
           ))}
-          {room > 0 && (
+          {room > 0 && canUpload && (
             <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-graphite text-xs text-steel hover:border-steel hover:text-chalk">
               <ImagePlus className="h-5 w-5" aria-hidden />
               Upload
@@ -303,6 +307,11 @@ export function ShareForm({
             </label>
           )}
         </div>
+        {!canUpload && (
+          <div className="mt-2">
+            <ConfirmEmailNote action="upload photos" />
+          </div>
+        )}
         <p className="mt-2 text-xs text-steel">
           Garage photos are copied to the public post; uploads here go only to the post, not your
           garage. Receipts are never shared.

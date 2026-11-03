@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { isEmailVerified } from "@/lib/email-verification";
 import { PHOTO_LIMITS } from "@/lib/gallery";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
 import { addMod } from "../actions";
@@ -23,6 +24,7 @@ export default function NewModPage({ params }: PageProps<"/garage/[id]/mods/new"
 async function NewMod({ params }: Pick<PageProps<"/garage/[id]/mods/new">, "params">) {
   const { id } = await params;
   const user = await requireUser();
+  const photosLocked = !(await isEmailVerified(user.id));
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
 
@@ -35,7 +37,7 @@ async function NewMod({ params }: Pick<PageProps<"/garage/[id]/mods/new">, "para
       <ModForm
         action={addMod.bind(null, car.id)}
         currentMileage={car.currentMileage}
-        photos={{ vehicleId: car.id, max: PHOTO_LIMITS.mod }}
+        photos={{ vehicleId: car.id, max: PHOTO_LIMITS.mod, locked: photosLocked }}
       />
     </>
   );
