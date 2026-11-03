@@ -24,8 +24,10 @@ const KINDS: { kind: TimelineEventKind; label: string; plural: string }[] = [
   { kind: "service", label: "Service", plural: "Service" },
   { kind: "mod", label: "Mod", plural: "Mods" },
   { kind: "reading", label: "Reading", plural: "Odometer" },
+  { kind: "due", label: "Due", plural: "Upcoming" },
 ];
-const kindLabel = (k: TimelineEventKind) => KINDS.find((x) => x.kind === k)!.label;
+const kindLabel = (k: TimelineEventKind, overdue?: boolean) =>
+  overdue ? "Overdue" : KINDS.find((x) => x.kind === k)!.label;
 
 const RANGES = [
   { id: "6m", label: "6M", days: 182 },
@@ -38,6 +40,10 @@ type RangeId = (typeof RANGES)[number]["id"];
 const MERGE_PX = 16;
 const MARGIN = { top: 14, right: 14, bottom: 28, left: 46 };
 const MARGIN_COMPACT = { top: 10, right: 10, bottom: 20, left: 34 };
+// Space between the axis labels and the first and last points, so markers at
+// either end don't sit on the labels.
+const INSET_X = 16;
+const INSET_X_COMPACT = 8;
 
 type Cluster = { key: string; x: number; y: number; events: PlacedEvent[] };
 
@@ -61,6 +67,7 @@ export function MileageChart({
     service: true,
     mod: true,
     reading: true,
+    due: true,
   });
   const [hoverT, setHoverT] = useState<number | null>(null);
   const [hoverCluster, setHoverCluster] = useState<string | null>(null);
@@ -98,29 +105,40 @@ export function MileageChart({
   const ranges = RANGES.filter((r) => r.id === "all" || span > r.days * 1.2);
   const height = compact ? boxH : width && width < 520 ? 200 : 260;
   const M = compact ? MARGIN_COMPACT : MARGIN;
+  const inset = compact ? INSET_X_COMPACT : INSET_X;
+  // The garage card sticks to what's been logged.
+  const projection = compact ? null : timeline.projection;
 
   const view = useMemo(() => {
     const days = RANGES.find((r) => r.id === range)!.days;
-    const end = timeline.end;
-    const start = Math.max(timeline.start, end - days * DAY);
+    const start = Math.max(timeline.start, timeline.end - days * DAY);
+    const end = projection ? projection[projection.length - 1].t : timeline.end;
     // Enter from the left edge when the range cuts the line.
     const line: TimelinePoint[] = [
       ...(start > timeline.start ? [{ t: start, miles: milesAt(timeline.line, start) }] : []),
       ...timeline.line.filter((p) => p.t >= start),
     ];
-    const miles = line.map((p) => p.miles);
+    const ahead = projection ?? [];
+    const miles = [...line, ...ahead].map((p) => p.miles);
     const ticks = mileageTicks(Math.min(...miles), Math.max(...miles));
-    return { start, end, line, ticks, lo: ticks[0], hi: ticks[ticks.length - 1] };
-  }, [timeline, range]);
+    // Logged line plus the projection, for reading mileage anywhere on the graph.
+    const full = [...line, ...ahead.slice(1)];
+    return { start, end, line, full, ticks, lo: ticks[0], hi: ticks[ticks.length - 1] };
+  }, [timeline, range, projection]);
 
   const plotW = Math.max(width - M.left - M.right, 1);
   const plotH = height - M.top - M.bottom;
-  const sx = (t: number) => M.left + ((t - view.start) / (view.end - view.start)) * plotW;
+  const innerW = Math.max(plotW - inset * 2, 1);
+  const sx = (t: number) =>
+    M.left + inset + ((t - view.start) / (view.end - view.start)) * innerW;
   const sy = (m: number) => M.top + (1 - (m - view.lo) / (view.hi - view.lo)) * plotH;
   const tAt = (x: number) =>
-    view.start + ((x - M.left) / plotW) * (view.end - view.start);
+    view.start + ((x - M.left - inset) / innerW) * (view.end - view.start);
 
-  const visible = timeline.events.filter((e) => shown[e.kind] && e.t >= view.start);
+  const hasDue = !compact && timeline.events.some((e) => e.kind === "due");
+  const visible = timeline.events.filter(
+    (e) => shown[e.kind] && e.t >= view.start && (e.kind !== "due" || hasDue),
+  );
 
   // Greedy left-to-right merge so overlapping markers become one list.
   const clusters: Cluster[] = [];
@@ -169,16 +187,20 @@ export function MileageChart({
   const readT = hoverT ?? latest.t;
   const readMiles = hovered
     ? Math.round(hovered.events.reduce((s, e) => s + e.miles, 0) / hovered.events.length)
-    : milesAt(view.line, readT);
+    : milesAt(view.full, readT);
+  const ahead = readT > latest.t;
   const monthly = milesPerMonth(first, latest);
 
   const path = view.line.map((p) => `${sx(p.t)},${sy(p.miles)}`).join(" ");
+  const projPath = projection?.map((p) => `${sx(p.t)},${sy(p.miles)}`).join(" ");
   const { ticks: xTicks, yearly } = timeTicks(view.start, view.end);
 
   const summary = hovered
     ? `${clusterDate(hovered)} · ${hovered.events.length === 1 ? hovered.events[0].label : `${hovered.events.length} entries, tap to list`}`
     : hoverT != null
-      ? fullDate(readT)
+      ? ahead
+        ? `Projected, ${fullDate(readT)}`
+        : fullDate(readT)
       : null;
 
   const header = compact ? (
@@ -198,7 +220,10 @@ export function MileageChart({
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div aria-live="polite" className="min-h-[3.25rem]">
         <p className="flex items-baseline gap-1.5">
-          <span className="readout text-3xl leading-none text-chalk">{mi(readMiles)}</span>
+          <span className="readout text-3xl leading-none text-chalk">
+            {ahead ? "~" : ""}
+            {mi(readMiles)}
+          </span>
           <span className="text-xs text-steel">mi</span>
         </p>
         <p className="mt-1.5 text-xs text-steel">
@@ -294,6 +319,16 @@ export function MileageChart({
                 points={`${path} ${sx(latest.t)},${M.top + plotH} ${sx(first.t)},${M.top + plotH}`}
                 fill={`url(#${fillId})`}
               />
+              {projPath && (
+                <polyline
+                  points={projPath}
+                  fill="none"
+                  className="stroke-chalk/45"
+                  strokeWidth={2}
+                  strokeDasharray="2 5"
+                  strokeLinecap="round"
+                />
+              )}
               <polyline
                 points={path}
                 fill="none"
@@ -317,7 +352,7 @@ export function MileageChart({
                       cx={sx(readT)}
                       cy={sy(readMiles)}
                       r={4}
-                      className="fill-chalk stroke-panel"
+                      className={ahead ? "fill-panel stroke-chalk/70" : "fill-chalk stroke-panel"}
                       strokeWidth={2}
                     />
                   )}
@@ -369,7 +404,7 @@ export function MileageChart({
       {!compact && (
         <>
           <div className="mt-3 flex flex-wrap items-center gap-1" role="group" aria-label="Show on graph">
-            {KINDS.map(({ kind, plural }) => (
+            {KINDS.filter((k) => k.kind !== "due" || hasDue).map(({ kind, plural }) => (
               <button
                 key={kind}
                 type="button"
@@ -380,10 +415,27 @@ export function MileageChart({
                 }}
                 className="btn min-h-8 border-transparent px-2.5 text-xs text-steel hover:text-chalk aria-pressed:text-chalk [&:not([aria-pressed=true])>svg]:opacity-30"
               >
-                <Shape kind={kind} size={kind === "mod" ? 12 : 10} />
+                <Shape kind={kind} size={sizeOf(kind)} />
                 {plural}
               </button>
             ))}
+            {projection && (
+              <span className="flex min-h-8 items-center gap-2 px-2.5 text-xs text-steel">
+                <svg width="16" height="2" aria-hidden className="shrink-0 overflow-visible">
+                  <line
+                    x1="1"
+                    x2="15"
+                    y1="1"
+                    y2="1"
+                    className="stroke-chalk/60"
+                    strokeWidth="2"
+                    strokeDasharray="2 5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Projected at your recent pace
+              </span>
+            )}
           </div>
 
           {selectedCluster && (
@@ -410,7 +462,7 @@ export function MileageChart({
                   <tr key={e.key} className="border-t border-graphite">
                     <td className="py-1 pr-3 whitespace-nowrap">{fullDate(e.t)}</td>
                     <td className="py-1">
-                      {e.label} <span className="text-steel">({kindLabel(e.kind)})</span>
+                      {e.label} <span className="text-steel">({kindLabel(e.kind, e.overdue)})</span>
                     </td>
                     <td className="readout py-1 text-right whitespace-nowrap">
                       {e.estimated ? "~" : ""}
@@ -427,6 +479,8 @@ export function MileageChart({
   );
 }
 
+const sizeOf = (k: TimelineEventKind) => (k === "mod" || k === "due" ? 12 : 10);
+
 function clusterDate(c: Cluster) {
   const a = c.events[0].t;
   const b = c.events[c.events.length - 1].t;
@@ -435,10 +489,30 @@ function clusterDate(c: Cluster) {
   return `${fmt(a, sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" })} to ${fullDate(b)}`;
 }
 
-function Shape({ kind, size }: { kind: TimelineEventKind; size: number }) {
+function Shape({
+  kind,
+  size,
+  overdue = false,
+}: {
+  kind: TimelineEventKind;
+  size: number;
+  overdue?: boolean;
+}) {
   return (
     <svg width={size} height={size} viewBox="0 0 12 12" aria-hidden className="shrink-0 overflow-visible">
-      {kind === "service" ? (
+      {kind === "due" ? (
+        <rect
+          x="2"
+          y="2"
+          width="8"
+          height="8"
+          rx="1"
+          transform="rotate(45 6 6)"
+          className={`${overdue ? "fill-overdue" : "fill-due"} stroke-panel`}
+          strokeWidth="2"
+          paintOrder="stroke"
+        />
+      ) : kind === "service" ? (
         <rect x="1" y="1" width="10" height="10" rx="2" className="fill-chart-service stroke-panel" strokeWidth="2" paintOrder="stroke" />
       ) : kind === "mod" ? (
         <circle cx="6" cy="6" r="5.5" className="fill-chart-mods stroke-panel" strokeWidth="2" paintOrder="stroke" />
@@ -463,7 +537,7 @@ function ClusterMarker({
   const { events } = cluster;
   const label =
     events.length === 1
-      ? `${kindLabel(events[0].kind)}: ${events[0].label}, ${fullDate(events[0].t)}, ${events[0].estimated ? "about " : ""}${mi(events[0].miles)} mi`
+      ? `${kindLabel(events[0].kind, events[0].overdue)}: ${events[0].label}, ${fullDate(events[0].t)}, ${events[0].estimated ? "about " : ""}${mi(events[0].miles)} mi`
       : `${events.length} entries, ${clusterDate(cluster)}. Show list`;
 
   return (
@@ -491,14 +565,20 @@ function MarkerFace({ cluster, active }: { cluster: Cluster; active: boolean }) 
   if (events.length === 1) {
     return (
       <span className={`flex rounded transition-transform ${active ? "scale-150" : ""}`}>
-        <Shape kind={events[0].kind} size={events[0].kind === "mod" ? 12 : 10} />
+        <Shape kind={events[0].kind} size={sizeOf(events[0].kind)} overdue={events[0].overdue} />
       </span>
     );
   }
   const kinds = new Set(events.map((e) => e.kind));
   const only = kinds.size === 1 ? events[0].kind : null;
   const border =
-    only === "service" ? "border-chart-service" : only === "mod" ? "border-chart-mods" : "border-chalk/70";
+    only === "service"
+      ? "border-chart-service"
+      : only === "mod"
+        ? "border-chart-mods"
+        : only === "due"
+          ? "border-due"
+          : "border-chalk/70";
   return (
     <span
       className={`readout flex h-5 min-w-5 items-center justify-center rounded border-2 bg-carbon px-1 text-xs leading-none text-chalk ${border} ${active ? "bg-graphite" : ""}`}
@@ -529,11 +609,11 @@ function ClusterList({ cluster, onClose }: { cluster: Cluster; onClose: () => vo
       <ul className="mt-2">
         {events.map((e) => (
           <li key={e.key} className="flex items-center gap-3 border-t border-rule py-2 first:border-t-0">
-            <Shape kind={e.kind} size={e.kind === "mod" ? 12 : 10} />
+            <Shape kind={e.kind} size={sizeOf(e.kind)} overdue={e.overdue} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm">{e.label}</p>
               <p className="text-xs text-steel">
-                {kindLabel(e.kind)} · {fullDate(e.t)} · {e.estimated ? "about " : ""}
+                {kindLabel(e.kind, e.overdue)} · {fullDate(e.t)} · {e.estimated ? "about " : ""}
                 {mi(e.miles)} mi
               </p>
             </div>

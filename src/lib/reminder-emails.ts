@@ -2,12 +2,26 @@ import "server-only";
 import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import { authUsers } from "drizzle-orm/supabase";
 import { db } from "@/db";
-import { emailSettings, reminders, serviceRecords, vehicles } from "@/db/schema";
+import {
+  emailSettings,
+  mileageReadings,
+  mods,
+  reminders,
+  serviceRecords,
+  vehicles,
+} from "@/db/schema";
 import { sendEmail } from "@/lib/email";
 import { unsubscribeToken } from "@/lib/email-settings";
 import { reminderEmail, type ReminderEmailCar } from "@/lib/email-templates";
 import {
+  buildMileageTimeline,
+  daysUntilMiles,
+  milesPerDay,
+  type TimelinePoint,
+} from "@/lib/mileage-timeline";
+import {
   describeDue,
+  dueLimits,
   evaluateReminder,
   STATUS_RANK,
   withCarAgeStart,
@@ -21,6 +35,9 @@ const RENOTIFY_DAYS = 7;
 // Resend's free plan allows 100 emails a day and 2 a second.
 const MAX_EMAILS_PER_RUN = 90;
 const SEND_GAP_MS = 600;
+// A reminder the odometer says is fine, but the usual pace says is likely due
+// within this many days, gets a "check your odometer" nudge.
+const LIKELY_DUE_DAYS = 14;
 
 type Candidate = {
   userId: string;
@@ -109,6 +126,39 @@ function serviceDatesFor(userIds: string[]) {
     .where(inArray(serviceRecords.userId, userIds));
 }
 
+// Each car's logged mileage line (readings, service, and mods with a
+// mileage), for estimating how far it's been driven since.
+async function mileageLines(vehicleIds: string[], currentMileage: Map<string, number>, today: Date) {
+  const [readings, services, carMods] = await Promise.all([
+    db
+      .select({ vehicleId: mileageReadings.vehicleId, date: mileageReadings.readOn, mileage: mileageReadings.mileage })
+      .from(mileageReadings)
+      .where(inArray(mileageReadings.vehicleId, vehicleIds)),
+    db
+      .select({ vehicleId: serviceRecords.vehicleId, date: serviceRecords.servicedOn, mileage: serviceRecords.mileage })
+      .from(serviceRecords)
+      .where(and(inArray(serviceRecords.vehicleId, vehicleIds), isNotNull(serviceRecords.mileage))),
+    db
+      .select({ vehicleId: mods.vehicleId, date: mods.installedOn, mileage: mods.installedMileage })
+      .from(mods)
+      .where(
+        and(inArray(mods.vehicleId, vehicleIds), isNotNull(mods.installedOn), isNotNull(mods.installedMileage)),
+      ),
+  ]);
+  const todayIso = today.toISOString().slice(0, 10);
+  const lines = new Map<string, TimelinePoint[]>();
+  for (const id of vehicleIds) {
+    const events = [...readings, ...services, ...carMods]
+      .filter((e) => e.vehicleId === id)
+      .map((e, i) => ({ key: String(i), kind: "reading" as const, date: e.date!, mileage: e.mileage, label: "" }));
+    const timeline = buildMileageTimeline(events, currentMileage.get(id) ?? 0, todayIso);
+    if (timeline) lines.set(id, timeline.line);
+  }
+  return lines;
+}
+
+const mi = (n: number) => Math.round(n).toLocaleString("en-US");
+
 type Outbox = { email: string; cars: Map<string, ReminderEmailCar>; reminderIds: string[] };
 
 // Builds one email per user listing every due-soon or overdue reminder.
@@ -127,15 +177,42 @@ async function buildOutbox(today: Date) {
       });
       return {
         c,
+        reminder,
         result: evaluateReminder(reminder, c.currentMileage, today, {
           dueSoonPercent: c.reminderPercent,
         }),
       };
-    })
-    .filter(({ result }) => result.status !== "ok")
+    });
+
+  // Reminders that look fine by the last odometer reading but, at the car's
+  // usual pace, have likely come due or will within two weeks.
+  const lines = await mileageLines(
+    [...new Set(candidates.map((c) => c.vehicleId))],
+    new Map(candidates.map((c) => [c.vehicleId, c.currentMileage])),
+    today,
+  );
+  const likely = new Map<string, string>();
+  for (const { c, reminder, result } of ranked) {
+    const { dueMiles } = dueLimits(reminder);
+    const line = lines.get(c.vehicleId);
+    const rate = line && milesPerDay(line);
+    if (result.status !== "ok" || dueMiles == null || !line || !rate) continue;
+    const days = Math.ceil(daysUntilMiles(line, rate, dueMiles, today.getTime()));
+    if (days > LIKELY_DUE_DAYS) continue;
+    const pace = `you drive about ${mi(rate * 30.44)} mi a month`;
+    likely.set(
+      c.reminderId,
+      days <= 0
+        ? `Likely due now: it's due at ${mi(dueMiles)} mi and ${pace}. Check your odometer.`
+        : `Likely due in about ${days} ${days === 1 ? "day" : "days"}: it's due at ${mi(dueMiles)} mi and ${pace}. Check your odometer.`,
+    );
+  }
+
+  const due = ranked
+    .filter(({ c, result }) => result.status !== "ok" || likely.has(c.reminderId))
     .sort((a, b) => STATUS_RANK[a.result.status] - STATUS_RANK[b.result.status]);
 
-  for (const { c, result } of ranked) {
+  for (const { c, result } of due) {
     let box = byUser.get(c.userId);
     if (!box) {
       box = { email: c.email, cars: new Map(), reminderIds: [] };
@@ -146,7 +223,12 @@ async function buildOutbox(today: Date) {
       car = { name: c.vehicle.nickname || vehicleName(c.vehicle), items: [] };
       box.cars.set(c.vehicleId, car);
     }
-    car.items.push({ task: c.task, status: result.status, due: describeDue(result) });
+    const guess = likely.get(c.reminderId);
+    car.items.push(
+      guess
+        ? { task: c.task, status: "due_soon", due: guess, likely: true }
+        : { task: c.task, status: result.status, due: describeDue(result) },
+    );
     box.reminderIds.push(c.reminderId);
   }
   return [...byUser.entries()];
