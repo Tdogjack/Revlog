@@ -99,6 +99,13 @@
       "when": 1793600460091,
       "tag": "0013_mileage_readings",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793681170342,
+      "tag": "0014_receipt_scans",
+      "breakpoints": true
     }
   ]
 }

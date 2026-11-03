@@ -18,6 +18,11 @@ export type QueuedPhoto = { key: number; file: File; url: string };
 
 let nextKey = 0;
 
+// Wraps an already-resized photo for the queue, like the receipt scanner does.
+export function queuePhoto(file: File): QueuedPhoto {
+  return { key: nextKey++, file, url: URL.createObjectURL(file) };
+}
+
 // Uploads queued photos one at a time once the record exists. Returns
 // whether every photo made it.
 export async function uploadQueued(
