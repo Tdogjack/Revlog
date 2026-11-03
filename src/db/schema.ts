@@ -234,6 +234,15 @@ export const attachments = pgTable(
   () => [ownerPolicy("attachments")],
 ).enableRLS();
 
+// One row per receipt scan, so each user gets a daily cap on AI calls.
+export const receiptScans = pgTable(
+  "receipt_scans",
+  {
+    ...ownerColumns,
+  },
+  (t) => [index("receipt_scans_user_created_idx").on(t.userId, t.createdAt), ownerPolicy("receipt_scans")],
+).enableRLS();
+
 // Public identity for community features. Usernames are stored lowercase.
 export const profiles = pgTable(
   "profiles",

@@ -12,6 +12,7 @@ import {
   setModStatus,
   updateMod,
 } from "@/lib/mods";
+import { scanModReceipt, type ModScanResult } from "@/lib/mod-scan";
 import { parsePartRows, settlePartsCost, syncParts } from "@/lib/parts";
 
 export type ModFormState =
@@ -51,6 +52,15 @@ export async function addMod(
   // With photos waiting, the form uploads them to the new mod, then leaves.
   if (formData.get("stay")) return { savedId: mod.id };
   redirect(`/garage/${vehicleId}`);
+}
+
+// Reads an order email, order page, receipt, or listing into form values.
+// Nothing is saved here.
+export async function scanModPhoto(formData: FormData): Promise<ModScanResult> {
+  const user = await requireUser();
+  const photo = formData.get("photo");
+  if (!(photo instanceof File) || photo.size === 0) return { error: "Choose a photo to scan." };
+  return scanModReceipt(user.id, photo);
 }
 
 export async function editMod(
