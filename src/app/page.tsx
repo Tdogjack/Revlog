@@ -126,7 +126,7 @@ export default function Home() {
         </section>
 
         {/* Light like a shop ticket, to break up the dark run. */}
-        <section className="bg-chalk text-carbon">
+        <section className="bg-paper text-carbon">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
             <div className="flex flex-col justify-between gap-4 border-b border-dashed border-carbon/30 pb-8 md:flex-row md:items-end">
               <h2 className="font-display text-3xl leading-tight font-semibold sm:text-4xl">
@@ -188,19 +188,12 @@ export default function Home() {
                       </p>
                     </div>
                   </Link>
+                  <p className="mt-2 px-1 text-xs leading-relaxed text-steel">
+                    <PhotoCredit label="Photo" photo={car.photo} />, Wikimedia Commons
+                  </p>
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-xs text-steel">
-              Photos from Wikimedia Commons:{" "}
-              {cars.map((car, i) => (
-                <span key={car.id}>
-                  {i > 0 && ", "}
-                  <PhotoCredit label={car.name} photo={car.photo} />
-                </span>
-              ))}
-              .
-            </p>
 
             <div className="mt-20 flex flex-col items-start justify-between gap-6 rounded-2xl border border-graphite bg-panel p-8 md:flex-row md:items-end md:p-12">
               <h2 className="max-w-2xl font-display text-3xl leading-tight font-semibold sm:text-5xl">

@@ -13,6 +13,8 @@
   /* Secondary text, 7:1 on the panel surface. */
   --color-steel: #a1aab6;
   --color-chalk: #eef0f2;
+  /* Light band on the landing page, softer than chalk against the dark run. */
+  --color-paper: #cfd4db;
 
   /* Status colors, kept distinct from the brand red */
   --color-due: #f1b84b;
