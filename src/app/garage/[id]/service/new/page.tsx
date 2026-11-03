@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { isEmailVerified } from "@/lib/email-verification";
 import { PHOTO_LIMITS } from "@/lib/gallery";
 import { toPartRows } from "@/lib/part-rows";
 import { listPartsForParent } from "@/lib/parts";
@@ -39,6 +40,7 @@ const formatDate = (isoDate: string) =>
 async function NewService({ params, searchParams }: Pick<Props, "params" | "searchParams">) {
   const [{ id }, { copy, reminder: reminderId }] = await Promise.all([params, searchParams]);
   const user = await requireUser();
+  const photosLocked = !(await isEmailVerified(user.id));
   const [car, customTypes] = await Promise.all([
     getVehicle(user.id, id),
     listServiceTypes(user.id),
@@ -97,7 +99,7 @@ async function NewService({ params, searchParams }: Pick<Props, "params" | "sear
               : undefined
         }
         initialParts={toPartRows(sourceParts, { keepIds: false })}
-        photos={{ vehicleId: car.id, max: PHOTO_LIMITS.record }}
+        photos={{ vehicleId: car.id, max: PHOTO_LIMITS.record, locked: photosLocked }}
       />
     </>
   );

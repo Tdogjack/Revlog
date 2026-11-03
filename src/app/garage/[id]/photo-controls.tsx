@@ -1,11 +1,20 @@
 "use client";
 
 import { startTransition, useActionState, useRef, useState } from "react";
+import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import { PHOTO_ACCEPT, withResizedPhoto } from "@/lib/resize-image";
 import { changeVehiclePhoto, removeVehiclePhoto } from "../actions";
 
 // "Change photo" uploads as soon as a picture is chosen.
-export function PhotoControls({ vehicleId, hasPhoto }: { vehicleId: string; hasPhoto: boolean }) {
+export function PhotoControls({
+  vehicleId,
+  hasPhoto,
+  canUpload,
+}: {
+  vehicleId: string;
+  hasPhoto: boolean;
+  canUpload: boolean;
+}) {
   const [state, formAction, pending] = useActionState(
     changeVehiclePhoto.bind(null, vehicleId),
     undefined,
@@ -28,19 +37,23 @@ export function PhotoControls({ vehicleId, hasPhoto }: { vehicleId: string; hasP
   return (
     <div className="text-sm">
       <div className="flex flex-wrap items-center gap-4">
-        <form ref={formRef} action={submit}>
-          <label className="flex min-h-9 cursor-pointer items-center text-steel focus-within:text-chalk focus-within:underline hover:text-chalk">
-            {pending ? "Uploading…" : hasPhoto ? "Change photo" : "Add a photo"}
-            <input
-              type="file"
-              name="photo"
-              accept={PHOTO_ACCEPT}
-              className="sr-only"
-              disabled={pending}
-              onChange={() => formRef.current?.requestSubmit()}
-            />
-          </label>
-        </form>
+        {canUpload ? (
+          <form ref={formRef} action={submit}>
+            <label className="flex min-h-9 cursor-pointer items-center text-steel focus-within:text-chalk focus-within:underline hover:text-chalk">
+              {pending ? "Uploading…" : hasPhoto ? "Change photo" : "Add a photo"}
+              <input
+                type="file"
+                name="photo"
+                accept={PHOTO_ACCEPT}
+                className="sr-only"
+                disabled={pending}
+                onChange={() => formRef.current?.requestSubmit()}
+              />
+            </label>
+          </form>
+        ) : (
+          <ConfirmEmailNote action="add a photo" />
+        )}
         {hasPhoto && !pending && (
           <form action={removeVehiclePhoto.bind(null, vehicleId)}>
             <button type="submit" className="min-h-9 text-steel hover:text-overdue">

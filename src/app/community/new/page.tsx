@@ -8,6 +8,7 @@ import { countShareableParts, getBuildPostId, getPost, MAX_POST_PHOTOS } from "@
 import { listPhotosForVehicle } from "@/lib/gallery";
 import { getMod } from "@/lib/mods";
 import { signedPhotoUrls } from "@/lib/photos";
+import { isEmailVerified } from "@/lib/email-verification";
 import { getProfile } from "@/lib/profiles";
 import { getVehicle, listVehicles, vehicleName } from "@/lib/vehicles";
 import { saveBuild, sharePost } from "../actions";
@@ -44,6 +45,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
   if (!(await getProfile(user.id))) redirect(`/username?next=${encodeURIComponent(here)}`);
 
   const car = vehicleId ? await getVehicle(user.id, vehicleId) : null;
+  const canUpload = await isEmailVerified(user.id);
   if (!car) return <ChooseCar userId={user.id} />;
   const mod = modId ? await getMod(user.id, car.id, modId) : null;
   const buildPostId = await getBuildPostId(user.id, car.id);
@@ -94,6 +96,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
           partScope="your installed mods"
           defaultTag="build"
           showTags={false}
+          canUpload={canUpload}
           submitLabel={build ? "Update build" : "Post build"}
         />
       </>
@@ -130,6 +133,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
         partCount={partCount}
         partScope={mod ? "this mod" : "your installed mods"}
         defaultTag={mod ? "mod" : "progress"}
+        canUpload={canUpload}
       />
     </>
   );

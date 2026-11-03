@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { posts } from "@/db/schema";
 import { getUser, requireUser } from "@/lib/auth";
+import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import {
   addComment,
   addPostPhoto,
@@ -130,6 +131,7 @@ async function atDailyLimit(userId: string) {
 // One new photo per call, so each request stays under the upload size limit.
 export async function uploadPostPhoto(postId: string, formData: FormData) {
   const user = await requireUser();
+  if (!(await isEmailVerified(user.id))) return { error: CONFIRM_EMAIL_FIRST };
   const photo = readPhoto(formData);
   if (!photo) return { error: "Choose a photo first." };
   if ("error" in photo) return { error: photo.error };

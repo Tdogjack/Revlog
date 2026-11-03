@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { isEmailVerified } from "@/lib/email-verification";
 import { PHOTO_LIMITS, signedPhotosFor } from "@/lib/gallery";
 import { toPartRows } from "@/lib/part-rows";
 import { listPartsForParent } from "@/lib/parts";
@@ -30,6 +31,7 @@ async function EditService({ params, searchParams }: Pick<Props, "params" | "sea
   const [{ id, recordId }, { photos: photoStatus }] = await Promise.all([params, searchParams]);
   const failed = photoStatus === "failed";
   const user = await requireUser();
+  const photosLocked = !(await isEmailVerified(user.id));
   const [car, customTypes] = await Promise.all([
     getVehicle(user.id, id),
     listServiceTypes(user.id),
@@ -62,6 +64,7 @@ async function EditService({ params, searchParams }: Pick<Props, "params" | "sea
         photos={{
           vehicleId: car.id,
           max: PHOTO_LIMITS.record,
+          locked: photosLocked,
           target: { id: record.id, photos: recordPhotos },
         }}
         initial={{

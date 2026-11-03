@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import { photoPathsFor, removePhotoFiles } from "@/lib/gallery";
 import { parsePartRows, settlePartsCost, syncParts } from "@/lib/parts";
 import { getReminder, listReminders, setReminderStart } from "@/lib/reminder-store";
@@ -180,6 +181,7 @@ export async function editServiceRecord(
 // Reads a receipt photo into form values. Nothing is saved here.
 export async function scanServiceReceipt(formData: FormData): Promise<ScanResult> {
   const user = await requireUser();
+  if (!(await isEmailVerified(user.id))) return { error: CONFIRM_EMAIL_FIRST };
   const photo = formData.get("photo");
   if (!(photo instanceof File) || photo.size === 0) return { error: "Choose a receipt photo." };
   return scanReceipt(user.id, photo, await listServiceTypes(user.id));

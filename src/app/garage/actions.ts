@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import { deleteVehiclePhoto, readPhoto, uploadVehiclePhoto } from "@/lib/photos";
 import { deleteVehicle } from "@/lib/vehicle-removal";
 import {
@@ -50,6 +51,9 @@ export async function addVehicle(_prev: FormState, formData: FormData): Promise<
 
   const photo = readPhoto(formData);
   if (photo && "error" in photo) return { error: photo.error, values: raw };
+  if (photo && !(await isEmailVerified(user.id))) {
+    return { error: CONFIRM_EMAIL_FIRST, values: raw };
+  }
 
   const vehicle = await createVehicle(user.id, parsed.data);
 
@@ -95,6 +99,7 @@ export async function changeVehiclePhoto(
   formData: FormData,
 ): Promise<PhotoState> {
   const user = await requireUser();
+  if (!(await isEmailVerified(user.id))) return { error: CONFIRM_EMAIL_FIRST };
   const photo = readPhoto(formData);
   if (!photo) return { error: "Choose a photo first." };
   if ("error" in photo) return { error: photo.error };

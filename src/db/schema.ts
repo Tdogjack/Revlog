@@ -243,6 +243,26 @@ export const receiptScans = pgTable(
   (t) => [index("receipt_scans_user_created_idx").on(t.userId, t.createdAt), ownerPolicy("receipt_scans")],
 ).enableRLS();
 
+// A row means the user proved they own their email by opening a link sent to
+// it. Accounts work without one, but photo uploads and scans need it. Users
+// can only read their own row; the server writes it after a link is opened.
+export const emailVerifications = pgTable(
+  "email_verifications",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [
+    pgPolicy("email_verifications_owner_select", {
+      for: "select",
+      to: authenticatedRole,
+      using: sql`${authUid} = user_id`,
+    }),
+  ],
+).enableRLS();
+
 // Public identity for community features. Usernames are stored lowercase.
 export const profiles = pgTable(
   "profiles",

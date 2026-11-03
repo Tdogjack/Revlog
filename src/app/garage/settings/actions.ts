@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { emailConfigured, sendEmail } from "@/lib/email";
 import { setReminderEmails, setReminderPercent } from "@/lib/email-settings";
+import { isEmailVerified, sendVerificationEmail } from "@/lib/email-verification";
 import { testEmail } from "@/lib/email-templates";
 import { deleteAllPhotos } from "@/lib/photos";
 import { siteUrl } from "@/lib/site";
@@ -52,6 +53,16 @@ export async function sendTestEmail(): Promise<SettingsState> {
   });
   if (!result.ok) return { error: `Couldn't send: ${result.error}` };
   return { message: `Sent to ${user.email}. Check your inbox (and spam folder).` };
+}
+
+export async function resendConfirmation(): Promise<SettingsState> {
+  const user = await requireUser();
+  if (!user.email) return { error: "Your account has no email address." };
+  if (await isEmailVerified(user.id)) return { message: "Your email is already confirmed." };
+
+  const error = await sendVerificationEmail(user.email);
+  if (error) return { error };
+  return { message: `Sent to ${user.email}. Open the link in it to confirm (check spam too).` };
 }
 
 export async function deleteAccount(

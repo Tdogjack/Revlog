@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+import { requireUser } from "@/lib/auth";
+import { isEmailVerified } from "@/lib/email-verification";
 import { addVehicle } from "../actions";
 import { VehicleForm } from "./vehicle-form";
 
@@ -12,7 +15,14 @@ export default function NewVehiclePage() {
         ← Back to garage
       </Link>
       <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Add a car</h1>
-      <VehicleForm action={addVehicle} />
+      <Suspense fallback={null}>
+        <NewVehicleForm />
+      </Suspense>
     </div>
   );
+}
+
+async function NewVehicleForm() {
+  const user = await requireUser();
+  return <VehicleForm action={addVehicle} canUpload={await isEmailVerified(user.id)} />;
 }

@@ -2,6 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { sendVerificationEmail } from "@/lib/email-verification";
 import { checkPassword } from "@/lib/password-rules";
 import { createProfile, usernameTaken } from "@/lib/profiles";
 import { RESET_COOKIE } from "@/lib/reset-cookie";
@@ -64,10 +65,13 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   // the garage asks for a new username on first visit.
   await createProfile(data.user.id, username);
 
-  // With email confirmation on, there's no session until the link is clicked.
+  // With email confirmation on in Supabase, there's no session until the link
+  // is clicked.
   if (!data.session) {
     return { message: "Check your email for a link to confirm your account." };
   }
+  // The account works now; confirming the email unlocks photos and scans.
+  await sendVerificationEmail(email);
   redirect("/garage");
 }
 

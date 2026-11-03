@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
+import { markEmailVerified } from "@/lib/email-verification";
 import { RESET_COOKIE } from "@/lib/reset-cookie";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,8 +13,9 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      if (data.user) await markEmailVerified(data.user.id);
       if (resetting) {
         cookieStore.delete(RESET_COOKIE);
         return NextResponse.redirect(`${origin}/reset-password`);

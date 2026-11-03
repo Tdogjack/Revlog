@@ -91,6 +91,22 @@ export function EmailSettingsForm({
   );
 }
 
+export function ResendConfirmationForm({
+  action,
+}: {
+  action: (prev: SettingsState) => Promise<SettingsState>;
+}) {
+  const [state, formAction, pending] = useActionState(action, undefined);
+  return (
+    <form action={formAction} className="mt-4 flex flex-wrap items-center gap-3">
+      <button type="submit" disabled={pending} className="btn">
+        {pending ? "Sending…" : "Resend confirmation email"}
+      </button>
+      <Feedback state={state} />
+    </form>
+  );
+}
+
 export function DeleteAccountForm({ action }: { action: Action }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   return (

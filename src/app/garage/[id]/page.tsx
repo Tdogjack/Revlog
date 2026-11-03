@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Check, ChevronDown, Copy, Download, Pencil, Plus, Share2 } from "lucide-react";
+import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
 import { DeletePostButton } from "@/app/community/delete-post-button";
 import { requireUser } from "@/lib/auth";
 import { getBuildPostId } from "@/lib/community";
 import { getEmailSettings } from "@/lib/email-settings";
+import { isEmailVerified } from "@/lib/email-verification";
 import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { buildMileageTimeline } from "@/lib/mileage-timeline";
@@ -123,6 +125,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
     settings,
     buildPostId,
     readings,
+    canUpload,
   ] = await Promise.all([
       listServiceRecords(user.id, car.id),
       listMods(user.id, car.id),
@@ -133,6 +136,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       getEmailSettings(user.id),
       getBuildPostId(user.id, car.id),
       listMileageReadings(user.id, car.id),
+      isEmailVerified(user.id),
     ]);
   const photos = await signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]);
   const stripPhotos = (match: (p: (typeof gallery)[number]) => boolean): StripPhoto[] =>
@@ -279,7 +283,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       <header className="mt-6 flex flex-col gap-6 border-b border-graphite pb-8 sm:flex-row sm:items-end">
         <div className="flex flex-col items-start gap-2">
           <ProfilePhoto src={photoUrl ?? null} alt={vehicleName(car)} />
-          <PhotoControls vehicleId={car.id} hasPhoto={!!car.photoPath} />
+          <PhotoControls vehicleId={car.id} hasPhoto={!!car.photoPath} canUpload={canUpload} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-5 sm:pb-8">
           <div>
@@ -458,7 +462,13 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                 max={PHOTO_LIMITS.build}
                 addLabel="Add build photos"
                 size="large"
+                canAdd={canUpload}
               />
+              {!canUpload && (
+                <div className="mt-2">
+                  <ConfirmEmailNote />
+                </div>
+              )}
             </div>
 
             {carMods.length === 0 ? (

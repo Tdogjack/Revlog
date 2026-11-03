@@ -10,6 +10,7 @@ import {
   type QueuedPhoto,
 } from "@/components/form-photos";
 import { PartsFieldset } from "@/components/parts-fieldset";
+import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import { ReceiptScanner } from "@/components/receipt-scanner";
 import type { PartRow } from "@/lib/part-rows";
 import { localToday } from "@/lib/local-date";
@@ -95,7 +96,12 @@ export function ModForm({
       action={formAction}
       className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6"
     >
-      {!photos.target && (
+      {!photos.target && photos.locked && (
+        <div className="rounded-md border border-graphite bg-carbon p-4">
+          <ConfirmEmailNote action="scan receipts and add photos" />
+        </div>
+      )}
+      {!photos.target && !photos.locked && (
         <ReceiptScanner
           scan={scanModPhoto}
           intro="Have an order email, receipt, or listing? Scan a screenshot and the form fills itself in."

@@ -51,7 +51,7 @@ You need Node.js 20.9 or newer and a free [Supabase](https://supabase.com) proje
    npm run dev
    ```
 
-In Supabase, add `http://localhost:3000/**` to Authentication > URL Configuration > Redirect URLs so sign-up confirmation links work. Branded auth email templates are in `supabase/templates/`.
+In Supabase, add `http://localhost:3000/**` to Authentication > URL Configuration > Redirect URLs so sign-up confirmation links work. Branded auth email templates are in `supabase/templates/`; paste each into Authentication > Emails (`magic-link.html` goes in "Magic link or OTP"). Leave "Confirm email" off under Sign In / Providers > Email: accounts work right away, and the magic link email is what confirms an address and unlocks photo uploads and scans.
 
 ## Scripts
 

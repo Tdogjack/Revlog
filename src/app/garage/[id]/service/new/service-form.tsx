@@ -15,6 +15,7 @@ import { ServiceTypeSelect } from "@/components/service-type-select";
 import { localToday } from "@/lib/local-date";
 import type { ExtraService, ScannedReceipt } from "@/lib/receipt-scan";
 import { categoryLabel, type CustomType } from "@/lib/service-categories";
+import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import { ReceiptScanner } from "@/components/receipt-scanner";
 import { scanServiceReceipt, type ServiceFormState } from "../actions";
 
@@ -117,7 +118,12 @@ export function ServiceForm({
       action={formAction}
       className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6"
     >
-      {!photos.target && (
+      {!photos.target && photos.locked && (
+        <div className="rounded-md border border-graphite bg-carbon p-4">
+          <ConfirmEmailNote action="scan receipts and add photos" />
+        </div>
+      )}
+      {!photos.target && !photos.locked && (
         <ReceiptScanner
           scan={scanServiceReceipt}
           intro="Have a receipt? Scan it and the form fills itself in."
