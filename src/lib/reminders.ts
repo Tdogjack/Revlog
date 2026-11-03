@@ -93,6 +93,21 @@ function addMonths(isoDate: string, months: number): Date {
   return d;
 }
 
+// The odometer reading and date a reminder comes due at, for plotting ahead.
+export function dueLimits(reminder: ReminderInput) {
+  const timeFrom = reminder.lastDoneOn ?? reminder.startOn ?? null;
+  return {
+    dueMiles:
+      reminder.intervalMiles != null && reminder.lastDoneMileage != null
+        ? reminder.lastDoneMileage + reminder.intervalMiles
+        : null,
+    dueOn:
+      reminder.intervalMonths != null && timeFrom != null
+        ? addMonths(timeFrom, reminder.intervalMonths).toISOString().slice(0, 10)
+        : null,
+  };
+}
+
 export const STATUS_RANK: Record<ReminderStatus, number> = { overdue: 0, due_soon: 1, ok: 2 };
 
 function formatDays(days: number) {

@@ -73,7 +73,13 @@ export function emailButton(href: string, label: string) {
 </td></tr></table>`;
 }
 
-export type ReminderEmailItem = { task: string; status: ReminderStatus; due: string };
+// `likely` marks a reminder estimated from driving pace, not a logged reading.
+export type ReminderEmailItem = {
+  task: string;
+  status: ReminderStatus;
+  due: string;
+  likely?: boolean;
+};
 export type ReminderEmailCar = { name: string; items: ReminderEmailItem[] };
 
 export function reminderEmail({
@@ -93,7 +99,7 @@ export function reminderEmail({
   let subject: string;
   if (items.length === 1) {
     const [only] = items;
-    subject = `${only.task} is ${only.status === "overdue" ? "overdue" : "due soon"} on your ${only.car}`;
+    subject = `${only.task} is ${only.status === "overdue" ? "overdue" : only.likely ? "likely due soon" : "due soon"} on your ${only.car}`;
   } else {
     subject = overdue
       ? `${items.length} services need attention (${overdue} overdue)`
@@ -105,7 +111,7 @@ export function reminderEmail({
       const rows = car.items
         .map((item) => {
           const color = item.status === "overdue" ? C.overdue : C.due;
-          const label = item.status === "overdue" ? "Overdue" : "Due soon";
+          const label = item.status === "overdue" ? "Overdue" : item.likely ? "Check soon" : "Due soon";
           return `<tr>
 <td style="padding:10px 0;border-top:1px solid ${C.graphite};font-family:${FONT};font-size:15px;color:${C.chalk};">${escapeHtml(item.task)}<br><span style="font-size:13px;color:${color};">${escapeHtml(item.due)}</span></td>
 <td align="right" valign="top" style="padding:10px 0 10px 12px;border-top:1px solid ${C.graphite};font-family:${FONT};font-size:12px;font-weight:600;color:${color};white-space:nowrap;">${label}</td>

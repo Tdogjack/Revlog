@@ -16,6 +16,7 @@ import { signedPhotoUrls } from "@/lib/photos";
 import { listReminders } from "@/lib/reminder-store";
 import {
   describeDue,
+  dueLimits,
   evaluateReminder,
   STATUS_RANK,
   withCarAgeStart,
@@ -193,6 +194,13 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       ),
     ],
     car.currentMileage,
+    undefined,
+    carReminders.map(({ reminder: r }) => ({
+      key: `due-${r.id}`,
+      label: r.task,
+      href: `/garage/${car.id}/reminders/${r.id}/edit`,
+      ...dueLimits(r),
+    })),
   );
 
   const renderRecord = (r: (typeof records)[number]) => {
