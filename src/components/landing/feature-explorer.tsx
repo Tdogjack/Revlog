@@ -102,7 +102,7 @@ export function FeatureExplorer() {
               tabIndex={selected ? 0 : -1}
               onClick={() => setGroupId(g.id)}
               onKeyDown={(e) => onTabKey(e, i)}
-              className={`relative shrink-0 rounded-md px-4 py-3 font-display text-2xl font-semibold transition-colors sm:text-3xl ${selected ? "text-chalk" : "text-steel hover:text-chalk"}`}
+              className={`relative shrink-0 rounded-md px-4 py-3 text-lg font-semibold transition-colors sm:text-xl ${selected ? "text-chalk" : "text-steel hover:text-chalk"}`}
             >
               {g.title}
               <span

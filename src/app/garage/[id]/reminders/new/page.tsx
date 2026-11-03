@@ -34,7 +34,7 @@ async function NewReminder({ params }: Pick<PageProps<"/garage/[id]/reminders/ne
       <Link href={`/garage/${car.id}`} className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
-      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Add a reminder</h1>
+      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Add a reminder</h1>
       <ReminderForm action={addReminder.bind(null, car.id)} customTypes={customTypes} />
     </>
   );

@@ -1,49 +1,54 @@
 @import "tailwindcss";
 
-/* Redline brand palette */
+/* Redline brand palette: cool neutral grays, with red kept for actions and
+   anything overdue. */
 @theme {
-  --color-carbon: #121417;
-  --color-panel: #1b1f24;
-  --color-graphite: #2a2e35;
-  --color-redline: #e63946;
-  --color-redline-hover: #f04f5b;
-  --color-redline-fill: #d42a3a;
-  --color-redline-fill-hover: #bf2130;
-  --color-steel: #8d99ae;
-  --color-chalk: #f4f1ec;
+  --color-carbon: #0d0f12;
+  --color-panel: #15181c;
+  --color-graphite: #262b32;
+  --color-redline: #e5484d;
+  --color-redline-hover: #ec5d5e;
+  --color-redline-fill: #cf3a40;
+  --color-redline-fill-hover: #b5313a;
+  /* Secondary text, 7:1 on the panel surface. */
+  --color-steel: #a1aab6;
+  --color-chalk: #eef0f2;
 
   /* Status colors, kept distinct from the brand red */
-  --color-due: #f2b950;
+  --color-due: #f1b84b;
   --color-due-bg: #3a2c0f;
-  --color-overdue: #ff5c66;
+  --color-overdue: #ff6b6f;
   --color-overdue-bg: #3a1a1d;
-  --color-overdue-solid: #d62839;
-  --color-done: #7fd99a;
-  --color-done-bg: #16301f;
+  --color-overdue-solid: #cc2f37;
+  --color-done: #4fc98c;
+  --color-done-bg: #13301f;
   /* Chart series, checked for colorblind separation on the panel surface. */
-  --color-chart-service: #e63946;
-  --color-chart-mods: #3b8fd0;
+  --color-chart-service: #e5484d;
+  --color-chart-mods: #4a92d4;
 
   /* Hairline for rows inside a panel, one step quieter than graphite. */
-  --color-rule: #23272d;
+  --color-rule: #1f2329;
   /* Outline for buttons and inputs, visible on both carbon and panel. */
-  --color-edge: #3a404a;
+  --color-edge: #3a414b;
   /* Input outline, 3:1 against carbon and panel so fields are findable. */
-  --color-field-edge: #646e7d;
+  --color-field-edge: #69727f;
 
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-jetbrains-mono);
-}
-
-/* Condensed gauge-style face for headings and readouts. Inlined because the
-   font variable is set on the garage layout, not on :root. */
-@theme inline {
-  --font-display: var(--font-barlow-condensed, var(--font-inter)), sans-serif;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-display: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
   background: var(--color-carbon);
   color: var(--color-chalk);
+}
+
+/* Anything you can click reads as clickable: semibold, unless a utility says
+   otherwise. Links and buttons that wrap whole cards are left alone. */
+@layer base {
+  :where(a, button, select, summary, [role="tab"]):not(:has(p, div, img, h2, h3, ul, ol, table)) {
+    font-weight: 600;
+  }
 }
 
 :focus-visible {
@@ -63,7 +68,7 @@ body {
     border-radius: 0.375rem;
     border: 1px solid var(--color-edge);
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--color-chalk);
     white-space: nowrap;
     transition:
@@ -126,7 +131,7 @@ body {
     transition: border-color 120ms;
   }
   .field::placeholder {
-    color: #6b7585;
+    color: #747e8c;
   }
   .field:hover {
     border-color: var(--color-steel);
@@ -141,7 +146,7 @@ body {
   .field-label {
     font-size: 0.875rem;
     font-weight: 500;
-    color: #c9ced6;
+    color: #ccd2da;
   }
   .field-hint {
     display: block;
@@ -151,12 +156,18 @@ body {
     color: var(--color-steel);
   }
 
-  /* Gauge-cluster numerals: condensed, tabular, used for mileage and money. */
+  /* Numerals for mileage and money: tabular so columns line up, semibold so
+     they're the first thing you read. */
   .readout {
-    font-family: var(--font-barlow-condensed, var(--font-inter)), sans-serif;
+    font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
-    font-weight: 500;
-    letter-spacing: 0.01em;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* Headings: tight tracking, the way a large sans should sit. */
+  .font-display {
+    letter-spacing: -0.02em;
   }
 
   .skeleton {

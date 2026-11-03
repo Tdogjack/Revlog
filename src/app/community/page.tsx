@@ -19,7 +19,7 @@ export default function CommunityPage({ searchParams }: PageProps<"/community">)
     <div className="mx-auto max-w-2xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-4xl leading-none font-semibold">Community</h1>
+          <h1 className="font-display text-4xl leading-tight font-semibold">Community</h1>
           <p className="mt-2 text-steel">Builds and fresh mods from Revlog drivers.</p>
         </div>
         <Link href="/community/new" className="btn btn-primary">

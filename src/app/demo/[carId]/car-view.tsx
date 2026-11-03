@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Check, ChevronDown, Copy, Download, Pencil, Plus, Share2 } from "lucide-react";
 import { MileageChart } from "@/components/mileage-chart";
+import { cardClass, RecordStats, reminderEdge } from "@/components/record-stats";
 import { StatusBadge } from "@/components/status-badge";
 import { ProfilePhoto } from "@/app/garage/[id]/profile-photo";
 import {
@@ -47,8 +48,6 @@ const summaryClass = "cursor-pointer list-none [&::-webkit-details-marker]:hidde
 const panelClass = "rounded-lg border border-graphite bg-panel p-5 sm:p-6";
 const sectionHeadClass = "flex flex-wrap items-start justify-between gap-3";
 const headingClass = "font-display text-2xl leading-tight font-semibold";
-const rowClass =
-  "-mx-3 rounded-md border-t border-rule px-3 py-4 first:border-t-0 hover:bg-graphite/40";
 const dateClass = "shrink-0 pt-0.5 text-sm text-steel tabular-nums sm:w-24";
 
 const statusStyle: Record<ModStatus, string> = {
@@ -129,23 +128,15 @@ function CarDetails({ car }: { car: DemoCar }) {
   const plannedCost = sumCost(car.mods.filter((m) => m.status === "planned"));
 
   const renderRecord = (r: DemoRecord) => (
-    <li key={r.id} className={`${rowClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}>
+    <li key={r.id} className={`${cardClass} flex flex-col gap-1 border-l-chart-service sm:flex-row sm:gap-4`}>
       <div className={dateClass}>{formatDate(r.servicedOn)}</div>
       <details className="group min-w-0 flex-1">
         <summary className={summaryClass}>
           <div className="flex flex-wrap items-baseline gap-x-2">
-            <p className="font-medium">{r.title}</p>
+            <p className="font-semibold">{r.title}</p>
             <p className="text-sm text-steel">{categoryLabel(r.category, [])}</p>
           </div>
-          <p className="mt-1 text-sm text-steel">
-            {[
-              r.mileage != null && `${r.mileage.toLocaleString("en-US")} mi`,
-              r.cost != null && money.format(r.cost),
-              r.shop,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
+          <RecordStats miles={r.mileage} cost={r.cost} extra={[r.shop]} />
           <DetailsHint notes={!!r.notes} parts={r.parts.length} />
         </summary>
         {r.notes && <p className="mt-2 whitespace-pre-line text-sm">{r.notes}</p>}
@@ -186,7 +177,7 @@ function CarDetails({ car }: { car: DemoCar }) {
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-5 sm:pb-8">
           <div>
-            <h1 className="font-display text-4xl leading-none font-semibold sm:text-5xl">
+            <h1 className="font-display text-4xl leading-tight font-semibold sm:text-5xl">
               {car.nickname}
             </h1>
             <p className="mt-2 text-steel">{demoCarName(car)}</p>
@@ -248,36 +239,36 @@ function CarDetails({ car }: { car: DemoCar }) {
               </div>
             </div>
 
-            <ol className="mt-4">
+            <ol className="mt-4 space-y-2">
               {groupByType(car.records).map((group) =>
                 group.length === 1 ? (
                   renderRecord(group[0])
                 ) : (
-                  <li key={group[0].category} className="border-t border-rule first:border-t-0">
+                  <li key={group[0].category} className={`${cardClass} border-l-chart-service`}>
                     <details className="group/type">
                       <summary
-                        className={`${summaryClass} -mx-3 flex flex-col gap-1 rounded-md px-3 py-4 hover:bg-graphite/40 sm:flex-row sm:gap-4`}
+                        className={`${summaryClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}
                       >
                         <div className={dateClass}>{formatDate(group[0].servicedOn)}</div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium">{categoryLabel(group[0].category, [])}</p>
-                          <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
-                            <ChevronDown
-                              className="h-3.5 w-3.5 transition-transform group-open/type:rotate-180"
-                              aria-hidden
-                            />
-                            {[
-                              `${group.length} times`,
-                              group[0].mileage != null &&
-                                `last at ${group[0].mileage.toLocaleString("en-US")} mi`,
-                              sumCost(group) > 0 && `${money.format(sumCost(group))} total`,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
+                          <p className="font-semibold">{categoryLabel(group[0].category, [])}</p>
+                          <RecordStats
+                                miles={group[0].mileage}
+                                extra={[
+                                  `Last of ${group.length}`,
+                                  sumCost(group) > 0 && `${money.format(sumCost(group))} total`,
+                                ]}
+                              />
+                              <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
+                                <ChevronDown
+                                  className="h-3.5 w-3.5 transition-transform group-open/type:rotate-180"
+                                  aria-hidden
+                                />
+                                Show all {group.length}
+                              </p>
                         </div>
                       </summary>
-                      <ol className="mb-3 ml-1 border-l border-graphite pl-4">
+                      <ol className="mt-3 space-y-2">
                         {group.map(renderRecord)}
                       </ol>
                     </details>
@@ -313,27 +304,22 @@ function CarDetails({ car }: { car: DemoCar }) {
               </div>
             </div>
 
-            <ul className="mt-4">
+            <ul className="mt-4 space-y-2">
               {car.mods.map((m) => {
                 const summary = (
                   <>
-                    <p className={`font-medium ${m.status === "removed" ? "text-steel line-through" : ""}`}>
+                    <p className={`font-semibold ${m.status === "removed" ? "text-steel line-through" : ""}`}>
                       {modName(m)}
                     </p>
-                    <p className="mt-1 text-sm text-steel">
-                      {[
-                        modCategoryLabel(m.category),
-                        m.installedOn && formatDate(m.installedOn),
-                        m.installedMileage != null && `${m.installedMileage.toLocaleString("en-US")} mi`,
-                        m.cost != null && money.format(m.cost),
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
+                    <RecordStats
+                          miles={m.installedMileage}
+                          cost={m.cost}
+                          extra={[modCategoryLabel(m.category), m.installedOn && formatDate(m.installedOn)]}
+                        />
                   </>
                 );
                 return (
-                  <li key={m.id} className={`${rowClass} flex flex-col gap-2 sm:flex-row sm:gap-4`}>
+                  <li key={m.id} className={`${cardClass} flex flex-col gap-2 sm:flex-row sm:gap-4 ${m.status === "removed" ? "border-l-graphite" : "border-l-chart-mods"}`}>
                     {m.notes || m.parts.length > 0 ? (
                       <details className="group min-w-0 flex-1">
                         <summary className={summaryClass}>
@@ -351,7 +337,7 @@ function CarDetails({ car }: { car: DemoCar }) {
                         value={m.status}
                         aria-label={`Status of ${modName(m)}`}
                         onChange={(e) => demo.setModStatus(car.id, m.id, e.target.value as ModStatus)}
-                        className={`min-h-8 cursor-pointer rounded-md border bg-carbon px-2 text-xs font-medium ${statusStyle[m.status]}`}
+                        className={`min-h-8 cursor-pointer rounded-md border bg-carbon px-2 text-xs font-semibold ${statusStyle[m.status]}`}
                       >
                         {MOD_STATUSES.map((s) => (
                           <option key={s.value} value={s.value}>
@@ -376,16 +362,16 @@ function CarDetails({ car }: { car: DemoCar }) {
                 Add
               </AccountOnly>
             </div>
-            <ul className="mt-4">
+            <ul className="mt-4 space-y-2">
               {reminders.map(({ reminder: r, result }) => (
-                <li key={r.id} className={`${rowClass} flex gap-3`}>
+                <li key={r.id} className={`${cardClass} flex gap-3 ${reminderEdge[result.status]}`}>
                   <details className="group min-w-0 flex-1">
                     <summary className={summaryClass}>
-                      <p className="font-medium">{r.task}</p>
+                      <p className="font-semibold">{r.task}</p>
                       <p
-                        className={`mt-1 text-sm ${
-                          result.status === "overdue"
-                            ? "font-medium text-overdue"
+                        className={`mt-1 text-base font-semibold ${
+                            result.status === "overdue"
+                              ? "text-overdue"
                             : result.status === "due_soon"
                               ? "text-due"
                               : "text-steel"

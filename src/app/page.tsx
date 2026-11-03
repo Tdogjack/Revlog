@@ -60,11 +60,9 @@ export default function Home() {
 
       <main className="flex-1">
         <section className="relative overflow-hidden">
-          {/* The redline band from the gauge, run across the top of the page. */}
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-redline/60 to-redline" aria-hidden />
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-20 sm:px-6 md:pt-20 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-16 lg:pt-24 lg:pb-28">
             <div>
-              <h1 className="font-display text-6xl leading-[0.92] font-semibold tracking-[-0.01em] sm:text-7xl xl:text-8xl">
+              <h1 className="font-display text-5xl leading-[1.05] font-semibold sm:text-6xl xl:text-[4.25rem]">
                 Every oil change and every mod, logged.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-pretty text-steel">
@@ -99,7 +97,7 @@ export default function Home() {
         <section className="border-t border-graphite bg-panel/40">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <h2 className="font-display text-4xl leading-none font-semibold sm:text-5xl">
+              <h2 className="font-display text-3xl leading-tight font-semibold sm:text-4xl">
                 Put some miles on it
               </h2>
               <p className="max-w-md text-steel">
@@ -115,7 +113,7 @@ export default function Home() {
 
         <section id="log" className="scroll-mt-16 border-t border-graphite">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-            <h2 className="font-display text-4xl leading-none font-semibold sm:text-5xl">
+            <h2 className="font-display text-3xl leading-tight font-semibold sm:text-4xl">
               Everything in the log
             </h2>
             <p className="mt-4 max-w-xl text-steel">
@@ -131,7 +129,7 @@ export default function Home() {
         <section className="bg-chalk text-carbon">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
             <div className="flex flex-col justify-between gap-4 border-b border-dashed border-carbon/30 pb-8 md:flex-row md:items-end">
-              <h2 className="font-display text-4xl leading-none font-semibold sm:text-5xl">
+              <h2 className="font-display text-3xl leading-tight font-semibold sm:text-4xl">
                 Up and running in four steps
               </h2>
               <p className="text-carbon/70">About a minute for the first car.</p>
@@ -151,7 +149,7 @@ export default function Home() {
         <section className="border-b border-graphite">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <h2 className="font-display text-4xl leading-none font-semibold sm:text-5xl">
+              <h2 className="font-display text-3xl leading-tight font-semibold sm:text-4xl">
                 Take one for a spin
               </h2>
               <p className="max-w-md text-steel">
@@ -205,7 +203,7 @@ export default function Home() {
             </p>
 
             <div className="mt-20 flex flex-col items-start justify-between gap-6 rounded-2xl border border-graphite bg-panel p-8 md:flex-row md:items-end md:p-12">
-              <h2 className="max-w-2xl font-display text-4xl leading-none font-semibold sm:text-6xl">
+              <h2 className="max-w-2xl font-display text-3xl leading-tight font-semibold sm:text-5xl">
                 Add your first car. It takes about a minute.
               </h2>
               <SignedInSwitch

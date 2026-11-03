@@ -16,7 +16,7 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 export default function CostsPage() {
   return (
     <>
-      <h1 className="font-display text-4xl leading-none font-semibold">Costs</h1>
+      <h1 className="font-display text-4xl leading-tight font-semibold">Costs</h1>
       <p className="mt-2 text-steel">
         What you&apos;ve spent on service and installed mods, from your records.
       </p>

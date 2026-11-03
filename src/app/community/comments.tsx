@@ -45,7 +45,7 @@ export function Comments({
         <p className="mt-3 text-sm text-steel">
           <Link
             href={`/login?next=${encodeURIComponent(`/community/${postId}#comments`)}`}
-            className="font-medium text-chalk hover:text-redline"
+            className="font-semibold text-chalk hover:text-redline"
           >
             Log in
           </Link>{" "}
@@ -62,7 +62,7 @@ export function Comments({
               <div className="flex items-center gap-2 text-xs text-steel">
                 <Link
                   href={`/u/${c.username}`}
-                  className="font-medium text-chalk hover:text-redline"
+                  className="font-semibold text-chalk hover:text-redline"
                 >
                   @{c.username}
                 </Link>

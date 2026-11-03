@@ -12,7 +12,7 @@ export function RemoveCar({ vehicleId, name }: { vehicleId: string; name: string
 
   return (
     <details className="mt-10 border-t border-graphite pt-6">
-      <summary className="w-fit cursor-pointer py-2 text-sm font-medium text-steel hover:text-overdue">
+      <summary className="w-fit cursor-pointer py-2 text-sm font-semibold text-steel hover:text-overdue">
         Remove this car
       </summary>
       <form action={removeVehicle.bind(null, vehicleId)} className="mt-4 space-y-3">

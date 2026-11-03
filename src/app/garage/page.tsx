@@ -28,7 +28,7 @@ export default function GaragePage() {
   return (
     <>
       <div className="flex items-end justify-between gap-4">
-        <h1 className="font-display text-4xl leading-none font-semibold">Your garage</h1>
+        <h1 className="font-display text-4xl leading-tight font-semibold">Your garage</h1>
         <Link href="/garage/new" className="btn btn-primary">
           <Plus className="h-4 w-4" aria-hidden />
           Add a car

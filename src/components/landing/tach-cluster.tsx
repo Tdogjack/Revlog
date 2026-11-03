@@ -219,7 +219,7 @@ export function TachCluster() {
               </text>
             );
           })}
-          <text x={CX} y={CY - 46} textAnchor="middle" className="fill-steel text-[13px]">
+          <text x={CX} y={CY - 46} textAnchor="middle" className="fill-steel text-[13px] font-normal">
             × 1000 r/min
           </text>
           <g
@@ -239,7 +239,7 @@ export function TachCluster() {
           <text x={CX} y={CY + 62} textAnchor="middle" className="readout fill-chalk text-[40px]">
             {shown.toLocaleString("en-US")}
           </text>
-          <text x={CX} y={CY + 84} textAnchor="middle" className="fill-steel text-[13px]">
+          <text x={CX} y={CY + 84} textAnchor="middle" className="fill-steel text-[13px] font-normal">
             rpm
           </text>
         </svg>
