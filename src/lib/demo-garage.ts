@@ -356,3 +356,16 @@ export function demoTimeline(car: DemoCar, today: string, reminders?: EvaluatedR
 // Same as vehicleName in vehicles.ts, which is server only.
 export const demoCarName = (v: { year: number; make: string; model: string; trim: string | null }) =>
   [v.year, v.make, v.model, v.trim].filter(Boolean).join(" ");
+
+// What the landing page's demo cards show, without working out any dates.
+export function demoCarCards() {
+  return SEED.map((car) => ({
+    id: car.id,
+    nickname: car.nickname,
+    name: demoCarName(car),
+    currentMileage: car.currentMileage,
+    photo: car.photo,
+    services: car.records.length,
+    installed: car.mods.filter((m) => m.status === "installed").length,
+  }));
+}

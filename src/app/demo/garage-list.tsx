@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { MileageChart } from "@/components/mileage-chart";
+import { PhotoCredit } from "@/components/photo-credit";
 import { StatusBadge } from "@/components/status-badge";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { demoCarName, demoTimeline, evaluateDemoReminders, type DemoCar } from "@/lib/demo-garage";
@@ -90,7 +91,7 @@ export function DemoGarageList() {
         {demo.cars.map((car, i) => (
           <span key={car.id}>
             {i > 0 && ", "}
-            <PhotoCredit car={car} />
+            <DemoPhotoCredit car={car} />
           </span>
         ))}
         .
@@ -99,18 +100,6 @@ export function DemoGarageList() {
   );
 }
 
-// Author and license, linked, as the photos' licenses ask.
-export function PhotoCredit({ car }: { car: DemoCar }) {
-  const { photo } = car;
-  return (
-    <>
-      <a href={photo.sourceUrl} className="underline underline-offset-2 hover:text-chalk">
-        {car.make} {car.model}
-      </a>{" "}
-      by {photo.author},{" "}
-      <a href={photo.licenseUrl} className="underline underline-offset-2 hover:text-chalk">
-        {photo.license}
-      </a>
-    </>
-  );
+export function DemoPhotoCredit({ car }: { car: DemoCar }) {
+  return <PhotoCredit label={`${car.make} ${car.model}`} photo={car.photo} />;
 }

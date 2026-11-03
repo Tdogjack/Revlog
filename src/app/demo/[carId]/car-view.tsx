@@ -20,7 +20,7 @@ import { MOD_STATUSES, modCategoryLabel, type ModStatus } from "@/lib/mod-catego
 import { describeDue } from "@/lib/reminders";
 import { categoryLabel } from "@/lib/service-categories";
 import { AccountOnly } from "../demo-chrome";
-import { PhotoCredit } from "../garage-list";
+import { DemoPhotoCredit } from "../garage-list";
 import { useDemo } from "../demo-store";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -181,7 +181,7 @@ function CarDetails({ car }: { car: DemoCar }) {
         <div className="flex flex-col items-start gap-2">
           <ProfilePhoto src={car.photo.src} alt={demoCarName(car)} />
           <p className="text-xs text-steel">
-            Photo: <PhotoCredit car={car} />
+            Photo: <DemoPhotoCredit car={car} />
           </p>
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-5 sm:pb-8">
