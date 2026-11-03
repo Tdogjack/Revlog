@@ -30,7 +30,7 @@ export function ModControls({
           defaultValue={status}
           aria-label="Mod status"
           onChange={(e) => e.currentTarget.form?.requestSubmit()}
-          className={`mr-1 min-h-8 cursor-pointer rounded-md border bg-carbon px-2 text-xs font-medium ${statusStyle[status]}`}
+          className={`mr-1 min-h-8 cursor-pointer rounded-md border bg-carbon px-2 text-xs font-semibold ${statusStyle[status]}`}
         >
           {MOD_STATUSES.map((s) => (
             <option key={s.value} value={s.value}>

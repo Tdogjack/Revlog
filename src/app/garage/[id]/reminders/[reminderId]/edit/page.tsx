@@ -44,7 +44,7 @@ async function EditReminder({ params }: Pick<Props, "params">) {
       <Link href={`/garage/${car.id}`} className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
-      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Edit reminder</h1>
+      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Edit reminder</h1>
       <ReminderForm
         action={editReminder.bind(null, car.id, reminder.id)}
         customTypes={customTypes}

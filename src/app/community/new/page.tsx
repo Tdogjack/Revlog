@@ -73,7 +73,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
   if (isBuild) {
     return (
       <>
-        <h1 className="mt-4 font-display text-4xl leading-none font-semibold">
+        <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">
           {build ? "Update public build" : "Post public build"}
         </h1>
         <p className="mt-2 text-steel">
@@ -105,7 +105,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
 
   return (
     <>
-      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">
+      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">
         {mod ? "Share a new mod" : "Share to the community"}
       </h1>
       <p className="mt-2 text-steel">
@@ -116,7 +116,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
           Showing off the whole car?{" "}
           <Link
             href={`/community/new?vehicle=${car.id}&build=1`}
-            className="font-medium text-chalk hover:text-redline"
+            className="font-semibold text-chalk hover:text-redline"
           >
             {buildPostId ? "Update your public build" : "Post your public build"}
           </Link>{" "}
@@ -144,7 +144,7 @@ async function ChooseCar({ userId }: { userId: string }) {
   const photoUrls = await signedPhotoUrls(cars.map((c) => c.photoPath));
   return (
     <>
-      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Share to the community</h1>
+      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Share to the community</h1>
       <p className="mt-2 text-steel">
         Pick a car. Public builds and single mods are shared from the car&apos;s page.
       </p>

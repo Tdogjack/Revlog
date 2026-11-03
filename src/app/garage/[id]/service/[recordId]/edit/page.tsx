@@ -49,7 +49,7 @@ async function EditService({ params, searchParams }: Pick<Props, "params" | "sea
       <Link href={`/garage/${car.id}`} className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
-      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Edit service</h1>
+      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Edit service</h1>
       {failed && (
         <p role="alert" className="mt-2 rounded-md bg-graphite px-3 py-2 text-sm">
           Saved, but some photos didn&apos;t upload. Add them again below.

@@ -15,7 +15,7 @@ export default function SettingsPage() {
       <Link href="/garage" className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
         ← Back to garage
       </Link>
-      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Settings</h1>
+      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Settings</h1>
       <Suspense fallback={null}>
         <SettingsSections />
       </Suspense>

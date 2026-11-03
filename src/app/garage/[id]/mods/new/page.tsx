@@ -33,7 +33,7 @@ async function NewMod({ params }: Pick<PageProps<"/garage/[id]/mods/new">, "para
       <Link href={`/garage/${car.id}`} className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
-      <h1 className="mt-4 font-display text-4xl leading-none font-semibold">Add a mod</h1>
+      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Add a mod</h1>
       <ModForm
         action={addMod.bind(null, car.id)}
         currentMileage={car.currentMileage}

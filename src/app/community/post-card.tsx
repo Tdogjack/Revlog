@@ -42,7 +42,7 @@ export function PostCard({
   return (
     <article className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-steel">
-        <Link href={`/u/${post.username}`} className="font-medium text-chalk hover:text-redline">
+        <Link href={`/u/${post.username}`} className="font-semibold text-chalk hover:text-redline">
           @{post.username}
         </Link>
         <span aria-hidden>·</span>
