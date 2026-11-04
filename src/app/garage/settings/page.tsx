@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { PalettePicker } from "@/components/palette-picker";
 import { requireUser } from "@/lib/auth";
 import { getEmailSettings } from "@/lib/email-settings";
 import { isEmailVerified } from "@/lib/email-verification";
@@ -51,6 +52,11 @@ async function SettingsSections() {
         >
           Change password
         </Link>
+      </section>
+
+      <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+        <h2 className="mb-4 font-display text-2xl leading-tight font-semibold">Appearance</h2>
+        <PalettePicker />
       </section>
 
       <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">

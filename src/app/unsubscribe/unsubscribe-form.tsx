@@ -42,7 +42,7 @@ export function UnsubscribeForm({
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-redline py-2.5 font-medium text-white hover:bg-redline-hover disabled:opacity-60"
+        className="w-full rounded-md bg-redline-fill py-2.5 font-medium text-on-accent hover:bg-redline-fill-hover disabled:opacity-60"
       >
         {pending ? "One sec…" : "Unsubscribe from reminder emails"}
       </button>

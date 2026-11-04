@@ -226,7 +226,7 @@ export function ShareForm({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={p.url} alt="" className="h-full w-full object-cover" />
                     {on && (
-                      <span className="absolute top-1 right-1 rounded-full bg-redline p-0.5 text-white">
+                      <span className="absolute top-1 right-1 rounded-full bg-redline-fill p-0.5 text-on-accent">
                         <Check className="h-3 w-3" aria-hidden />
                       </span>
                     )}
@@ -260,7 +260,7 @@ export function ShareForm({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.url} alt="" className="h-full w-full object-cover" />
                   {on && (
-                    <span className="absolute top-1 right-1 rounded-full bg-redline p-0.5 text-white">
+                    <span className="absolute top-1 right-1 rounded-full bg-redline-fill p-0.5 text-on-accent">
                       <Check className="h-3 w-3" aria-hidden />
                     </span>
                   )}

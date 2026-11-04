@@ -137,7 +137,7 @@ export default function Home() {
             <ol className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-0">
               {steps.map(([title, body], i) => (
                 <li key={title} className="lg:border-l lg:border-carbon/15 lg:px-6 lg:first:border-l-0 lg:first:pl-0">
-                  <span className="readout text-5xl leading-none text-redline-fill">{i + 1}</span>
+                  <span className="readout text-5xl leading-none text-paper-accent">{i + 1}</span>
                   <h3 className="mt-3 text-lg font-semibold">{title}</h3>
                   <p className="mt-1 leading-relaxed text-carbon/75">{body}</p>
                 </li>

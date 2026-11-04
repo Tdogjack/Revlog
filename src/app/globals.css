@@ -10,6 +10,10 @@
   --color-redline-hover: #ec5d5e;
   --color-redline-fill: #cf3a40;
   --color-redline-fill-hover: #b5313a;
+  /* Text and icons on the solid accent fill. */
+  --color-on-accent: #fff;
+  /* Accent for large numerals on the landing page's paper band. */
+  --color-paper-accent: #cf3a40;
   /* Secondary text, 7:1 on the panel surface. */
   --color-steel: #a1aab6;
   --color-chalk: #eef0f2;
@@ -34,10 +38,132 @@
   --color-edge: #3a414b;
   /* Input outline, 3:1 against carbon and panel so fields are findable. */
   --color-field-edge: #69727f;
+  --color-label: #ccd2da;
+  --color-placeholder: #747e8c;
 
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
   --font-display: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Palettes people can pick in Settings. Redline, in @theme above, is the default;
+   each block overrides it when data-theme is set on <html>. The redline-named
+   tokens mean "the accent" here. Keep the list in src/lib/palettes.ts in step. */
+
+/* Shop floor: the hazard accent takes over amber, so "due" moves to rust orange. */
+[data-theme="shop-floor"] {
+  --color-carbon: #1c1c1e;
+  --color-panel: #252527;
+  --color-graphite: #36363a;
+  --color-redline: #f2a900;
+  --color-redline-hover: #ffbe2e;
+  --color-redline-fill: #f2a900;
+  --color-redline-fill-hover: #d99700;
+  --color-on-accent: #1c1c1e;
+  --color-paper-accent: #8f5a00;
+  --color-steel: #b8b5ad;
+  --color-chalk: #fafaf7;
+  --color-paper: #d6d3cb;
+  --color-due: #ff9a5c;
+  --color-due-bg: #40230f;
+  --color-overdue: #ff7377;
+  --color-chart-service: #f2a900;
+  --color-rule: #2e2e31;
+  --color-edge: #4a4a4e;
+  --color-field-edge: #7e7c78;
+  --color-label: #d6d3cb;
+  --color-placeholder: #8c8a84;
+}
+
+/* Heritage green: racing green panels on ink. Brass is the accent, so "due"
+   moves to copper, and "done" goes pale so it reads against the green. */
+[data-theme="heritage"] {
+  --color-carbon: #141814;
+  --color-panel: #0b3d2e;
+  --color-graphite: #1b5241;
+  --color-redline: #c9a227;
+  --color-redline-hover: #dcb43a;
+  --color-redline-fill: #c9a227;
+  --color-redline-fill-hover: #b08c1c;
+  --color-on-accent: #141814;
+  --color-paper-accent: #7a5c10;
+  --color-steel: #c9cdb9;
+  --color-chalk: #efe6d2;
+  --color-paper: #ddd4bf;
+  --color-due: #f5a26b;
+  --color-due-bg: #3f2414;
+  --color-overdue: #ff9a90;
+  --color-overdue-bg: #3f1a1a;
+  --color-done: #8fe3b8;
+  --color-done-bg: #082a20;
+  --color-chart-service: #c9a227;
+  --color-chart-mods: #7cc4e8;
+  --color-rule: #134a39;
+  --color-edge: #3f7562;
+  --color-field-edge: #7f9c90;
+  --color-label: #ddd4bf;
+  --color-placeholder: #8a9a8d;
+}
+
+/* Voltage: electric blue is too light for white labels, so the fill goes deeper
+   and text uses a lighter tint. Signal lime carries "done" and the second chart
+   series. */
+[data-theme="voltage"] {
+  --color-carbon: #0d1b2a;
+  --color-panel: #14263a;
+  --color-graphite: #22374f;
+  --color-redline: #6ea8ff;
+  --color-redline-hover: #8dbbff;
+  --color-redline-fill: #2a6de0;
+  --color-redline-fill-hover: #2360c8;
+  --color-on-accent: #fff;
+  --color-paper-accent: #2a6de0;
+  --color-steel: #a9bbd0;
+  --color-chalk: #e8eef5;
+  --color-paper: #c9d5e3;
+  --color-done: #b5e61d;
+  --color-done-bg: #27330a;
+  --color-chart-service: #6ea8ff;
+  --color-chart-mods: #b5e61d;
+  --color-rule: #1c3046;
+  --color-edge: #415a77;
+  --color-field-edge: #6f88a4;
+  --color-label: #c9d5e3;
+  --color-placeholder: #7d93ab;
+}
+
+/* Clean spec: the one light palette, so the dark-to-light scale flips. Carbon is
+   the page and chalk is the ink, which turns the bg-paper and bg-chalk inversions
+   on the landing page into dark bands. Safety orange is too light for text on
+   white, so text uses a deeper orange and the fill carries navy labels. */
+[data-theme="clean-spec"] {
+  color-scheme: light;
+  --color-carbon: #eef0f3;
+  --color-panel: #ffffff;
+  --color-graphite: #d9dde3;
+  --color-redline: #b93c0a;
+  --color-redline-hover: #9a3208;
+  --color-redline-fill: #ff6b1a;
+  --color-redline-fill-hover: #ff8142;
+  --color-on-accent: #1b2433;
+  --color-paper-accent: #ff6b1a;
+  --color-steel: #5b6470;
+  --color-chalk: #1b2433;
+  --color-paper: #232e3f;
+  --color-due: #7a5900;
+  --color-due-bg: #fbf0d0;
+  --color-overdue: #b3261e;
+  --color-overdue-bg: #fce8e6;
+  --color-overdue-solid: #c4302b;
+  --color-done: #17724a;
+  --color-done-bg: #def4e8;
+  --color-chart-service: #d4500f;
+  --color-chart-mods: #2563b8;
+  --color-rule: #e6e9ed;
+  --color-edge: #c2c8d0;
+  --color-field-edge: #7d8591;
+  --color-label: #3a4556;
+  --color-placeholder: #6b7480;
 }
 
 body {
@@ -84,7 +210,7 @@ body {
   .btn-primary {
     border-color: transparent;
     background: var(--color-redline-fill);
-    color: #fff;
+    color: var(--color-on-accent);
   }
   .btn-primary:hover {
     border-color: transparent;
@@ -133,7 +259,7 @@ body {
     transition: border-color 120ms;
   }
   .field::placeholder {
-    color: #747e8c;
+    color: var(--color-placeholder);
   }
   .field:hover {
     border-color: var(--color-steel);
@@ -148,7 +274,7 @@ body {
   .field-label {
     font-size: 0.875rem;
     font-weight: 500;
-    color: #ccd2da;
+    color: var(--color-label);
   }
   .field-hint {
     display: block;
