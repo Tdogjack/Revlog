@@ -1,8 +1,10 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { serviceRecords, vehicles } from "@/db/schema";
+import { partPrices, parts, serviceRecords, vehicles } from "@/db/schema";
+import type { PartInput } from "@/lib/parts";
 import { isUuid } from "@/lib/vehicles";
 
 const stripNumber = (v: unknown) => (typeof v === "string" ? v.replace(/[$,\s]/g, "") : v);
@@ -106,6 +108,67 @@ export async function createServiceRecord(
     }
 
     return record;
+  });
+}
+
+// Saves a batch of past records in one go: all of them or none. Odometer
+// moves up to the highest reading in the batch, and a record with no cost
+// takes its parts total, like a logged record does. Returns the new ids in
+// the order given.
+export async function createServiceRecords(
+  userId: string,
+  vehicleId: string,
+  rows: { record: ServiceRecordInput; parts: PartInput[] }[],
+) {
+  return db.transaction(async (tx) => {
+    const [owned] = await tx
+      .select({ id: vehicles.id })
+      .from(vehicles)
+      .where(and(eq(vehicles.id, vehicleId), eq(vehicles.userId, userId)))
+      .limit(1);
+    if (!owned) return null;
+
+    const prepared = rows.map(({ record, parts: partRows }) => {
+      const partsTotal = partRows.reduce((sum, p) => sum + Number(p.price ?? 0) * p.quantity, 0);
+      return {
+        id: randomUUID(),
+        cost: record.cost ?? (partsTotal > 0 ? partsTotal.toFixed(2) : null),
+        record,
+        partRows,
+      };
+    });
+
+    await tx.insert(serviceRecords).values(
+      prepared.map(({ id, cost, record }) => ({ ...record, cost, id, userId, vehicleId })),
+    );
+
+    const newParts = prepared.flatMap(({ id, partRows }) =>
+      partRows.map((p) => ({ ...p, id: randomUUID(), serviceRecordId: id, userId, vehicleId })),
+    );
+    if (newParts.length > 0) {
+      await tx.insert(parts).values(newParts);
+      const priced = newParts.flatMap((p) =>
+        p.price == null ? [] : [{ userId, partId: p.id, price: p.price }],
+      );
+      if (priced.length > 0) await tx.insert(partPrices).values(priced);
+    }
+
+    const mileages = rows.flatMap((r) => (r.record.mileage == null ? [] : [r.record.mileage]));
+    if (mileages.length > 0) {
+      const highest = Math.max(...mileages);
+      await tx
+        .update(vehicles)
+        .set({ currentMileage: highest })
+        .where(
+          and(
+            eq(vehicles.id, vehicleId),
+            eq(vehicles.userId, userId),
+            lt(vehicles.currentMileage, highest),
+          ),
+        );
+    }
+
+    return prepared.map((p) => p.id);
   });
 }
 

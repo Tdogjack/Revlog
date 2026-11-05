@@ -50,6 +50,11 @@ export default function PrivacyPage() {
           request from Revlog, not from you.
         </li>
         <li>
+          To read receipts, service documents, and spreadsheets when you ask Revlog to scan them.
+          The file is sent to Anthropic&apos;s AI service, which turns it into fields for you to
+          check. Spreadsheets that don&apos;t need AI are read in your own browser.
+        </li>
+        <li>
           To look up a VIN when you ask. The VIN is sent to the U.S. National Highway Traffic Safety
           Administration&apos;s free decoding service.
         </li>
@@ -77,6 +82,9 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Resend</strong> for sending email.
+        </li>
+        <li>
+          <strong>Anthropic</strong> for reading the documents you choose to scan.
         </li>
       </ul>
       <p>

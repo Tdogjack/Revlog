@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { Check, ChevronDown, Copy, Download, Pencil, Plus, Share2 } from "lucide-react";
+import { Check, ChevronDown, Copy, Download, FileUp, Pencil, Plus, Share2 } from "lucide-react";
 import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
 import { DeletePostButton } from "@/app/community/delete-post-button";
@@ -341,6 +341,14 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                     PDF
                   </a>
                 )}
+                <Link
+                  href={`/garage/${car.id}/service/import`}
+                  className="btn"
+                  title="Add past services from photos, PDFs, or a spreadsheet"
+                >
+                  <FileUp className="h-4 w-4" aria-hidden />
+                  Import
+                </Link>
                 <Link href={`/garage/${car.id}/service/new`} className="btn btn-primary">
                   <Plus className="h-4 w-4" aria-hidden />
                   Log service
@@ -350,7 +358,14 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
 
             {records.length === 0 ? (
               <p className="mt-4 text-sm text-steel">
-                No service records yet. Log your last oil change to start the timeline.
+                No service records yet. Log your last oil change to start the timeline, or{" "}
+                <Link
+                  href={`/garage/${car.id}/service/import`}
+                  className="text-chalk underline underline-offset-2 hover:text-redline"
+                >
+                  import its past services
+                </Link>{" "}
+                all at once.
               </p>
             ) : (
               <>
