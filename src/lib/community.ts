@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
+import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import {
   mods,
@@ -22,6 +23,11 @@ import { getVehicle, isUuid } from "@/lib/vehicles";
 const BUCKET = "community-photos";
 export const MAX_POST_PHOTOS = 10;
 export const FEED_PAGE = 20;
+
+// The build on the landing page. If it's ever deleted, the best-liked build
+// with photos takes its place.
+const FEATURED_BUILD_ID = "465bc740-ec3e-4d88-bea6-c02797f292f3";
+export const FEATURED_BUILD_TAG = "featured-build";
 
 // The bucket is public, so photo links are plain URLs that never expire.
 export function communityPhotoUrl(path: string) {
@@ -207,6 +213,33 @@ export function listInstalledMods(vehicleId: string) {
     .from(mods)
     .where(and(eq(mods.vehicleId, vehicleId), eq(mods.status, "installed")))
     .orderBy(asc(mods.installedOn), asc(mods.createdAt));
+}
+
+// Cached so the landing page stays prerendered. A failed read shows no build
+// rather than breaking the page, and is retried within minutes.
+export async function getFeaturedBuild() {
+  "use cache";
+  cacheTag(FEATURED_BUILD_TAG);
+  try {
+    const pinned = await getPost(FEATURED_BUILD_ID);
+    const post = pinned?.photos.length
+      ? pinned
+      : (await listPosts({ tag: "build", sort: "best" })).find((p) => p.photos.length);
+    cacheLife("hours");
+    return post ?? null;
+  } catch {
+    cacheLife("minutes");
+    return null;
+  }
+}
+
+export async function hasLiked(userId: string, postId: string) {
+  const [row] = await db
+    .select({ postId: postLikes.postId })
+    .from(postLikes)
+    .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)))
+    .limit(1);
+  return !!row;
 }
 
 // The car's public build post, if it has one.
