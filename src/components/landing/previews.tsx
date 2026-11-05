@@ -77,6 +77,50 @@ export function ScanPreview() {
   );
 }
 
+// An old spreadsheet log beside the services read out of it.
+export function ImportPreview() {
+  const rows = [
+    ["02/14/26", "Brake pads", "41,880", "Brake pads", "Feb 14, 2026", "41,880 mi"],
+    ["11/02/25", "Oil + filter", "39,150", "Oil change", "Nov 2, 2025", "39,150 mi"],
+    ["06/18/25", "Plugs", "36,400", "Spark plugs", "Jun 18, 2025", "36,400 mi"],
+    ["01/09/25", "Oil + filter", "33,720", "Oil change", "Jan 9, 2025", "33,720 mi"],
+  ];
+  return (
+    <div className={`${panel} grid gap-4 sm:grid-cols-[13rem_minmax(0,1fr)]`}>
+      <div className={`${paper} px-3 py-4 text-xs leading-relaxed`}>
+        <p className="font-semibold">M3 service log.xlsx</p>
+        <div className="my-2 border-t border-carbon/15" />
+        <p className="grid grid-cols-[3.75rem_minmax(0,1fr)_auto] gap-2 text-carbon/70">
+          <span>Date</span>
+          <span>Work</span>
+          <span>Miles</span>
+        </p>
+        {rows.map(([date, work, miles]) => (
+          <p key={date} className="mt-1 grid grid-cols-[3.75rem_minmax(0,1fr)_auto] gap-2 tabular-nums">
+            <span>{date}</span>
+            <span className="truncate">{work}</span>
+            <span>{miles}</span>
+          </p>
+        ))}
+      </div>
+      <div className="min-w-0">
+        <ul className="divide-y divide-rule border-y border-rule">
+          {rows.map(([date, , , service, day, miles]) => (
+            <li key={date} className="flex items-baseline justify-between gap-3 py-2">
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium">{service}</span>
+                <span className="block text-xs text-steel">{day}</span>
+              </span>
+              <span className="readout shrink-0 text-sm">{miles}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-sm text-done">4 services read from the sheet. Check each one before saving.</p>
+      </div>
+    </div>
+  );
+}
+
 export function EmailPreview() {
   return (
     <div className={panel}>
