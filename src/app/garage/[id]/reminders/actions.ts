@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import {
   createReminder,
   deleteReminder,
+  markReminderNeverDone,
   reminderInput,
   updateReminder,
 } from "@/lib/reminder-store";
@@ -102,6 +103,13 @@ export async function removeReminder(vehicleId: string, reminderId: string) {
   const user = await requireUser();
   await deleteReminder(user.id, reminderId);
   revalidatePath(`/garage/${vehicleId}`);
+}
+
+export async function markNeverDone(vehicleId: string, reminderId: string) {
+  const user = await requireUser();
+  await markReminderNeverDone(user.id, vehicleId, reminderId);
+  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath("/garage");
 }
 
 export type MileageState = { error?: string } | undefined;

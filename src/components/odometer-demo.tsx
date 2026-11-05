@@ -27,9 +27,11 @@ const START_REMINDERS: DemoReminder[] = [
   { task: "Spark plugs", every: 60_000, lastAt: 0 },
 ];
 
+type DemoStatus = Exclude<ReminderStatus, "unknown">;
+
 function evaluate(r: DemoReminder, miles: number) {
   const left = r.lastAt + r.every - miles;
-  const status: ReminderStatus = left < 0 ? "overdue" : left <= DUE_SOON_MILES ? "due_soon" : "ok";
+  const status: DemoStatus = left < 0 ? "overdue" : left <= DUE_SOON_MILES ? "due_soon" : "ok";
   const used = Math.min(1, Math.max(0, (miles - r.lastAt) / r.every));
   const text =
     left < 0
@@ -38,12 +40,12 @@ function evaluate(r: DemoReminder, miles: number) {
   return { status, used, text };
 }
 
-const barTone: Record<ReminderStatus, string> = {
+const barTone: Record<DemoStatus, string> = {
   ok: "bg-steel",
   due_soon: "bg-due",
   overdue: "bg-overdue",
 };
-const textTone: Record<ReminderStatus, string> = {
+const textTone: Record<DemoStatus, string> = {
   ok: "text-steel",
   due_soon: "text-due",
   overdue: "text-overdue",

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
+import { suggestedIntervals } from "@/lib/service-plan";
 import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
 import { addReminder } from "../actions";
@@ -35,7 +36,11 @@ async function NewReminder({ params }: Pick<PageProps<"/garage/[id]/reminders/ne
         ← Back to {car.nickname ?? vehicleName(car)}
       </Link>
       <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Add a reminder</h1>
-      <ReminderForm action={addReminder.bind(null, car.id)} customTypes={customTypes} />
+      <ReminderForm
+        action={addReminder.bind(null, car.id)}
+        customTypes={customTypes}
+        suggested={suggestedIntervals(car)}
+      />
     </>
   );
 }

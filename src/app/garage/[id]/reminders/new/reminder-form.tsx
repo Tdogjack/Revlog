@@ -5,13 +5,15 @@ import { ServiceTypeSelect } from "@/components/service-type-select";
 import { localToday } from "@/lib/local-date";
 import { REMINDER_PRESETS } from "@/lib/reminder-presets";
 import type { CustomType } from "@/lib/service-categories";
+import type { SuggestedInterval } from "@/lib/service-plan";
 import type { ReminderFormState } from "../actions";
 
 const inputClass = "field mt-1";
 
 // Picking a type with a known interval fills it in; other types keep what's typed.
-function presetIntervals(type: string) {
-  const p = REMINDER_PRESETS.find((p) => p.type === type);
+// A car's own suggestion wins over the general one.
+function presetIntervals(type: string, suggested: Record<string, SuggestedInterval>) {
+  const p = suggested[type] ?? REMINDER_PRESETS.find((p) => p.type === type);
   return p
     ? {
         intervalMiles: p.intervalMiles?.toString() ?? "",
@@ -26,11 +28,14 @@ export function ReminderForm({
   action,
   customTypes,
   initial,
+  suggested = {},
   submitLabel = "Save reminder",
 }: {
   action: (prev: ReminderFormState, formData: FormData) => Promise<ReminderFormState>;
   customTypes: CustomType[];
   initial?: Record<string, string>;
+  // Typical intervals for this car, by service type.
+  suggested?: Record<string, SuggestedInterval>;
   submitLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -40,7 +45,7 @@ export function ReminderForm({
   const [intervals, setIntervals] = useState(
     () =>
       (v && { intervalMiles: v.intervalMiles, intervalMonths: v.intervalMonths }) ??
-      presetIntervals("oil")!,
+      presetIntervals("oil", suggested)!,
   );
 
   return (
@@ -59,7 +64,7 @@ export function ReminderForm({
         defaultNewType={v?.newType}
         onChange={(next) => {
           setType(next);
-          const preset = presetIntervals(next);
+          const preset = presetIntervals(next, suggested);
           if (preset) setIntervals(preset);
         }}
         className={inputClass}

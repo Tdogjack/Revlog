@@ -11,6 +11,7 @@ export const SERVICE_CATEGORIES = [
   { value: "cabin-filter", label: "Cabin air filter" },
   { value: "coolant", label: "Coolant" },
   { value: "transmission", label: "Transmission fluid" },
+  { value: "differential", label: "Differential fluid" },
   { value: "spark-plugs", label: "Spark plugs" },
   { value: "battery", label: "Battery" },
   { value: "wipers", label: "Wiper blades" },
@@ -31,6 +32,7 @@ const MILEAGE_TYPES = [
   "air-filter",
   "coolant",
   "transmission",
+  "differential",
   "spark-plugs",
 ];
 

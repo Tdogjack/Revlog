@@ -146,6 +146,9 @@ export const reminders = pgTable(
     intervalMonths: integer("interval_months"),
     lastDoneOn: date("last_done_on"),
     lastDoneMileage: integer("last_done_mileage"),
+    // Set on reminders added with a new car: its history is unknown until a
+    // service is logged, or the owner clears this by saying it's never been done.
+    startedOn: date("started_on"),
     lastNotifiedAt: timestamp("last_notified_at", { withTimezone: true }),
   },
   () => [ownerPolicy("reminders")],
