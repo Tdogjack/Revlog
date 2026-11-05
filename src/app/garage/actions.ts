@@ -71,7 +71,7 @@ export async function addVehicle(_prev: FormState, formData: FormData): Promise<
     }
   }
 
-  redirect(`/garage/${vehicle.id}`);
+  redirect(`/garage/${vehicle.id}/service/import?new=1`);
 }
 
 export async function editVehicle(

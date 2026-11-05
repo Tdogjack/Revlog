@@ -14,7 +14,7 @@ import { SERVICE_CATEGORIES, type CustomType } from "@/lib/service-categories";
 
 export const DAILY_SCAN_LIMIT = 20;
 
-const MODEL = "claude-haiku-5-5";
+export const MODEL = "claude-haiku-5-5";
 
 const receiptSchema = z.object({
   isReceipt: z.boolean(),
@@ -75,7 +75,7 @@ Only use what is printed on the document. Never guess a value.`;
 
 // Counts scans in the last 24 hours and records this one, so failed scans
 // still count toward the cap.
-async function claimScan(userId: string) {
+export async function claimScan(userId: string, limit = DAILY_SCAN_LIMIT) {
   const [{ used }] = await db
     .select({ used: count() })
     .from(receiptScans)
@@ -85,12 +85,12 @@ async function claimScan(userId: string) {
         gt(receiptScans.createdAt, sql`now() - interval '1 day'`),
       ),
     );
-  if (used >= DAILY_SCAN_LIMIT) return false;
+  if (used >= limit) return false;
   await db.insert(receiptScans).values({ userId });
   return true;
 }
 
-const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
 
 // Shared by the service and mod scanners: checks the daily cap, then asks
 // Haiku to read the image into `schema`.
