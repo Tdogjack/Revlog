@@ -6,6 +6,7 @@ import {
   CostsPreview,
   EmailPreview,
   GraphPreview,
+  ImportPreview,
   ModsPreview,
   OrderScanPreview,
   PdfPreview,
@@ -28,6 +29,7 @@ const GROUPS: Group[] = [
     accent: "bg-chart-service",
     features: [
       { id: "scan", title: "Receipt scanning", body: "Snap the shop receipt. The date, mileage, cost, shop, and parts fill in for you to check.", Preview: ScanPreview },
+      { id: "import", title: "History import", body: "Coming from a spreadsheet, a logbook, or another app? Drop in the files or photos and check each service before it saves.", Preview: ImportPreview },
       { id: "remind", title: "Reminders and emails", body: "By miles, months, or whichever comes first. A heads-up before it's due, and a nudge while it's overdue.", Preview: EmailPreview },
       { id: "graph", title: "Mileage graph", body: "The odometer over time with every service and mod on it, and what's due on the road ahead.", Preview: GraphPreview },
       { id: "pdf", title: "PDF history", body: "Every service, mileage, and cost in a clean, printable record to hand the next owner.", Preview: PdfPreview },
