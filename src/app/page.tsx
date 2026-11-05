@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Gauge } from "lucide-react";
 import { FeatureExplorer } from "@/components/landing/feature-explorer";
-import { TachCluster } from "@/components/landing/tach-cluster";
+import { FeaturedBuild } from "@/components/landing/featured-build";
 import { OdometerDemo } from "@/components/odometer-demo";
 import { PhotoCredit } from "@/components/photo-credit";
 import { SignedInSwitch } from "@/components/signed-in-switch";
@@ -60,10 +60,10 @@ export default function Home() {
 
       <main className="flex-1">
         <section className="relative overflow-hidden">
-          <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-20 sm:px-6 md:pt-20 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-16 lg:pt-24 lg:pb-28">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-20 sm:px-6 md:pt-20 lg:grid-cols-[minmax(0,1fr)_32rem] lg:gap-16 lg:pt-24 lg:pb-28">
             <div>
               <h1 className="font-display text-5xl leading-[1.05] font-semibold sm:text-6xl xl:text-[4.25rem]">
-                Every oil change and every mod, logged.
+                Build it, Maintain it, Share it!
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-pretty text-steel">
                 Revlog keeps your car&apos;s service history, tells you what&apos;s due before
@@ -90,7 +90,7 @@ export default function Home() {
                 Free. Your garage stays private. The demo needs no account.
               </p>
             </div>
-            <TachCluster />
+            <FeaturedBuild />
           </div>
         </section>
 

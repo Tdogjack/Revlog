@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { FEATURED_BUILD_TAG } from "@/lib/community";
 import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import { deleteVehiclePhoto, readPhoto, uploadVehiclePhoto } from "@/lib/photos";
 import { deleteVehicle } from "@/lib/vehicle-removal";
@@ -141,6 +142,7 @@ export async function removeVehicle(vehicleId: string, formData: FormData) {
   if (typed !== name && typed !== "delete") redirect(`/garage/${vehicleId}?remove=mismatch`);
 
   await deleteVehicle(user.id, vehicleId);
+  updateTag(FEATURED_BUILD_TAG);
   revalidatePath("/garage");
   revalidatePath("/community");
   redirect("/garage");

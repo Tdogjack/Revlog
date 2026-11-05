@@ -1,7 +1,7 @@
 "use server";
 
 import { and, count, eq, gt } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { posts } from "@/db/schema";
@@ -14,6 +14,7 @@ import {
   createPost,
   deleteComment,
   deletePost,
+  FEATURED_BUILD_TAG,
   getBuildPostId,
   setLike,
   updateBuildPost,
@@ -89,6 +90,7 @@ export async function saveBuild(_prev: PostFormState, formData: FormData): Promi
       photoIds,
     });
     if (error) return { error, values };
+    updateTag(FEATURED_BUILD_TAG);
     revalidatePath("/community");
     revalidatePath(`/community/${existing}`);
     revalidatePath(`/garage/${vehicleId}`);
@@ -107,6 +109,7 @@ export async function saveBuild(_prev: PostFormState, formData: FormData): Promi
     tag: "build",
   });
   if ("error" in result) return { error: result.error, values };
+  updateTag(FEATURED_BUILD_TAG);
   revalidatePath("/community");
   revalidatePath(`/garage/${vehicleId}`);
   return { postId: result.id };
@@ -137,6 +140,7 @@ export async function uploadPostPhoto(postId: string, formData: FormData) {
   if ("error" in photo) return { error: photo.error };
   const error = await addPostPhoto(user.id, postId, photo);
   if (error) return { error };
+  updateTag(FEATURED_BUILD_TAG);
   revalidatePath(`/community/${postId}`);
   return {};
 }
@@ -146,6 +150,7 @@ export async function uploadPostPhoto(postId: string, formData: FormData) {
 export async function removePost(postId: string, next: string) {
   const user = await requireUser();
   await deletePost(user.id, postId);
+  updateTag(FEATURED_BUILD_TAG);
   revalidatePath("/community");
   if (next !== "/community") revalidatePath(next);
   redirect(next.startsWith("/garage/") ? next : "/community");
@@ -156,6 +161,7 @@ export async function toggleLike(postId: string, liked: boolean) {
   const user = await getUser();
   if (!user) return null;
   const result = await setLike(user.id, postId, liked);
+  updateTag(FEATURED_BUILD_TAG);
   revalidatePath("/community");
   revalidatePath(`/community/${postId}`);
   return result;
@@ -177,6 +183,7 @@ export async function postComment(
     return { error: "That's the comment limit for today. Try again tomorrow.", body };
   const error = await addComment(user.id, postId, body);
   if (error) return { error, body };
+  updateTag(FEATURED_BUILD_TAG);
   revalidatePath("/community");
   revalidatePath(`/community/${postId}`);
   return {};
@@ -186,6 +193,7 @@ export async function removeComment(commentId: string) {
   const user = await requireUser();
   const postId = await deleteComment(user.id, commentId);
   if (!postId) return;
+  updateTag(FEATURED_BUILD_TAG);
   revalidatePath("/community");
   revalidatePath(`/community/${postId}`);
 }
