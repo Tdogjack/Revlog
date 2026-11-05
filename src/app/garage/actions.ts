@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { FEATURED_BUILD_TAG } from "@/lib/community";
 import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import { deleteVehiclePhoto, readPhoto, uploadVehiclePhoto } from "@/lib/photos";
+import { buildServicePlan, readAnswers } from "@/lib/service-plan";
 import { deleteVehicle } from "@/lib/vehicle-removal";
 import {
   createVehicle,
@@ -56,7 +57,9 @@ export async function addVehicle(_prev: FormState, formData: FormData): Promise<
     return { error: CONFIRM_EMAIL_FIRST, values: raw };
   }
 
-  const vehicle = await createVehicle(user.id, parsed.data);
+  // Built here rather than sent by the browser, so what's saved can't be altered.
+  const plan = buildServicePlan(parsed.data, readAnswers(formData));
+  const vehicle = await createVehicle(user.id, parsed.data, plan.items);
 
   if (photo) {
     try {

@@ -2,7 +2,8 @@ import "server-only";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { mileageReadings, vehicles } from "@/db/schema";
+import { mileageReadings, reminders, vehicles } from "@/db/schema";
+import type { PlanItem } from "@/lib/service-plan";
 
 // The database connection bypasses row-level security, so every query here
 // must filter by the signed-in user's id.
@@ -132,13 +133,33 @@ function recordReading(tx: Tx, userId: string, vehicleId: string, mileage: numbe
     });
 }
 
-export async function createVehicle(userId: string, input: VehicleInput) {
+// Starter reminders stay "unknown" until the owner logs the service or says it's
+// never been done, since assuming either would misreport a used car.
+export async function createVehicle(userId: string, input: VehicleInput, plan: PlanItem[] = []) {
   return db.transaction(async (tx) => {
     const [vehicle] = await tx
       .insert(vehicles)
       .values({ ...input, userId })
       .returning({ id: vehicles.id });
     await recordReading(tx, userId, vehicle.id, input.currentMileage, utcToday());
+    if (plan.length > 0) {
+      const now = Date.now();
+      await tx.insert(reminders).values(
+        plan.map((item, i) => ({
+          userId,
+          vehicleId: vehicle.id,
+          task: item.task,
+          serviceCategory: item.service,
+          intervalMiles: item.intervalMiles,
+          intervalMonths: item.intervalMonths,
+          lastDoneOn: null,
+          lastDoneMileage: 0,
+          startedOn: utcToday(),
+          // Reminders list oldest first, so this keeps them in plan order.
+          createdAt: new Date(now + i),
+        })),
+      );
+    }
     return vehicle;
   });
 }

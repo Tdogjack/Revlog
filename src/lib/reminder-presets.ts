@@ -9,6 +9,7 @@ export const REMINDER_PRESETS = [
   { type: "brake-fluid", intervalMiles: null, intervalMonths: 24 },
   { type: "coolant", intervalMiles: 60000, intervalMonths: 60 },
   { type: "transmission", intervalMiles: 60000, intervalMonths: null },
+  { type: "differential", intervalMiles: 50000, intervalMonths: null },
   { type: "spark-plugs", intervalMiles: 60000, intervalMonths: null },
   { type: "wipers", intervalMiles: null, intervalMonths: 12 },
   { type: "inspection", intervalMiles: null, intervalMonths: 12 },

@@ -50,6 +50,7 @@ type Candidate = {
   intervalMonths: number | null;
   lastDoneOn: string | null;
   lastDoneMileage: number | null;
+  startedOn: string | null;
   createdAt: Date;
   vehicleId: string;
   vehicle: {
@@ -79,6 +80,7 @@ async function candidateReminders(): Promise<Candidate[]> {
       intervalMonths: reminders.intervalMonths,
       lastDoneOn: reminders.lastDoneOn,
       lastDoneMileage: reminders.lastDoneMileage,
+      startedOn: reminders.startedOn,
       createdAt: reminders.createdAt,
       reminderPercent: emailSettings.reminderPercent,
       vehicleId: reminders.vehicleId,
@@ -209,7 +211,10 @@ async function buildOutbox(today: Date) {
   }
 
   const due = ranked
-    .filter(({ c, result }) => result.status !== "ok" || likely.has(c.reminderId))
+    .filter(
+      ({ c, result }) =>
+        result.status === "overdue" || result.status === "due_soon" || likely.has(c.reminderId),
+    )
     .sort((a, b) => STATUS_RANK[a.result.status] - STATUS_RANK[b.result.status]);
 
   for (const { c, result } of due) {

@@ -3,7 +3,9 @@
 
 import { vinModelYear } from "@/lib/vin-year";
 
-export type ReminderStatus = "ok" | "due_soon" | "overdue";
+// "unknown" means nobody has said when this was last done, so there's nothing
+// honest to report yet: it's neither on track nor overdue.
+export type ReminderStatus = "ok" | "due_soon" | "overdue" | "unknown";
 
 export type ReminderInput = {
   intervalMiles: number | null;
@@ -12,6 +14,9 @@ export type ReminderInput = {
   lastDoneMileage: number | null;
   // When it's never been done, the date the time interval counts from.
   startOn?: string | null; // YYYY-MM-DD
+  // Set on reminders added with a new car, until the owner logs the service or
+  // says it's never been done.
+  startedOn?: string | null; // YYYY-MM-DD
 };
 
 export type ReminderResult = {
@@ -93,8 +98,14 @@ function addMonths(isoDate: string, months: number): Date {
   return d;
 }
 
+// Run after withLastService, which sets lastDoneOn when there's a record.
+export function isHistoryUnknown(reminder: ReminderInput) {
+  return reminder.startedOn != null && reminder.lastDoneOn == null;
+}
+
 // The odometer reading and date a reminder comes due at, for plotting ahead.
 export function dueLimits(reminder: ReminderInput) {
+  if (isHistoryUnknown(reminder)) return { dueMiles: null, dueOn: null };
   const timeFrom = reminder.lastDoneOn ?? reminder.startOn ?? null;
   return {
     dueMiles:
@@ -108,7 +119,12 @@ export function dueLimits(reminder: ReminderInput) {
   };
 }
 
-export const STATUS_RANK: Record<ReminderStatus, number> = { overdue: 0, due_soon: 1, ok: 2 };
+export const STATUS_RANK: Record<ReminderStatus, number> = {
+  overdue: 0,
+  due_soon: 1,
+  unknown: 2,
+  ok: 3,
+};
 
 function formatDays(days: number) {
   if (days >= 60) {
@@ -120,6 +136,7 @@ function formatDays(days: number) {
 
 // Plain-language summary, like "Due in 412 mi or 3 months" or "Overdue by 210 mi".
 export function describeDue({ status, milesLeft, daysLeft, neverDone }: ReminderResult) {
+  if (status === "unknown") return "No service logged";
   if (neverDone) return "Never done";
   const parts: string[] = [];
   if (status === "overdue") {
@@ -152,6 +169,8 @@ export function evaluateReminder(
   today: Date = new Date(),
   options: ReminderOptions = {},
 ): ReminderResult {
+  if (isHistoryUnknown(reminder)) return { status: "unknown", milesLeft: null, daysLeft: null };
+
   let milesLeft: number | null = null;
   let daysLeft: number | null = null;
 

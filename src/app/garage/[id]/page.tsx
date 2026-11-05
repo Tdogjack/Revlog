@@ -35,6 +35,7 @@ import { PhotoControls } from "./photo-controls";
 import { ProfilePhoto } from "./profile-photo";
 import { RemoveCar } from "./remove-car";
 import { MileageEditor, ReminderControls } from "./reminder-controls";
+import { markNeverDone } from "./reminders/actions";
 import { MileageChart } from "@/components/mileage-chart";
 import { cardClass, RecordStats, reminderEdge } from "@/components/record-stats";
 import { StatusBadge } from "@/components/status-badge";
@@ -557,7 +558,10 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
             ) : (
               <ul className="mt-4 space-y-2">
                 {carReminders.map(({ reminder: r, result }) => (
-                  <li key={r.id} className={`${cardClass} flex gap-3 ${reminderEdge[result.status]}`}>
+                  <li
+                    key={r.id}
+                    className={`${cardClass} flex flex-wrap gap-3 ${reminderEdge[result.status]}`}
+                  >
                     <details className="group min-w-0 flex-1">
                       <summary className={summaryClass}>
                         <p className="font-semibold">{r.task}</p>
@@ -584,6 +588,8 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                             {r.lastDoneMileage != null &&
                               ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
                           </>
+                        ) : result.status === "unknown" ? (
+                          "Last done: not logged"
                         ) : (
                           "Last done: never"
                         )}
@@ -603,14 +609,31 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                     <div className="flex shrink-0 flex-col items-end gap-2">
                       <StatusBadge status={result.status} />
                       {/* Opens Log service with this reminder's type filled in. */}
-                      <Link
-                        href={`/garage/${car.id}/service/new?reminder=${r.id}`}
-                        className="btn min-h-8 px-2.5 text-xs"
-                      >
-                        <Check className="h-3.5 w-3.5" aria-hidden />
-                        Done
-                      </Link>
+                      {result.status !== "unknown" && (
+                        <Link
+                          href={`/garage/${car.id}/service/new?reminder=${r.id}`}
+                          className="btn min-h-8 px-2.5 text-xs"
+                        >
+                          <Check className="h-3.5 w-3.5" aria-hidden />
+                          Done
+                        </Link>
+                      )}
                     </div>
+                    {result.status === "unknown" && (
+                      <div className="grid basis-full grid-cols-2 gap-2">
+                        <Link
+                          href={`/garage/${car.id}/service/new?reminder=${r.id}`}
+                          className="btn"
+                        >
+                          Log service
+                        </Link>
+                        <form action={markNeverDone.bind(null, car.id, r.id)}>
+                          <button type="submit" className="btn w-full">
+                            Never done
+                          </button>
+                        </form>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

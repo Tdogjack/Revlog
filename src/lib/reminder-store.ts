@@ -138,6 +138,24 @@ export async function updateReminder(
   return updated ?? null;
 }
 
+// The owner says this was never done, so it counts from 0 mi and the car's age.
+export async function markReminderNeverDone(
+  userId: string,
+  vehicleId: string,
+  reminderId: string,
+) {
+  await db
+    .update(reminders)
+    .set({ startedOn: null, lastDoneOn: null, lastDoneMileage: 0, lastNotifiedAt: null })
+    .where(
+      and(
+        eq(reminders.id, reminderId),
+        eq(reminders.vehicleId, vehicleId),
+        eq(reminders.userId, userId),
+      ),
+    );
+}
+
 // Only for older reminders that aren't linked to a service type.
 export async function setReminderStart(
   userId: string,

@@ -42,4 +42,5 @@ export const reminderEdge = {
   overdue: "border-l-overdue",
   due_soon: "border-l-due",
   ok: "border-l-done",
+  unknown: "border-l-steel",
 } as const;

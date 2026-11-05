@@ -7,6 +7,7 @@ const styles: Record<ReminderStatus, { label: string; className: string; dot?: s
   overdue: { label: "Overdue", className: "rounded bg-overdue-solid px-2 py-0.5 text-white" },
   due_soon: { label: "Due soon", className: "text-due", dot: "bg-due" },
   ok: { label: "On track", className: "text-done", dot: "bg-done" },
+  unknown: { label: "Unknown", className: "text-steel", dot: "bg-steel" },
 };
 
 export function StatusBadge({ status, label }: { status: ReminderStatus; label?: string }) {

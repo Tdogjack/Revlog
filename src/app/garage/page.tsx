@@ -159,7 +159,12 @@ async function VehicleList() {
                     const u = urgency.get(car.id);
                     if (!u) return null;
                     if (u.status === "ok") return <StatusBadge status="ok" label="All caught up" />;
-                    const label = u.status === "overdue" ? "overdue" : "due soon";
+                    const label =
+                      u.status === "overdue"
+                        ? "overdue"
+                        : u.status === "unknown"
+                          ? "not logged"
+                          : "due soon";
                     return <StatusBadge status={u.status} label={`${u.count} ${label}`} />;
                   })()}
                 </div>
