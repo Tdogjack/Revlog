@@ -12,7 +12,8 @@ lives in application code and every query filters by user id.
 
 | Area | Operations | Today | Phase |
 | --- | --- | --- | --- |
-| Account | sign up, sign in, refresh, sign out, request password reset, choose username, resend confirmation | `(auth)/actions.ts`, `garage/settings/actions.ts` | 1 |
+| Account | sign up, sign in, refresh, sign out, resend confirmation (password reset opens the website) | `(auth)/actions.ts`, `garage/settings/actions.ts` | 1 |
+| Account | choose username, for accounts without one | `(auth)/actions.ts` | 3 |
 | Account | delete account (both stores require this in the app) | `garage/settings/actions.ts` | 1 |
 | Garage | list cars with status and photos, add with service plan, edit, remove, favorite, reorder, update mileage, set or clear car photo | `garage/actions.ts`, `reminders/actions.ts`, `garage/page.tsx` | 1 |
 | Service log | list, add, edit, delete, log from a reminder, list and add service types | `service/actions.ts`, `lib/service-records.ts`, `lib/service-types.ts` | 1 |
@@ -27,18 +28,20 @@ lives in application code and every query filters by user id.
 
 Community ships with report, block, and moderator actions together (Apple guideline 1.2).
 
-## Rules stuck in action files or pages
+## Rules moved out of action files and pages
 
-These need to move into `src/lib` so the website and API call the same code. Actions stay as thin
+These now live in `src/lib`, so the website and API call the same code. Actions stay as thin
 wrappers that read the form and redirect.
 
-- Sign up: username, blocked words, terms, password, taken email handling.
-- Service logging: type resolution, mileage defaulting, extra services, parts, reminder restart.
-- Reminder add and edit: type resolution, last-done service record.
-- Add car: starter service plan.
-- Account deletion: photo removal, then user removal.
-- Community: `checkText`, daily post limit, suspension and profile checks.
-- Reminder status for the garage list, currently computed in `garage/page.tsx`.
+- Sign up, sign in, and account deletion: `lib/account.ts`.
+- Service logging: `lib/service-log.ts`. Saved parts stay untouched unless `parts` is sent, because
+  syncing an empty list would delete them.
+- Reminder add and edit: `lib/reminder-forms.ts`.
+- Photo upload rules: `lib/gallery.ts`.
+- Reminder ranking: `rankReminders` and `carUrgency` in `lib/reminders.ts`.
+
+Still to move when community reaches the app: `checkText`, the daily post limit, and the suspension
+and profile checks in `community/actions.ts`.
 
 ## API
 
@@ -62,17 +65,14 @@ The Supabase key has never left the server. No client code uses it, and nothing 
 holding the key could write those tables directly, skipping the text filter, suspensions, and daily
 limits. Likewise `ai_consents` and `user_blocks`, and files in the public `community-photos` bucket.
 
-Recommended: the app holds no Supabase key. `/api/v1/auth/*` signs in and refreshes on the server
+The app holds no Supabase key. `/api/v1/auth/*` signs in and refreshes on the server
 and returns tokens, which the app keeps in `expo-secure-store`.
-
-Alternative: use the Supabase SDK on the phone, then close the gap with a production migration or by
-turning off the Data API. The SDK handles refresh for us, but a missed policy is a filter bypass.
 
 ## Checks
 
-The repo has no test runner. Add Vitest, and test each route for: 401 without a token, the user id
-passed through for ownership, and the suspension, text filter, email, and AI consent gates. Tests
-never write to the real database, so `src/lib` calls are mocked and the run on a real phone is the
+`npm test` runs Vitest over the phase 1 rules: 401 without a token, the user id coming from the token
+and never the body, the text filter on usernames, and the email gate on photos. Suspensions and the AI
+consent gate have no phase 1 route; test them when community and scans arrive. Tests never write to the real database, so `src/lib` calls are mocked and the run on a real phone is the
 end-to-end check. Whether a separate test Supabase project exists is still to confirm.
 
 ## Expo

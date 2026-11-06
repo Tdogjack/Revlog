@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Revlog",
+    "slug": "revlog",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "revlog",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "me.revlog.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "me.revlog.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#1c1c1e",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1c1c1e",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 96
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Revlog uses your photos so you can add them to your cars and service records.",
+          "cameraPermission": "Revlog uses the camera so you can photograph your car, parts, and receipts.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "experiments": {
+      "reactCompiler": true
+    },
+    "backgroundColor": "#1c1c1e"
+  }
+}
