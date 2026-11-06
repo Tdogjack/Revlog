@@ -5,46 +5,27 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { FEATURED_BUILD_TAG } from "@/lib/community";
 import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
-import { deleteVehiclePhoto, readPhoto, uploadVehiclePhoto } from "@/lib/photos";
+import { clearVehiclePhoto, replaceVehiclePhoto } from "@/lib/gallery";
+import { readPhoto, uploadVehiclePhoto } from "@/lib/photos";
 import { buildServicePlan, readAnswers } from "@/lib/service-plan";
 import { deleteVehicle } from "@/lib/vehicle-removal";
 import {
   createVehicle,
   getVehicle,
   moveVehicle,
+  readVehicleFields,
+  removalConfirmed,
   setVehicleFavorite,
   setVehiclePhoto,
   updateVehicle,
   vehicleInput,
-  vehicleName,
 } from "@/lib/vehicles";
 
 export type FormState = { error?: string; values?: Record<string, string> } | undefined;
 
-const vehicleFields = [
-  "year",
-  "make",
-  "model",
-  "trim",
-  "nickname",
-  "vin",
-  "currentMileage",
-  "builtMonth",
-  "builtYear",
-];
-
-// The build date is picked as a month and year, and stored as the 1st of that month.
-function readVehicleFields(formData: FormData) {
-  const raw = Object.fromEntries(vehicleFields.map((k) => [k, String(formData.get(k) ?? "")]));
-  const month = raw.builtMonth.trim();
-  const year = raw.builtYear.trim();
-  raw.builtOn = month || year ? `${year}-${month}-01` : "";
-  return raw;
-}
-
 export async function addVehicle(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
-  const raw = readVehicleFields(formData);
+  const raw = readVehicleFields((k) => formData.get(k));
 
   const parsed = vehicleInput.safeParse(raw);
   if (!parsed.success) {
@@ -80,7 +61,7 @@ export async function editVehicle(
   formData: FormData,
 ): Promise<FormState> {
   const user = await requireUser();
-  const raw = readVehicleFields(formData);
+  const raw = readVehicleFields((k) => formData.get(k));
 
   const parsed = vehicleInput.safeParse(raw);
   if (!parsed.success) {
@@ -103,33 +84,15 @@ export async function changeVehiclePhoto(
   formData: FormData,
 ): Promise<PhotoState> {
   const user = await requireUser();
-  if (!(await isEmailVerified(user.id))) return { error: CONFIRM_EMAIL_FIRST };
-  const photo = readPhoto(formData);
-  if (!photo) return { error: "Choose a photo first." };
-  if ("error" in photo) return { error: photo.error };
-
-  let path: string;
-  try {
-    path = await uploadVehiclePhoto(user.id, vehicleId, photo);
-  } catch {
-    return { error: "The photo didn't upload. Try again." };
-  }
-
-  const oldPath = await setVehiclePhoto(user.id, vehicleId, path);
-  if (oldPath === undefined) {
-    await deleteVehiclePhoto(path);
-    return { error: "That car wasn't found." };
-  }
-  if (oldPath) await deleteVehiclePhoto(oldPath);
-
+  const error = await replaceVehiclePhoto(user.id, vehicleId, formData);
+  if (error) return { error };
   revalidatePath(`/garage/${vehicleId}`);
   return { ok: true };
 }
 
 export async function removeVehiclePhoto(vehicleId: string) {
   const user = await requireUser();
-  const oldPath = await setVehiclePhoto(user.id, vehicleId, null);
-  if (oldPath) await deleteVehiclePhoto(oldPath);
+  await clearVehiclePhoto(user.id, vehicleId);
   revalidatePath(`/garage/${vehicleId}`);
 }
 
@@ -137,12 +100,9 @@ export async function removeVehicle(vehicleId: string, formData: FormData) {
   const user = await requireUser();
   const car = await getVehicle(user.id, vehicleId);
   if (!car) redirect("/garage");
-  // The form asks for the car's name (or "DELETE") so it can't be removed by a stray click.
-  const typed = String(formData.get("confirm") ?? "")
-    .trim()
-    .toLowerCase();
-  const name = (car.nickname ?? vehicleName(car)).toLowerCase();
-  if (typed !== name && typed !== "delete") redirect(`/garage/${vehicleId}?remove=mismatch`);
+  if (!removalConfirmed(car, String(formData.get("confirm") ?? ""))) {
+    redirect(`/garage/${vehicleId}?remove=mismatch`);
+  }
 
   await deleteVehicle(user.id, vehicleId);
   updateTag(FEATURED_BUILD_TAG);

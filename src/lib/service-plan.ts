@@ -59,14 +59,29 @@ export const DEFAULT_ANSWERS: DrivingAnswers = {
 
 // Anything unrecognized falls back to the default rather than blocking the save.
 export function readAnswers(formData: FormData): DrivingAnswers {
-  const pick = <T extends string>(name: string, options: readonly { value: T }[], fallback: T) =>
-    options.find((o) => o.value === formData.get(name))?.value ?? fallback;
-  const picked = formData.getAll("conditions");
+  return pickAnswers({
+    driving: formData.get("driving"),
+    roads: formData.get("roads"),
+    conditions: formData.getAll("conditions"),
+    caution: formData.get("caution"),
+  });
+}
+
+// Anything unrecognized falls back to the defaults.
+export function pickAnswers(raw: {
+  driving?: unknown;
+  roads?: unknown;
+  conditions?: unknown;
+  caution?: unknown;
+}): DrivingAnswers {
+  const pick = <T extends string>(value: unknown, options: readonly { value: T }[], fallback: T) =>
+    options.find((o) => o.value === value)?.value ?? fallback;
+  const picked: unknown[] = Array.isArray(raw.conditions) ? raw.conditions : [];
   return {
-    driving: pick("driving", DRIVING_OPTIONS, DEFAULT_ANSWERS.driving),
-    roads: pick("roads", ROAD_OPTIONS, DEFAULT_ANSWERS.roads),
+    driving: pick(raw.driving, DRIVING_OPTIONS, DEFAULT_ANSWERS.driving),
+    roads: pick(raw.roads, ROAD_OPTIONS, DEFAULT_ANSWERS.roads),
     conditions: CONDITION_OPTIONS.map((c) => c.value).filter((c) => picked.includes(c)),
-    caution: pick("caution", CAUTION_OPTIONS, DEFAULT_ANSWERS.caution),
+    caution: pick(raw.caution, CAUTION_OPTIONS, DEFAULT_ANSWERS.caution),
   };
 }
 

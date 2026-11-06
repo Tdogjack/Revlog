@@ -3,10 +3,16 @@ import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { photos } from "@/db/schema";
 import { getMod } from "@/lib/mods";
-import { deleteVehiclePhoto, signedPhotoUrls, uploadVehiclePhoto } from "@/lib/photos";
+import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
+import {
+  deleteVehiclePhoto,
+  readPhoto,
+  signedPhotoUrls,
+  uploadVehiclePhoto,
+} from "@/lib/photos";
 import { getServiceRecord } from "@/lib/service-records";
 import { createClient } from "@/lib/supabase/server";
-import { getVehicle, isUuid } from "@/lib/vehicles";
+import { getVehicle, isUuid, setVehiclePhoto } from "@/lib/vehicles";
 
 // Where a photo belongs: the car's build library, one mod, or one service
 // record (receipts).
@@ -84,6 +90,58 @@ export async function addPhoto(userId: string, vehicleId: string, target: PhotoT
     storagePath: path,
   });
   return null;
+}
+
+function readTarget(kind: string, id: string | null): PhotoTarget | null {
+  if (kind === "build") return { kind: "build" };
+  if ((kind === "mod" || kind === "record") && id && isUuid(id)) return { kind, id };
+  return null;
+}
+
+// Handles one uploaded photo. Returns an error message, or null once saved.
+export async function saveUploadedPhoto(
+  userId: string,
+  vehicleId: string,
+  kind: string,
+  targetId: string | null,
+  formData: FormData,
+) {
+  if (!(await isEmailVerified(userId))) return CONFIRM_EMAIL_FIRST;
+  const target = readTarget(kind, targetId);
+  if (!target) return "That photo doesn't have a place to go.";
+  const photo = readPhoto(formData);
+  if (!photo) return "Choose a photo first.";
+  if ("error" in photo) return photo.error;
+  return addPhoto(userId, vehicleId, target, photo);
+}
+
+// Swaps the car's main photo. Returns an error message, or null once saved.
+export async function replaceVehiclePhoto(userId: string, vehicleId: string, formData: FormData) {
+  if (!(await isEmailVerified(userId))) return CONFIRM_EMAIL_FIRST;
+  const photo = readPhoto(formData);
+  if (!photo) return "Choose a photo first.";
+  if ("error" in photo) return photo.error;
+  if (!(await getVehicle(userId, vehicleId))) return "That car wasn't found.";
+
+  let path: string;
+  try {
+    path = await uploadVehiclePhoto(userId, vehicleId, photo);
+  } catch {
+    return "The photo didn't upload. Try again.";
+  }
+
+  const oldPath = await setVehiclePhoto(userId, vehicleId, path);
+  if (oldPath === undefined) {
+    await deleteVehiclePhoto(path);
+    return "That car wasn't found.";
+  }
+  if (oldPath) await deleteVehiclePhoto(oldPath);
+  return null;
+}
+
+export async function clearVehiclePhoto(userId: string, vehicleId: string) {
+  const oldPath = await setVehiclePhoto(userId, vehicleId, null);
+  if (oldPath) await deleteVehiclePhoto(oldPath);
 }
 
 export async function deletePhoto(userId: string, photoId: string) {

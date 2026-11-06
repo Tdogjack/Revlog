@@ -204,3 +204,30 @@ export function evaluateReminder(
 
   return { status, milesLeft, daysLeft };
 }
+
+// Each reminder counted from its latest matching service record, or the car's
+// age if it's never been done; most urgent first.
+export function rankReminders<
+  R extends ReminderInput & { vehicleId: string; serviceCategory: string | null; createdAt: Date },
+>(
+  rows: R[],
+  car: { year: number; vin: string | null; builtOn?: string | null; currentMileage: number },
+  services: ServiceDate[],
+  options: ReminderOptions = {},
+) {
+  return rows
+    .map((row) => withCarAgeStart(withLastService(row, services), car))
+    .map((reminder) => ({
+      reminder,
+      result: evaluateReminder(reminder, car.currentMileage, undefined, options),
+    }))
+    .sort((a, b) => STATUS_RANK[a.result.status] - STATUS_RANK[b.result.status]);
+}
+
+// A car's most urgent reminder status, and how many reminders share it.
+export function carUrgency(results: { result: ReminderResult }[]) {
+  const [first] = results;
+  if (!first) return null;
+  const { status } = first.result;
+  return { status, count: results.filter((r) => r.result.status === status).length };
+}

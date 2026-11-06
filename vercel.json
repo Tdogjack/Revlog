@@ -1,6 +1,13 @@
 {
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . \":(exclude)mobile\"",
   "crons": [
-    { "path": "/api/cron/prices", "schedule": "0 14 * * *" },
-    { "path": "/api/cron/reminders", "schedule": "0 15 * * *" }
+    {
+      "path": "/api/cron/prices",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 15 * * *"
+    }
   ]
 }
