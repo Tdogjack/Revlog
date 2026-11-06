@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import type { CarDetail, CarRecord, CarReminder } from "@revlog/api";
+import type { CarDetail, CarMod, CarRecord, CarReminder, ModStatus } from "@revlog/api";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -146,6 +146,50 @@ function ReminderRow({ carId, reminder }: { carId: string; reminder: CarReminder
   );
 }
 
+const modStatus: Record<ModStatus, { label: string; color: string }> = {
+  installed: { label: "Installed", color: colors.done },
+  planned: { label: "Planned", color: colors.chalk },
+  removed: { label: "Removed", color: colors.steel },
+};
+
+function ModRow({ carId, mod }: { carId: string; mod: CarMod }) {
+  const facts = [
+    mod.categoryLabel,
+    mod.cost ? formatMoney(mod.cost) : null,
+    mod.installedOn ? formatDate(mod.installedOn) : null,
+    mod.parts.length > 0
+      ? `${mod.parts.length} ${mod.parts.length === 1 ? "part" : "parts"}`
+      : null,
+  ].filter(Boolean);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Edit ${mod.part}`}
+      style={({ pressed }) => [styles.mod, pressed && styles.modPressed]}
+      onPress={() => router.push(`/car/${carId}/mods/${mod.id}`)}
+    >
+      <View style={styles.modHead}>
+        <Text style={styles.rowTitle}>{mod.brand ? `${mod.brand} ${mod.part}` : mod.part}</Text>
+        <Text style={[styles.modStatus, { color: modStatus[mod.status].color }]}>
+          {modStatus[mod.status].label}
+        </Text>
+      </View>
+      <Text style={styles.rowDetail}>{facts.join(", ")}</Text>
+    </Pressable>
+  );
+}
+
+function BuildStat({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 function RecordRow({
   carId,
   record,
@@ -243,6 +287,11 @@ export default function Car() {
 
   const logService = () => router.push(`/car/${id}/service/new`);
   const addReminder = () => router.push(`/car/${id}/reminders/new`);
+  const addMod = () =>
+    router.push({
+      pathname: "/car/[id]/mods/new",
+      params: { id, mileage: String(car.currentMileage) },
+    });
   const updateMileage = () =>
     router.push({
       pathname: "/car/[id]/mileage",
@@ -250,6 +299,9 @@ export default function Car() {
     });
 
   const buildPhotos = car.photos.filter((p) => !p.recordId && !p.modId);
+  const sumCost = (mods: CarMod[]) => mods.reduce((sum, m) => sum + Number(m.cost ?? 0), 0);
+  const installed = car.mods.filter((m) => m.status === "installed");
+  const planned = car.mods.filter((m) => m.status === "planned");
 
   return (
     <>
@@ -334,13 +386,16 @@ export default function Car() {
             accessibilityLabel={`Update mileage, now ${formatMiles(car.currentMileage)}`}
             onPress={updateMileage}
           >
-            <Odometer miles={car.currentMileage} large />
+            <View style={styles.odometerRow}>
+              <Odometer miles={car.currentMileage} large />
+              <Feather name="edit-2" size={18} color={colors.steel} />
+            </View>
           </Pressable>
 
           <View style={styles.quickActions}>
             <QuickAction icon="tool" label="Log service" onPress={logService} />
+            <QuickAction icon="zap" label="Add mod" onPress={addMod} />
             <QuickAction icon="bell" label="Add reminder" onPress={addReminder} />
-            <QuickAction icon="edit-2" label="Mileage" onPress={updateMileage} />
           </View>
 
           <Section title="Reminders">
@@ -356,6 +411,29 @@ export default function Car() {
                   <ReminderRow key={r.id} carId={id} reminder={r} />
                 ))}
               </View>
+            )}
+          </Section>
+
+          <Section title="Build" action={{ label: "Add", onPress: addMod }}>
+            {car.mods.length === 0 ? (
+              <EmptyState
+                title="No mods yet"
+                body="Add parts you've installed, or plan your next build."
+                action={<Button label="Add a mod" kind="secondary" onPress={addMod} />}
+              />
+            ) : (
+              <>
+                <View style={styles.stats}>
+                  <BuildStat value={String(installed.length)} label="Installed" />
+                  <BuildStat value={formatMoney(String(sumCost(installed)))} label="Spent" />
+                  <BuildStat value={formatMoney(String(sumCost(planned)))} label="Planned" />
+                </View>
+                <View style={styles.panel}>
+                  {car.mods.map((m) => (
+                    <ModRow key={m.id} carId={id} mod={m} />
+                  ))}
+                </View>
+              </>
             )}
           </Section>
 
@@ -434,6 +512,7 @@ const styles = StyleSheet.create({
     gap: space.lg,
     backgroundColor: colors.asphalt,
   },
+  odometerRow: { flexDirection: "row", alignItems: "center", gap: space.md },
   quickActions: { flexDirection: "row", gap: space.sm },
   quickAction: {
     flex: 1,
@@ -472,6 +551,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.amber,
   },
   swipeLabel: { color: colors.onAmber, fontFamily: fonts.bold, fontSize: 14 },
+  stats: { flexDirection: "row", gap: space.sm },
+  stat: {
+    flex: 1,
+    gap: 2,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.rule,
+  },
+  statValue: { color: colors.chalk, fontFamily: fonts.mono, fontSize: 16, lineHeight: 22 },
+  statLabel: { color: colors.steel, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  mod: {
+    gap: 2,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.edge,
+  },
+  modPressed: { backgroundColor: colors.graphite },
+  modHead: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
+  modStatus: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 22 },
   record: { flexDirection: "row", gap: space.md },
   rail: { width: 12, alignItems: "center", paddingTop: 6 },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.edge },

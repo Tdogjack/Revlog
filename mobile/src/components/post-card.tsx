@@ -1,13 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { FeedPost } from "@revlog/api";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { PhotoPager } from "@/components/photo-pager";
 import { Avatar } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { formatDay } from "@/lib/format";
 import { tapFeedback } from "@/lib/haptics";
-import { colors, fonts, radius, space } from "@/lib/theme";
+import { colors, fonts, space } from "@/lib/theme";
 
 export function LikeButton({
   post,
@@ -59,7 +59,7 @@ export function PostCard({
   post: FeedPost;
   onChange: (post: FeedPost) => void;
 }) {
-  const [cover] = post.photos;
+  const open = () => router.push(`/post/${post.id}`);
   return (
     <View style={styles.card}>
       <View style={styles.byline}>
@@ -74,21 +74,13 @@ export function PostCard({
         </Pressable>
         <Text style={styles.meta}>{formatDay(post.createdAt)}</Text>
       </View>
+      {post.photos.length > 0 && <PhotoPager photos={post.photos} rounded onPress={open} />}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={post.title}
         style={({ pressed }) => [styles.main, pressed && styles.pressed]}
-        onPress={() => router.push(`/post/${post.id}`)}
+        onPress={open}
       >
-        {cover && (
-          <Image
-            source={{ uri: cover.url }}
-            style={styles.photo}
-            contentFit="cover"
-            transition={150}
-            accessibilityIgnoresInvertColors
-          />
-        )}
         <Text style={styles.title}>{post.title}</Text>
         <Text style={styles.meta}>
           {post.carName}, {post.tagLabel}
@@ -130,13 +122,6 @@ const styles = StyleSheet.create({
   username: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 15, lineHeight: 20 },
   main: { gap: space.xs },
   pressed: { opacity: 0.7 },
-  photo: {
-    width: "100%",
-    aspectRatio: 4 / 3,
-    borderRadius: radius.lg,
-    backgroundColor: colors.panel,
-    marginBottom: space.sm,
-  },
   title: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 19, lineHeight: 25 },
   meta: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
   stats: { flexDirection: "row", gap: space.xl },

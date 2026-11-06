@@ -22,14 +22,18 @@ export function Screen({
   children,
   refreshControl,
   scrollRef,
+  avoidKeyboard = true,
 }: {
   children: ReactNode;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   scrollRef?: React.Ref<React.ComponentRef<typeof ScrollView>>;
+  // Off when something pinned below the screen moves with the keyboard instead.
+  avoidKeyboard?: boolean;
 }) {
   return (
     <KeyboardAvoidingView
       style={styles.fill}
+      enabled={avoidKeyboard}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView

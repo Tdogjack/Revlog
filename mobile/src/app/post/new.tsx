@@ -1,6 +1,6 @@
 import type { CommunityOptions, GarageCar, Me } from "@revlog/api";
 import { Image } from "expo-image";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { Field, SelectField } from "@/components/fields";
@@ -16,9 +16,11 @@ export default function NewPost() {
   const cars = useApi<GarageCar[]>("/vehicles");
   const options = useApi<CommunityOptions>("/community/options");
   const me = useApi<Me>("/me");
-  const [vehicleId, setVehicleId] = useState("");
-  const [tag, setTag] = useState("progress");
-  const [title, setTitle] = useState("");
+  // Sharing a mod from its page starts with that car and mod filled in.
+  const shared = useLocalSearchParams<{ vehicleId?: string; modId?: string; title?: string }>();
+  const [vehicleId, setVehicleId] = useState(shared.vehicleId ?? "");
+  const [tag, setTag] = useState(shared.modId ? "mod" : "progress");
+  const [title, setTitle] = useState(shared.title ?? "");
   const [body, setBody] = useState("");
   const [photos, setPhotos] = useState<ChosenPhoto[]>([]);
   const [carError, setCarError] = useState<string | null>(null);
@@ -71,7 +73,7 @@ export default function NewPost() {
     try {
       const { id } = await api<{ id: string }>("/community/posts", {
         method: "POST",
-        body: { vehicleId: carId, tag, title, body },
+        body: { vehicleId: carId, modId: shared.modId, tag, title, body },
       });
       // The post is live now, so a failed photo doesn't lose it.
       let failed = 0;

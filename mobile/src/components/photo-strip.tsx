@@ -20,12 +20,19 @@ import { colors, fonts, space } from "@/lib/theme";
 
 const THUMB = 104;
 
-// Photos for a car, or for one service record with `targetId`.
+const hints = {
+  build: "Keep a visual record of the build.",
+  record: "Keep the receipt with the record.",
+  mod: "Before and after, or the parts themselves.",
+};
+
+// Photos for a car, or for one service record or mod with `kind` and `targetId`.
 export function PhotoStrip({
   carId,
   photos,
   limit,
   canUpload,
+  kind = "record",
   targetId,
   onChange,
 }: {
@@ -33,6 +40,7 @@ export function PhotoStrip({
   photos: CarPhoto[];
   limit: number;
   canUpload: boolean;
+  kind?: "record" | "mod";
   targetId?: string;
   onChange: () => void;
 }) {
@@ -50,7 +58,7 @@ export function PhotoStrip({
     }
     try {
       const form = await choosePhotoForm(
-        targetId ? { kind: "record", targetId } : { kind: "build" },
+        targetId ? { kind, targetId } : { kind: "build" },
       );
       if (!form) return;
       setUploading(true);
@@ -144,7 +152,7 @@ export function PhotoStrip({
       </Modal>
       {photos.length === 0 && (
         <Body style={styles.hint}>
-          {targetId ? "Keep the receipt with the record." : "Keep a visual record of the build."}
+          {hints[targetId ? kind : "build"]}
         </Body>
       )}
     </>
