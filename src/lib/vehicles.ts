@@ -58,6 +58,27 @@ export const vehicleInput = z.object({
 
 export type VehicleInput = z.infer<typeof vehicleInput>;
 
+const VEHICLE_FIELDS = [
+  "year",
+  "make",
+  "model",
+  "trim",
+  "nickname",
+  "vin",
+  "currentMileage",
+  "builtMonth",
+  "builtYear",
+];
+
+// The build date is picked as a month and year, and stored as the 1st of that month.
+export function readVehicleFields(read: (key: string) => unknown) {
+  const raw = Object.fromEntries(VEHICLE_FIELDS.map((k) => [k, String(read(k) ?? "")]));
+  const month = raw.builtMonth.trim();
+  const year = raw.builtYear.trim();
+  raw.builtOn = month || year ? `${year}-${month}-01` : "";
+  return raw;
+}
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Ids come from the URL; anything that isn't a uuid would make Postgres error.
@@ -186,6 +207,10 @@ export async function updateVehicle(userId: string, id: string, input: VehicleIn
 
 export const mileageInput = wholeNumber("mileage", 0, 2_000_000);
 
+// The owner's local date when one was sent and looks right.
+export const localDateOrToday = (value: unknown) =>
+  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+
 // `readOn` is the owner's local date when the browser sends one.
 export async function setVehicleMileage(
   userId: string,
@@ -232,6 +257,15 @@ export async function setVehiclePhoto(userId: string, id: string, photoPath: str
     .set({ photoPath })
     .where(and(eq(vehicles.id, id), eq(vehicles.userId, userId)));
   return existing.photoPath;
+}
+
+// The owner types the car's name (or "DELETE") so it can't be removed by a stray tap.
+export function removalConfirmed(
+  car: { year: number; make: string; model: string; trim: string | null; nickname: string | null },
+  typed: string,
+) {
+  const answer = typed.trim().toLowerCase();
+  return answer === (car.nickname ?? vehicleName(car)).toLowerCase() || answer === "delete";
 }
 
 export function vehicleName(v: { year: number; make: string; model: string; trim: string | null }) {

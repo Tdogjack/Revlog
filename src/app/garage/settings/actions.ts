@@ -1,15 +1,13 @@
 "use server";
 
-import { sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
+import { removeAccount } from "@/lib/account";
 import { requireUser } from "@/lib/auth";
 import { emailConfigured, sendEmail } from "@/lib/email";
 import { setReminderEmails, setReminderPercent } from "@/lib/email-settings";
 import { isEmailVerified, sendVerificationEmail } from "@/lib/email-verification";
 import { testEmail } from "@/lib/email-templates";
-import { deleteAllPhotos } from "@/lib/photos";
 import { siteUrl } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
@@ -70,18 +68,8 @@ export async function deleteAccount(
   formData: FormData,
 ): Promise<SettingsState> {
   const user = await requireUser();
-  if (String(formData.get("confirm") ?? "").trim() !== "DELETE") {
-    return { error: "Type DELETE to confirm." };
-  }
-
-  try {
-    await deleteAllPhotos(user.id);
-  } catch {
-    return { error: "Couldn't remove your photos. Try again." };
-  }
-  // Every table references auth.users with ON DELETE CASCADE, so this removes
-  // all of the user's cars, records, mods, reminders, parts, and settings.
-  await db.execute(sql`delete from auth.users where id = ${user.id}`);
+  const error = await removeAccount(user.id, String(formData.get("confirm") ?? ""));
+  if (error) return { error };
 
   // The user is gone on the server, so just clear this browser's session.
   const supabase = await createClient();

@@ -11,13 +11,7 @@ import { buildMileageTimeline } from "@/lib/mileage-timeline";
 import { listModInstalls } from "@/lib/mods";
 import { signedPhotoUrls } from "@/lib/photos";
 import { listAllReminders } from "@/lib/reminder-store";
-import {
-  evaluateReminder,
-  STATUS_RANK,
-  withCarAgeStart,
-  withLastService,
-  type ReminderStatus,
-} from "@/lib/reminders";
+import { carUrgency, rankReminders } from "@/lib/reminders";
 import { listServiceDates } from "@/lib/service-records";
 import { listMileageReadings, listVehicles, vehicleName } from "@/lib/vehicles";
 import { reorderVehicle, toggleFavorite } from "./actions";
@@ -55,23 +49,19 @@ async function VehicleList() {
   const options = { dueSoonPercent: settings.reminderPercent };
 
   // The most urgent reminder status for each car, and how many share it.
-  const urgency = new Map<string, { status: ReminderStatus; count: number }>();
-  for (const car of cars) {
-    for (const r of allReminders.filter((r) => r.vehicleId === car.id)) {
-      const { status } = evaluateReminder(
-        withCarAgeStart(withLastService(r, serviceDates), car),
-        car.currentMileage,
-        undefined,
-        options,
-      );
-      const current = urgency.get(car.id);
-      if (!current || STATUS_RANK[status] < STATUS_RANK[current.status]) {
-        urgency.set(car.id, { status, count: 1 });
-      } else if (status === current.status) {
-        current.count++;
-      }
-    }
-  }
+  const urgency = new Map(
+    cars.map((car) => [
+      car.id,
+      carUrgency(
+        rankReminders(
+          allReminders.filter((r) => r.vehicleId === car.id),
+          car,
+          serviceDates,
+          options,
+        ),
+      ),
+    ]),
+  );
 
   // A small odometer trace for each car with enough history to draw one.
   const timelines = new Map(

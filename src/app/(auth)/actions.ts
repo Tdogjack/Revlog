@@ -2,13 +2,17 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { sendVerificationEmail } from "@/lib/email-verification";
+import {
+  registerAccount,
+  signInWithPassword,
+  USERNAME_TAKEN,
+  usernameProblem,
+} from "@/lib/account";
 import { checkPassword } from "@/lib/password-rules";
-import { createProfile, usernameTaken } from "@/lib/profiles";
+import { createProfile } from "@/lib/profiles";
 import { RESET_COOKIE } from "@/lib/reset-cookie";
 import { createClient } from "@/lib/supabase/server";
-import { hasBlockedWords } from "@/lib/text-filter";
-import { checkUsername, normalizeUsername } from "@/lib/username-rules";
+import { normalizeUsername } from "@/lib/username-rules";
 
 export type AuthState =
   { error?: string; message?: string; values?: Record<string, string> } | undefined;
@@ -30,74 +34,26 @@ function safeNext(value: FormDataEntryValue | null) {
   return next.startsWith("/") && !next.startsWith("//") ? next : "/garage";
 }
 
-const EMAIL_TAKEN = "An account with that email already exists. Log in instead.";
-
-const offensiveName = (username: string) =>
-  hasBlockedWords(username) ? "That username isn't allowed. Try another." : null;
-
-const USERNAME_TAKEN = "That username is taken. Try another.";
-
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const { email, password } = readCredentials(formData);
   const username = normalizeUsername(String(formData.get("username") ?? ""));
   const values = { email, username };
-  if (!email || !password || !username) {
-    return { error: "Enter a username, your email, and a password.", values };
-  }
-  const badName = checkUsername(username) ?? offensiveName(username);
-  if (badName) return { error: badName, values };
-  if (formData.get("agree") !== "on") {
-    return { error: "Agree to the Terms and Privacy Policy to create an account.", values };
-  }
-  const weak = checkPassword(password);
-  if (weak) return { error: weak, values };
-  if (await usernameTaken(username)) return { error: USERNAME_TAKEN, values };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${await siteOrigin()}/auth/callback`,
-      data: { terms_accepted_at: new Date().toISOString() },
-    },
-  });
-  if (error) {
-    if (error.code === "user_already_exists") return { error: EMAIL_TAKEN, values };
-    return { error: error.message, values };
-  }
-
-  // With email confirmation on, Supabase doesn't error for a taken email; it
-  // returns a placeholder user with no identities instead.
-  if (!data.user || data.user.identities?.length === 0) return { error: EMAIL_TAKEN, values };
-
-  // If someone grabbed the name in the meantime, the account still works and
-  // the garage asks for a new username on first visit.
-  await createProfile(data.user.id, username);
-
-  // With email confirmation on in Supabase, there's no session until the link
-  // is clicked.
-  if (!data.session) {
+  const result = await registerAccount(
+    await createClient(),
+    { email, password, username, agreed: formData.get("agree") === "on" },
+    await siteOrigin(),
+  );
+  if ("error" in result) return { error: result.error, values };
+  if (!result.session) {
     return { message: "Check your email for a link to confirm your account." };
   }
-  // The account works now; confirming the email unlocks photos and scans.
-  await sendVerificationEmail(email);
   redirect("/garage");
 }
 
 export async function signIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const { email, password } = readCredentials(formData);
-  if (!email || !password) return { error: "Enter your email and password." };
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    if (error.code === "email_not_confirmed") {
-      return { error: "Confirm your email first. Check your inbox for the link." };
-    }
-    return { error: "That email and password don't match. Try again." };
-  }
-
+  const result = await signInWithPassword(await createClient(), email, password);
+  if ("error" in result) return { error: result.error };
   redirect(safeNext(formData.get("next")));
 }
 
@@ -163,7 +119,7 @@ export async function chooseUsername(_prev: AuthState, formData: FormData): Prom
 
   const username = normalizeUsername(String(formData.get("username") ?? ""));
   const values = { username };
-  const badName = checkUsername(username) ?? offensiveName(username);
+  const badName = usernameProblem(username);
   if (badName) return { error: badName, values };
   if (!(await createProfile(user.id, username))) return { error: USERNAME_TAKEN, values };
   redirect(safeNext(formData.get("next")));

@@ -19,10 +19,7 @@ import { listReminders } from "@/lib/reminder-store";
 import {
   describeDue,
   dueLimits,
-  evaluateReminder,
-  STATUS_RANK,
-  withCarAgeStart,
-  withLastService,
+  rankReminders,
 } from "@/lib/reminders";
 import { categoryLabel } from "@/lib/service-categories";
 import { listServiceRecords } from "@/lib/service-records";
@@ -149,15 +146,9 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
     carParts.filter((p) => p[key] === id);
   // Each reminder counts from its latest matching service record, or the
   // car's age if it's never been done; most urgent first.
-  const carReminders = reminderRows
-    .map((row) => withCarAgeStart(withLastService(row, records), car))
-    .map((reminder) => ({
-      reminder,
-      result: evaluateReminder(reminder, car.currentMileage, undefined, {
-        dueSoonPercent: settings.reminderPercent,
-      }),
-    }))
-    .sort((a, b) => STATUS_RANK[a.result.status] - STATUS_RANK[b.result.status]);
+  const carReminders = rankReminders(reminderRows, car, records, {
+    dueSoonPercent: settings.reminderPercent,
+  });
   const photoUrl = car.photoPath ? photos.get(car.photoPath) : null;
   const sumCost = (items: { cost: string | null }[]) =>
     items.reduce((sum, i) => sum + (i.cost ? Number(i.cost) : 0), 0);
