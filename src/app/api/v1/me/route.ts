@@ -3,6 +3,7 @@ import { hasAiConsent } from "@/lib/ai-consent";
 import { authed, fail, ok, readBody } from "@/lib/api";
 import type { Me } from "@/lib/api-types";
 import { isEmailVerified } from "@/lib/email-verification";
+import { isModerator } from "@/lib/moderation";
 import { getProfile } from "@/lib/profiles";
 
 export const GET = authed(async ({ user }) => {
@@ -17,6 +18,7 @@ export const GET = authed(async ({ user }) => {
     username: profile?.username ?? null,
     emailVerified,
     aiConsent,
+    moderator: isModerator(user.id),
   });
 });
 

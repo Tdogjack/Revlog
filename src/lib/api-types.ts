@@ -11,6 +11,7 @@ export type Me = {
   username: string | null;
   emailVerified: boolean;
   aiConsent: boolean;
+  moderator: boolean;
 };
 
 export type GarageCar = {
@@ -74,3 +75,65 @@ export type CarDetail = {
 };
 
 export type ServiceType = { value: string; label: string };
+
+export type FeedPost = {
+  id: string;
+  userId: string;
+  username: string;
+  tag: string;
+  tagLabel: string;
+  title: string;
+  body: string | null;
+  createdAt: string;
+  carName: string;
+  modName: string | null;
+  photos: { id: string; url: string }[];
+  likeCount: number;
+  commentCount: number;
+  liked: boolean;
+};
+
+export type PostComment = {
+  id: string;
+  userId: string;
+  username: string;
+  body: string;
+  createdAt: string;
+};
+
+export type PostDetail = {
+  post: FeedPost;
+  comments: PostComment[];
+  parts: string[];
+};
+
+export type Feed = { posts: FeedPost[]; hasMore: boolean };
+
+export type CommunityProfile = {
+  userId: string;
+  username: string;
+  isOwn: boolean;
+  blocked: boolean;
+  suspended: boolean;
+  posts: FeedPost[];
+};
+
+export type BlockedUser = { userId: string; username: string };
+
+export type ReportKind = "post" | "comment" | "user";
+
+export type OpenReport = {
+  id: string;
+  createdAt: string;
+  targetType: ReportKind;
+  targetId: string;
+  reportedUserId: string | null;
+  reportedUsername: string;
+  contentSnapshot: string | null;
+  reason: string;
+  details: string | null;
+  reporter: string | null;
+  gone: boolean;
+};
+
+export type ModerationQueue = { reports: OpenReport[]; suspended: BlockedUser[] };
