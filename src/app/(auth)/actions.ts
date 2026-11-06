@@ -127,6 +127,7 @@ export async function chooseUsername(_prev: AuthState, formData: FormData): Prom
 
 export async function signOut() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  // Only this browser. The default would also sign the phone app out.
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/");
 }

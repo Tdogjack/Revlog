@@ -1,5 +1,6 @@
 import "server-only";
 import type { User } from "@supabase/supabase-js";
+import { unstable_rethrow } from "next/navigation";
 import { NextResponse, type NextRequest } from "next/server";
 import { getUser } from "@/lib/auth";
 import { isUuid } from "@/lib/vehicles";
@@ -37,6 +38,8 @@ export function authed<P extends Record<string, string> = Record<string, never>>
       if (!Object.values(params).every(isUuid)) return fail("That wasn't found.", 404);
       return await handler({ user, request, params });
     } catch (err) {
+      // Next.js signals that aren't failures, like a route being dynamic at build.
+      unstable_rethrow(err);
       console.error("API request failed", err);
       return fail("Something went wrong. Try again.", 500);
     }
