@@ -1,6 +1,8 @@
+import { File } from "expo-file-system";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { Alert, Linking } from "react-native";
+import { ApiError } from "@/lib/api";
 
 const MAX_EDGE = 1600;
 // The server's limit is 1 MB; these steps land under it for phone photos.
@@ -15,10 +17,9 @@ async function shrink(uri: string, width: number, height: number) {
   const image = await context.renderAsync();
   for (const compress of QUALITIES) {
     const result = await image.saveAsync({ format: SaveFormat.JPEG, compress });
-    const { size } = await fetch(result.uri).then((r) => r.blob());
-    if (size <= MAX_BYTES) return result.uri;
+    if (new File(result.uri).size <= MAX_BYTES) return result.uri;
   }
-  throw new Error("That photo is too large. Try a smaller one.");
+  throw new ApiError("That photo is too large. Try a smaller one.", 400);
 }
 
 function askForCamera() {
@@ -60,7 +61,10 @@ export async function choosePhotoForm(fields: Record<string, string> = {}) {
 
   const form = new FormData();
   for (const [key, value] of Object.entries(fields)) form.append(key, value);
-  // React Native's FormData takes a file description rather than a Blob.
-  form.append("photo", { uri, name: "photo.jpg", type: "image/jpeg" } as unknown as Blob);
+  // Expo's fetch reads any part with bytes() and refuses React Native's { uri }
+  // form. The type is set here because the server only accepts image types.
+  const file = new File(uri);
+  const part = { name: "photo.jpg", type: "image/jpeg", bytes: () => file.bytes() };
+  form.append("photo", part as unknown as Blob);
   return form;
 }

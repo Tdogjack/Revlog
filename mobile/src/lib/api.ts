@@ -21,7 +21,9 @@ export const setSignedOutHandler = (handler: () => void) => {
 async function send(path: string, init: RequestInit) {
   try {
     return await fetch(`${API_URL}${path}`, init);
-  } catch {
+  } catch (err) {
+    // A bad request body lands here too, so keep the real cause visible.
+    if (__DEV__) console.warn(`Request to ${path} failed`, err);
     throw new ApiError(OFFLINE, 0);
   }
 }
