@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import type { Me, PostComment, PostDetail } from "@revlog/api";
 import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useRef, useState } from "react";
+import { useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useContentMenu, type MenuTarget } from "@/components/content-menu";
 import { Field } from "@/components/fields";
@@ -61,7 +61,7 @@ function CommentRow({
 
 export default function Post() {
   const { id, comments } = useLocalSearchParams<{ id: string; comments?: string }>();
-  const scroller = useRef<ScrollView>(null);
+  const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
   const jumped = useRef(false);
   const { data, error, reload } = useApi<PostDetail>(`/community/posts/${id}`);
   const me = useApi<Me>("/me");

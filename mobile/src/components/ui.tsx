@@ -23,7 +23,7 @@ export function Screen({
 }: {
   children: ReactNode;
   refreshControl?: React.ReactElement<RefreshControlProps>;
-  scrollRef?: React.Ref<ScrollView>;
+  scrollRef?: React.Ref<React.ComponentRef<typeof ScrollView>>;
 }) {
   return (
     <KeyboardAvoidingView
