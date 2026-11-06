@@ -23,12 +23,15 @@ export function Screen({
   refreshControl,
   scrollRef,
   avoidKeyboard = true,
+  bottomSpace,
 }: {
   children: ReactNode;
   refreshControl?: React.ReactElement<RefreshControlProps>;
   scrollRef?: React.Ref<React.ComponentRef<typeof ScrollView>>;
   // Off when something pinned below the screen moves with the keyboard instead.
   avoidKeyboard?: boolean;
+  // Extra room under the content, for something floating over the page.
+  bottomSpace?: number;
 }) {
   return (
     <KeyboardAvoidingView
@@ -44,7 +47,9 @@ export function Screen({
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
       >
-        <View style={styles.column}>{children}</View>
+        <View style={[styles.column, bottomSpace != null && { paddingBottom: bottomSpace }]}>
+          {children}
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

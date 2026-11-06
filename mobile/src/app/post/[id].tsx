@@ -3,7 +3,7 @@ import type { Me, PostComment, PostDetail } from "@revlog/api";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { CommentBox } from "@/components/comment-box";
+import { CommentBox, useCommentBoxSpace } from "@/components/comment-box";
 import { useContentMenu, type MenuTarget } from "@/components/content-menu";
 import { PhotoPager } from "@/components/photo-pager";
 import { LikeButton } from "@/components/post-card";
@@ -59,6 +59,7 @@ function CommentRow({
 
 export default function Post() {
   const { id, comments } = useLocalSearchParams<{ id: string; comments?: string }>();
+  const commentBoxSpace = useCommentBoxSpace();
   const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
   const jumped = useRef(false);
   const { data, error, reload } = useApi<PostDetail>(`/community/posts/${id}`);
@@ -118,7 +119,7 @@ export default function Post() {
           ),
         }}
       />
-      <Screen scrollRef={scroller} avoidKeyboard={false}>
+      <Screen scrollRef={scroller} avoidKeyboard={false} bottomSpace={commentBoxSpace}>
         {post.photos.length > 0 && (
           <View style={styles.photos}>
             <PhotoPager photos={post.photos} />
