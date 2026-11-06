@@ -1,5 +1,6 @@
 import "server-only";
 import type { CarDetail, GarageCar, ServiceType } from "@/lib/api-types";
+import { getBuildPostId } from "@/lib/community";
 import { getEmailSettings } from "@/lib/email-settings";
 import { isEmailVerified } from "@/lib/email-verification";
 import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
@@ -44,9 +45,20 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
   const car = await getVehicle(userId, vehicleId);
   if (!car) return null;
 
-  const [records, mods, reminders, types, parts, gallery, settings, canUpload] = await Promise.all([
+  const [
+    records,
+    mods,
+    buildPostId,
+    reminders,
+    types,
+    parts,
+    gallery,
+    settings,
+    canUpload,
+  ] = await Promise.all([
     listServiceRecords(userId, car.id),
     listMods(userId, car.id),
+    getBuildPostId(userId, car.id),
     listReminders(userId, car.id),
     listServiceTypes(userId),
     listPartsForVehicle(userId, car.id),
@@ -116,6 +128,7 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
           priceError: p.lastCheckError,
         })),
     })),
+    buildPostId,
     photos: gallery.flatMap((p) => {
       const url = urls.get(p.storagePath);
       return url ? [{ id: p.id, url, recordId: p.serviceRecordId, modId: p.modId }] : [];

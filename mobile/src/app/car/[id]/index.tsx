@@ -435,6 +435,18 @@ export default function Car() {
                 </View>
               </>
             )}
+            {car.buildPostId && (
+              <Button
+                label="View public build"
+                kind="secondary"
+                onPress={() => router.push(`/post/${car.buildPostId}`)}
+              />
+            )}
+            <Button
+              label={car.buildPostId ? "Update public build" : "Post public build"}
+              kind="secondary"
+              onPress={() => router.push(`/car/${id}/build`)}
+            />
           </Section>
 
           <Section title="Service log">

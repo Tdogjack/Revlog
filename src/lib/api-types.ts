@@ -102,9 +102,24 @@ export type CarDetail = {
   reminders: CarReminder[];
   records: CarRecord[];
   mods: CarMod[];
+  buildPostId: string | null;
   photos: CarPhoto[];
   photoLimit: number;
   canUpload: boolean;
+};
+
+export type BuildDraft = {
+  post: {
+    id: string;
+    title: string;
+    body: string | null;
+    showParts: boolean;
+    photos: { id: string; url: string }[];
+  } | null;
+  defaultTitle: string;
+  partCount: number;
+  maxPhotos: number;
+  gallery: { id: string; url: string }[];
 };
 
 export type ServiceType = { value: string; label: string };

@@ -108,7 +108,7 @@ export default function NewPost() {
       <SelectField
         label="Type of post"
         value={tag}
-        // The car's public build is shared from the website.
+        // The car's public build is posted from its car page.
         options={options.data.tags.filter((t) => t.value !== "build")}
         onChange={setTag}
       />

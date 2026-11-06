@@ -80,6 +80,10 @@ function Routes() {
           options={{ title: "Add a mod", presentation: "modal" }}
         />
         <Stack.Screen name="car/[id]/mods/[modId]" options={{ title: "Edit mod" }} />
+        <Stack.Screen
+          name="car/[id]/build"
+          options={{ title: "Public build", presentation: "modal" }}
+        />
         <Stack.Screen name="post/[id]" options={{ title: "" }} />
         <Stack.Screen name="post/new" options={{ title: "Share a post", presentation: "modal" }} />
         <Stack.Screen name="user/[username]" options={{ title: "" }} />
