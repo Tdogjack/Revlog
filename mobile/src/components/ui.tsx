@@ -19,9 +19,11 @@ import { colors, fonts, MAX_WIDTH, space, statusStyles } from "@/lib/theme";
 export function Screen({
   children,
   refreshControl,
+  scrollRef,
 }: {
   children: ReactNode;
   refreshControl?: React.ReactElement<RefreshControlProps>;
+  scrollRef?: React.Ref<ScrollView>;
 }) {
   return (
     <KeyboardAvoidingView
@@ -29,6 +31,7 @@ export function Screen({
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
+        ref={scrollRef}
         style={styles.fill}
         contentContainerStyle={styles.scroll}
         contentInsetAdjustmentBehavior="automatic"

@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import type { Me, PostComment, PostDetail } from "@revlog/api";
 import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useContentMenu, type MenuTarget } from "@/components/content-menu";
 import { Field } from "@/components/fields";
@@ -60,7 +60,9 @@ function CommentRow({
 }
 
 export default function Post() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, comments } = useLocalSearchParams<{ id: string; comments?: string }>();
+  const scroller = useRef<ScrollView>(null);
+  const jumped = useRef(false);
   const { data, error, reload } = useApi<PostDetail>(`/community/posts/${id}`);
   const me = useApi<Me>("/me");
   const [draft, setDraft] = useState("");
@@ -116,7 +118,7 @@ export default function Post() {
           ),
         }}
       />
-      <Screen>
+      <Screen scrollRef={scroller}>
         {post.photos.length > 0 && (
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
             {post.photos.map((photo) => (
@@ -161,7 +163,16 @@ export default function Post() {
           </View>
         )}
 
-        <View style={styles.comments}>
+        <View
+          style={styles.comments}
+          onLayout={(event) => {
+            // Opened from a comment button: land on the thread, once.
+            if (comments && !jumped.current) {
+              jumped.current = true;
+              scroller.current?.scrollTo({ y: event.nativeEvent.layout.y, animated: false });
+            }
+          }}
+        >
           <Heading>Comments</Heading>
           {data.comments.length === 0 && (
             <Body style={styles.muted}>Be the first to comment.</Body>

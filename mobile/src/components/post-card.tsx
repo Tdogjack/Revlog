@@ -85,10 +85,18 @@ export function PostCard({
         <Text style={styles.meta}>{formatDay(post.createdAt)}</Text>
         <View style={styles.stats}>
           <LikeButton post={post} onChange={onChange} />
-          <View style={styles.stat} accessibilityLabel={`${post.commentCount} comments`}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Open comments, ${post.commentCount}`}
+            hitSlop={8}
+            style={styles.stat}
+            onPress={() =>
+              router.push({ pathname: "/post/[id]", params: { id: post.id, comments: "1" } })
+            }
+          >
             <Feather name="message-circle" size={18} color={colors.steel} />
             <Text style={styles.statText}>{post.commentCount}</Text>
-          </View>
+          </Pressable>
         </View>
       </View>
     </View>
