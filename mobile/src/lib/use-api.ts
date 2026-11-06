@@ -3,11 +3,13 @@ import { useCallback, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 
 // Loads each time the screen comes into view, so saved edits show on return.
-export function useApi<T>(path: string) {
+// A null path waits, for screens that only sometimes need the data.
+export function useApi<T>(path: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    if (!path) return;
     try {
       setData(await api<T>(path));
       setError(null);

@@ -1,9 +1,9 @@
-import type { CommunityOptions, GarageCar, Me } from "@revlog/api";
-import { Image } from "expo-image";
+import type { CarDetail, CommunityOptions, GarageCar, Me } from "@revlog/api";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { Field, SelectField } from "@/components/fields";
+import { PhotoChoice, PHOTO_CHOICE_SIZE } from "@/components/photo-choice";
 import { Body, Button, EmptyState, FormError, LoadFailed, Loading, Screen } from "@/components/ui";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { choosePhoto, type ChosenPhoto } from "@/lib/photos";
@@ -12,17 +12,67 @@ import { useApi } from "@/lib/use-api";
 
 const MAX_PHOTOS = 10;
 
+type Shared = { vehicleId?: string; modId?: string; title?: string };
+
+// A mod post offers that mod's photos first, then the rest of the build's.
+const shareablePhotos = (car: CarDetail, modId?: string) => {
+  const usable = car.photos.filter((p) => !p.recordId && (!modId || !p.modId || p.modId === modId));
+  return modId
+    ? [...usable.filter((p) => p.modId === modId), ...usable.filter((p) => p.modId !== modId)]
+    : usable;
+};
+
+function GaragePhotos({
+  carId,
+  modId,
+  picked,
+  onToggle,
+}: {
+  carId: string;
+  modId?: string;
+  picked: string[];
+  onToggle: (id: string) => void;
+}) {
+  const car = useApi<CarDetail>(`/vehicles/${carId}`);
+  if (!car.data) return null;
+  return shareablePhotos(car.data, modId).map((photo, i) => (
+    <PhotoChoice
+      key={photo.id}
+      url={photo.url}
+      chosen={picked.includes(photo.id)}
+      label={`Garage photo ${i + 1}`}
+      onPress={() => onToggle(photo.id)}
+    />
+  ));
+}
+
 export default function NewPost() {
+  // Sharing a mod from its page starts with that car, mod, and its photos.
+  const shared = useLocalSearchParams<Shared>();
+  const sharedCar = useApi<CarDetail>(
+    shared.modId && shared.vehicleId ? `/vehicles/${shared.vehicleId}` : null,
+  );
+  if (shared.modId && !sharedCar.data) {
+    return sharedCar.error ? (
+      <LoadFailed message={sharedCar.error} onRetry={sharedCar.reload} />
+    ) : (
+      <Loading />
+    );
+  }
+  const modPhotos = sharedCar.data?.photos.filter((p) => p.modId === shared.modId) ?? [];
+  return <PostForm shared={shared} initialPicked={modPhotos.map((p) => p.id)} />;
+}
+
+function PostForm({ shared, initialPicked }: { shared: Shared; initialPicked: string[] }) {
   const cars = useApi<GarageCar[]>("/vehicles");
   const options = useApi<CommunityOptions>("/community/options");
   const me = useApi<Me>("/me");
-  // Sharing a mod from its page starts with that car and mod filled in.
-  const shared = useLocalSearchParams<{ vehicleId?: string; modId?: string; title?: string }>();
   const [vehicleId, setVehicleId] = useState(shared.vehicleId ?? "");
   const [tag, setTag] = useState(shared.modId ? "mod" : "progress");
   const [title, setTitle] = useState(shared.title ?? "");
   const [body, setBody] = useState("");
   const [photos, setPhotos] = useState<ChosenPhoto[]>([]);
+  const [picked, setPicked] = useState(initialPicked.slice(0, MAX_PHOTOS));
   const [carError, setCarError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
@@ -45,14 +95,21 @@ export default function NewPost() {
   }
 
   const carId = vehicleId || (cars.data.length === 1 ? cars.data[0].id : "");
+  const full = photos.length + picked.length >= MAX_PHOTOS;
+  const noRoom = () => Alert.alert("No room left", `Posts can have up to ${MAX_PHOTOS} photos.`);
+  const togglePicked = (id: string) => {
+    if (picked.includes(id)) setPicked(picked.filter((p) => p !== id));
+    else if (full) noRoom();
+    else setPicked([...picked, id]);
+  };
 
   const addPhoto = async () => {
     if (me.data && !me.data.emailVerified) {
       Alert.alert("Confirm your email", "Confirm your email to add photos. Resend the link from Account.");
       return;
     }
-    if (photos.length >= MAX_PHOTOS) {
-      Alert.alert("No room left", `Posts can have up to ${MAX_PHOTOS} photos.`);
+    if (full) {
+      noRoom();
       return;
     }
     try {
@@ -73,7 +130,7 @@ export default function NewPost() {
     try {
       const { id } = await api<{ id: string }>("/community/posts", {
         method: "POST",
-        body: { vehicleId: carId, modId: shared.modId, tag, title, body },
+        body: { vehicleId: carId, modId: shared.modId, tag, title, body, photoIds: picked },
       });
       // The post is live now, so a failed photo doesn't lose it.
       let failed = 0;
@@ -103,6 +160,8 @@ export default function NewPost() {
         onChange={(value) => {
           setCarError(null);
           setVehicleId(value);
+          // Photos belong to a car, so a new car starts with none chosen.
+          if (value !== carId) setPicked([]);
         }}
       />
       <SelectField
@@ -133,33 +192,40 @@ export default function NewPost() {
           style={styles.add}
           onPress={addPhoto}
         >
-          <Text style={styles.addLabel}>Add photo</Text>
+          <Text style={styles.addLabel}>New photo</Text>
         </Pressable>
         {photos.map((photo, i) => (
-          <Pressable
+          <PhotoChoice
             key={photo.uri}
-            accessibilityRole="imagebutton"
-            accessibilityLabel={`Remove photo ${i + 1}`}
+            url={photo.uri}
+            chosen
+            label={`New photo ${i + 1}`}
             onPress={() => setPhotos((current) => current.filter((p) => p !== photo))}
-          >
-            <Image source={{ uri: photo.uri }} style={styles.thumb} contentFit="cover" />
-          </Pressable>
+          />
         ))}
+        {carId && (
+          <GaragePhotos
+            carId={carId}
+            modId={shared.modId}
+            picked={picked}
+            onToggle={togglePicked}
+          />
+        )}
       </ScrollView>
-      {photos.length > 0 && <Body style={styles.hint}>Tap a photo to remove it.</Body>}
+      <Body style={styles.hint}>
+        Tap photos to choose them. {photos.length + picked.length} of {MAX_PHOTOS} chosen.
+      </Body>
       <FormError message={error} />
       <Button label="Share post" busy={sharing} onPress={share} />
     </Screen>
   );
 }
 
-const THUMB = 84;
-
 const styles = StyleSheet.create({
   photos: { gap: space.sm },
   add: {
-    width: THUMB,
-    height: THUMB,
+    width: PHOTO_CHOICE_SIZE,
+    height: PHOTO_CHOICE_SIZE,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.edge,
@@ -167,6 +233,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 13 },
-  thumb: { width: THUMB, height: THUMB, borderRadius: 8, backgroundColor: colors.panel },
   hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },
 });

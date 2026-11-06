@@ -1,49 +1,15 @@
 import { Feather } from "@expo/vector-icons";
 import type { BuildDraft, CarDetail } from "@revlog/api";
-import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { Field } from "@/components/fields";
+import { PhotoChoice, PHOTO_CHOICE_SIZE } from "@/components/photo-choice";
 import { Body, Button, FormError, Heading, LoadFailed, Loading, Screen } from "@/components/ui";
 import { api, ApiError, errorMessage } from "@/lib/api";
-import { tapFeedback } from "@/lib/haptics";
 import { choosePhoto, type ChosenPhoto } from "@/lib/photos";
 import { colors, fonts, radius, space } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
-
-const THUMB = 96;
-
-function PhotoChoice({
-  url,
-  chosen,
-  label,
-  onPress,
-}: {
-  url: string;
-  chosen: boolean;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: chosen }}
-      accessibilityLabel={label}
-      onPress={() => {
-        tapFeedback();
-        onPress();
-      }}
-    >
-      <Image source={{ uri: url }} style={[styles.thumb, chosen && styles.thumbChosen]} contentFit="cover" />
-      {chosen && (
-        <View style={styles.check}>
-          <Feather name="check" size={14} color={colors.onAmber} />
-        </View>
-      )}
-    </Pressable>
-  );
-}
 
 function BuildForm({ carId, draft, canUpload }: { carId: string; draft: BuildDraft; canUpload: boolean }) {
   const updating = !!draft.post;
@@ -208,8 +174,8 @@ const styles = StyleSheet.create({
   toggleLabel: { flex: 1, color: colors.chalk, fontFamily: fonts.regular, fontSize: 16, lineHeight: 22 },
   photos: { gap: space.sm },
   add: {
-    width: THUMB,
-    height: THUMB,
+    width: PHOTO_CHOICE_SIZE,
+    height: PHOTO_CHOICE_SIZE,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.edge,
@@ -218,24 +184,4 @@ const styles = StyleSheet.create({
     gap: space.xs,
   },
   addLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 13 },
-  thumb: {
-    width: THUMB,
-    height: THUMB,
-    borderRadius: radius.md,
-    borderWidth: 2,
-    borderColor: "transparent",
-    backgroundColor: colors.panel,
-  },
-  thumbChosen: { borderColor: colors.amber },
-  check: {
-    position: "absolute",
-    top: space.xs,
-    right: space.xs,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.amber,
-  },
 });
