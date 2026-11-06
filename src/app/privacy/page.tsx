@@ -26,7 +26,16 @@ export default function PrivacyPage() {
           photos, reminders, custom service types, and parts with their links and prices.
         </li>
         <li>
-          <strong>Community posts:</strong> the title, text, and photos you choose to share.
+          <strong>Community activity:</strong> the posts and photos you share, your comments and
+          likes, and the accounts you block.
+        </li>
+        <li>
+          <strong>Reports:</strong> reports you send, including the reason and any details you add,
+          and reports about your content.
+        </li>
+        <li>
+          <strong>Your agreements:</strong> when you accepted the terms, and whether you&apos;ve
+          allowed AI scanning.
         </li>
         <li>
           <strong>Price history:</strong> for parts with price tracking on, the prices Revlog reads
@@ -50,9 +59,13 @@ export default function PrivacyPage() {
           request from Revlog, not from you.
         </li>
         <li>
-          To read receipts, service documents, and spreadsheets when you ask Revlog to scan them.
-          The file is sent to Anthropic&apos;s AI service, which turns it into fields for you to
-          check. Spreadsheets that don&apos;t need AI are read in your own browser.
+          To read receipts, service documents, and spreadsheets when you ask Revlog to scan them, as
+          explained under <a href="#ai-scanning">AI scanning</a>.
+        </li>
+        <li>
+          To keep the community safe: filtering community text automatically, reviewing reports and
+          blocks, removing content, and suspending accounts that break the{" "}
+          <a href="/terms#community">community rules</a>.
         </li>
         <li>
           To look up a VIN when you ask. The VIN is sent to the U.S. National Highway Traffic Safety
@@ -61,14 +74,48 @@ export default function PrivacyPage() {
       </ul>
       <p>Revlog doesn&apos;t sell or rent your information, and doesn&apos;t show ads.</p>
 
+      <h2 id="ai-scanning">AI scanning</h2>
+      <p>
+        Revlog uses Anthropic, an AI company, to read files when you choose to scan them. Scanning
+        is optional, and nothing is sent until you allow it. You can turn it off any time in
+        Settings, and everything else in Revlog keeps working.
+      </p>
+      <ul>
+        <li>
+          <strong>What&apos;s sent:</strong> the photo, screenshot, PDF, or spreadsheet you scan, and
+          the names of your custom service types so entries can be sorted. Whatever is in the file
+          goes too, which may include your name, address, phone number, VIN, license plate, or what
+          you paid. Crop out anything you&apos;d rather not share.
+        </li>
+        <li>
+          <strong>Why:</strong> Anthropic&apos;s AI reads the file and returns the details, such as
+          the date, cost, and work done, for you to check before saving.
+        </li>
+        <li>
+          <strong>What Anthropic does with it:</strong> it processes files for Revlog as a service
+          provider. Under its commercial terms, it doesn&apos;t use them to train its AI models. It
+          may keep them for a limited time for safety and legal reasons. See{" "}
+          <a href="https://www.anthropic.com/legal/privacy">Anthropic&apos;s privacy policy</a>.
+        </li>
+        <li>
+          <strong>What Revlog keeps:</strong> only what you save, plus a count of your scans for the
+          daily limit.
+        </li>
+      </ul>
+      <p>Spreadsheets that don&apos;t need AI are read on your own device and aren&apos;t sent.</p>
+
       <h2>What&apos;s public</h2>
       <p>
-        Your garage is private. Only what you post to the community is public: your username, the
-        post&apos;s title and text, the photos you pick for it, the car&apos;s year, make, model,
-        trim, and nickname, and (for build posts) its list of installed mods, plus their parts,
-        links, and prices if you choose to include them. Shared photos are copied to a public
-        folder; the originals and your receipts stay private. Deleting a post removes it and its
-        shared photos.
+        Your garage is private. Only what you share in the community is public: your username, your
+        comments and likes, the post&apos;s title and text, the photos you pick for it, the
+        car&apos;s year, make, model, trim, and nickname, and (for build posts) its list of
+        installed mods, plus their parts, links, and prices if you choose to include them. Shared
+        photos are copied to a public folder; the originals and your receipts stay private. Deleting
+        a post removes it and its shared photos.
+      </p>
+      <p>
+        People you block aren&apos;t told. If you report something, the person reported isn&apos;t
+        told it was you. Moderators can see who sent a report.
       </p>
 
       <h2>Who else handles it</h2>
@@ -81,10 +128,11 @@ export default function PrivacyPage() {
           <strong>Vercel</strong> for hosting the website.
         </li>
         <li>
-          <strong>Resend</strong> for sending email.
+          <strong>Resend</strong> for sending email, including notices to moderators about reports
+          and blocks.
         </li>
         <li>
-          <strong>Anthropic</strong> for reading the documents you choose to scan.
+          <strong>Anthropic</strong> for reading the files you allow it to scan.
         </li>
       </ul>
       <p>
@@ -105,21 +153,36 @@ export default function PrivacyPage() {
         account, cars, photos, and history are removed right away. Copies may remain in our
         providers&apos; backups for a short time before they expire.
       </p>
+      <p>
+        Reports are the one exception. A report, including the text it copied from the reported post
+        or comment, can stay after an account is deleted, with the link to that account removed, for
+        as long as it&apos;s needed to keep the community safe or meet legal duties.
+      </p>
 
       <h2>Your choices</h2>
       <ul>
         <li>Turn reminder emails off in Settings, or with the unsubscribe link in any reminder.</li>
+        <li>Turn AI scanning off in Settings.</li>
+        <li>Block accounts from their posts, comments, or profile, and unblock them in Settings.</li>
         <li>Delete your account in Settings.</li>
         <li>
           Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> to ask for a copy of your
-          data or with any other privacy request.
+          data, to correct it, or with any other privacy request. You won&apos;t be treated
+          differently for asking.
         </li>
       </ul>
+
+      <h2>Mobile apps</h2>
+      <p>
+        Revlog&apos;s mobile apps handle your information the same way as the website. They ask
+        before using your camera, photos, or notifications, and only use them for the features you
+        choose. Revlog doesn&apos;t track you across other companies&apos; apps or websites.
+      </p>
 
       <h2>Security</h2>
       <p>
         Data is encrypted in transit, car photos are private to your account, and the database only
-        lets each account reach its own rows. No system is perfectly secure, so use a password you
+        lets each account reach its own rows. Your data is stored in the United States. No system is perfectly secure, so use a password you
         don&apos;t use anywhere else.
       </p>
 

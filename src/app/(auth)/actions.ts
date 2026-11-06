@@ -7,6 +7,7 @@ import { checkPassword } from "@/lib/password-rules";
 import { createProfile, usernameTaken } from "@/lib/profiles";
 import { RESET_COOKIE } from "@/lib/reset-cookie";
 import { createClient } from "@/lib/supabase/server";
+import { hasBlockedWords } from "@/lib/text-filter";
 import { checkUsername, normalizeUsername } from "@/lib/username-rules";
 
 export type AuthState =
@@ -31,6 +32,9 @@ function safeNext(value: FormDataEntryValue | null) {
 
 const EMAIL_TAKEN = "An account with that email already exists. Log in instead.";
 
+const offensiveName = (username: string) =>
+  hasBlockedWords(username) ? "That username isn't allowed. Try another." : null;
+
 const USERNAME_TAKEN = "That username is taken. Try another.";
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -40,8 +44,11 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   if (!email || !password || !username) {
     return { error: "Enter a username, your email, and a password.", values };
   }
-  const badName = checkUsername(username);
+  const badName = checkUsername(username) ?? offensiveName(username);
   if (badName) return { error: badName, values };
+  if (formData.get("agree") !== "on") {
+    return { error: "Agree to the Terms and Privacy Policy to create an account.", values };
+  }
   const weak = checkPassword(password);
   if (weak) return { error: weak, values };
   if (await usernameTaken(username)) return { error: USERNAME_TAKEN, values };
@@ -50,7 +57,10 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: `${await siteOrigin()}/auth/callback` },
+    options: {
+      emailRedirectTo: `${await siteOrigin()}/auth/callback`,
+      data: { terms_accepted_at: new Date().toISOString() },
+    },
   });
   if (error) {
     if (error.code === "user_already_exists") return { error: EMAIL_TAKEN, values };
@@ -153,7 +163,7 @@ export async function chooseUsername(_prev: AuthState, formData: FormData): Prom
 
   const username = normalizeUsername(String(formData.get("username") ?? ""));
   const values = { username };
-  const badName = checkUsername(username);
+  const badName = checkUsername(username) ?? offensiveName(username);
   if (badName) return { error: badName, values };
   if (!(await createProfile(user.id, username))) return { error: USERNAME_TAKEN, values };
   redirect(safeNext(formData.get("next")));

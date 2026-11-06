@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { Trash2 } from "lucide-react";
 import type { PostComment } from "@/lib/community";
+import { ContentMenu } from "./content-menu";
 import { postComment, removeComment, type CommentFormState } from "./actions";
 
 const inputClass = "field text-sm";
@@ -26,11 +27,13 @@ export function Comments({
   comments,
   viewerId,
   postOwnerId,
+  moderator,
 }: {
   postId: string;
   comments: PostComment[];
   viewerId: string | null;
   postOwnerId: string;
+  moderator: boolean;
 }) {
   return (
     <section id="comments" className="scroll-mt-20 rounded-lg border border-graphite bg-panel p-5 sm:p-6">
@@ -58,7 +61,11 @@ export function Comments({
       ) : (
         <ul className="mt-5 border-t border-graphite pt-4">
           {comments.map((c) => (
-            <li key={c.id} className="border-t border-rule py-4 first:border-t-0 first:pt-0">
+            <li
+              key={c.id}
+              id={`comment-${c.id}`}
+              className="scroll-mt-20 border-t border-rule py-4 first:border-t-0 first:pt-0 target:bg-carbon"
+            >
               <div className="flex items-center gap-2 text-xs text-steel">
                 <Link
                   href={`/u/${c.username}`}
@@ -68,24 +75,36 @@ export function Comments({
                 </Link>
                 <span aria-hidden>·</span>
                 <time dateTime={c.createdAt.toISOString()}>{timeAgo(c.createdAt)}</time>
-                {viewerId && (viewerId === c.userId || viewerId === postOwnerId) && (
-                  <form
-                    action={removeComment.bind(null, c.id)}
-                    onSubmit={(e) => {
-                      if (!confirm("Delete this comment?")) e.preventDefault();
-                    }}
-                    className="ml-auto"
-                  >
-                    <button
-                      type="submit"
-                      aria-label="Delete comment"
-                      title="Delete comment"
-                      className="icon-btn icon-btn-danger -my-2 h-8 w-8"
+                <div className="ml-auto flex items-center">
+                  {viewerId && (viewerId === c.userId || viewerId === postOwnerId) && (
+                    <form
+                      action={removeComment.bind(null, c.id)}
+                      onSubmit={(e) => {
+                        if (!confirm("Delete this comment?")) e.preventDefault();
+                      }}
                     >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                    </button>
-                  </form>
-                )}
+                      <button
+                        type="submit"
+                        aria-label="Delete comment"
+                        title="Delete comment"
+                        className="icon-btn icon-btn-danger -my-2 h-8 w-8"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </form>
+                  )}
+                  {viewerId !== c.userId && (
+                    <ContentMenu
+                      kind="comment"
+                      targetId={c.id}
+                      userId={c.userId}
+                      username={c.username}
+                      signedIn={!!viewerId}
+                      moderator={moderator}
+                      loginNext={`/community/${postId}#comments`}
+                    />
+                  )}
+                </div>
               </div>
               <p className="mt-1 max-w-prose whitespace-pre-line">{c.body}</p>
             </li>

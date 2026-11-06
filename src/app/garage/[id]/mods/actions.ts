@@ -13,6 +13,7 @@ import {
   setModStatus,
   updateMod,
 } from "@/lib/mods";
+import { AI_CONSENT_NEEDED, hasAiConsent } from "@/lib/ai-consent";
 import { scanModReceipt, type ModScanResult } from "@/lib/mod-scan";
 import { parsePartRows, settlePartsCost, syncParts } from "@/lib/parts";
 
@@ -60,6 +61,7 @@ export async function addMod(
 export async function scanModPhoto(formData: FormData): Promise<ModScanResult> {
   const user = await requireUser();
   if (!(await isEmailVerified(user.id))) return { error: CONFIRM_EMAIL_FIRST };
+  if (!(await hasAiConsent(user.id))) return { error: AI_CONSENT_NEEDED };
   const photo = formData.get("photo");
   if (!(photo instanceof File) || photo.size === 0) return { error: "Choose a photo to scan." };
   return scanModReceipt(user.id, photo);
