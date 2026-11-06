@@ -5,6 +5,7 @@ import type { FeedPost } from "@/lib/community";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { postTagLabel } from "@/lib/post-tags";
 import { vehicleName } from "@/lib/vehicles";
+import { ContentMenu } from "./content-menu";
 import { LikeButton } from "./like-button";
 
 export function timeAgo(date: Date, now = new Date()) {
@@ -28,39 +29,59 @@ export function postCarName(post: FeedPost) {
 }
 
 // One post in the feed. `link` makes the title open the post page;
-// `signedIn` lets the like button work instead of asking to log in.
+// `signedIn` lets the like button work instead of asking to log in. `viewerId`
+// is who's looking, and offers report and block on other people's posts; the
+// cached card on the landing page leaves it out and links to the post instead.
 export function PostCard({
   post,
   link = true,
   signedIn,
+  viewerId,
+  moderator = false,
 }: {
   post: FeedPost;
   link?: boolean;
   signedIn: boolean;
+  viewerId?: string | null;
+  moderator?: boolean;
 }) {
   const modName = post.modPart ? [post.modBrand, post.modPart].filter(Boolean).join(" ") : null;
   return (
     <article className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-steel">
-        <Link href={`/u/${post.username}`} className="font-semibold text-chalk hover:text-redline">
-          @{post.username}
-        </Link>
-        <span aria-hidden>·</span>
-        <span>{postCarName(post)}</span>
-        <span aria-hidden>·</span>
-        <time dateTime={post.createdAt.toISOString()}>{timeAgo(post.createdAt)}</time>
-        {post.tag === "build" && post.updatedAt.getTime() - post.createdAt.getTime() > 60_000 && (
-          <>
-            <span aria-hidden>·</span>
-            <time dateTime={post.updatedAt.toISOString()}>updated {timeAgo(post.updatedAt)}</time>
-          </>
+      <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-steel">
+          <Link href={`/u/${post.username}`} className="font-semibold text-chalk hover:text-redline">
+            @{post.username}
+          </Link>
+          <span aria-hidden>·</span>
+          <span>{postCarName(post)}</span>
+          <span aria-hidden>·</span>
+          <time dateTime={post.createdAt.toISOString()}>{timeAgo(post.createdAt)}</time>
+          {post.tag === "build" && post.updatedAt.getTime() - post.createdAt.getTime() > 60_000 && (
+            <>
+              <span aria-hidden>·</span>
+              <time dateTime={post.updatedAt.toISOString()}>updated {timeAgo(post.updatedAt)}</time>
+            </>
+          )}
+          <Link
+            href={`/community?tag=${post.tag}`}
+            className="ml-auto rounded-md border border-graphite px-2 py-0.5 text-xs text-chalk hover:border-steel"
+          >
+            {postTagLabel(post.tag)}
+          </Link>
+        </div>
+        {viewerId !== undefined && viewerId !== post.userId && (
+          <ContentMenu
+            kind="post"
+            targetId={post.id}
+            userId={post.userId}
+            username={post.username}
+            signedIn={signedIn}
+            moderator={moderator}
+            loginNext={`/community/${post.id}`}
+            leaveTo={link ? undefined : "/community"}
+          />
         )}
-        <Link
-          href={`/community?tag=${post.tag}`}
-          className="ml-auto rounded-md border border-graphite px-2 py-0.5 text-xs text-chalk hover:border-steel"
-        >
-          {postTagLabel(post.tag)}
-        </Link>
       </div>
 
       <h2 className="mt-3 font-display text-2xl leading-tight font-semibold sm:text-3xl">

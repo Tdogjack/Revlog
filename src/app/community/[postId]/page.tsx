@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getUser } from "@/lib/auth";
 import { getPost, listComments, listInstalledMods, listPostParts } from "@/lib/community";
+import { isModerator } from "@/lib/moderation";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { Comments } from "../comments";
 import { DeletePostButton } from "../delete-post-button";
@@ -40,12 +41,13 @@ async function PostDetails({
 }: Pick<PageProps<"/community/[postId]">, "params" | "searchParams">) {
   const [{ postId }, { failed }] = await Promise.all([params, searchParams]);
   const user = await getUser();
-  const post = await getPost(postId, user?.id);
+  const moderator = !!user && isModerator(user.id);
+  const post = await getPost(postId, user?.id, moderator);
   if (!post) notFound();
   const [buildList, sharedParts, comments] = await Promise.all([
     post.kind === "build" ? listInstalledMods(post.vehicleId) : [],
     listPostParts(post),
-    listComments(post.id),
+    listComments(post.id, user?.id, moderator),
   ]);
 
   return (
@@ -56,7 +58,13 @@ async function PostDetails({
           photo, or share again.
         </p>
       )}
-      <PostCard post={post} link={false} signedIn={!!user} />
+      <PostCard
+        post={post}
+        link={false}
+        signedIn={!!user}
+        viewerId={user?.id ?? null}
+        moderator={moderator}
+      />
 
       {buildList.length > 0 && (
         <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
@@ -106,6 +114,7 @@ async function PostDetails({
         comments={comments}
         viewerId={user?.id ?? null}
         postOwnerId={post.userId}
+        moderator={moderator}
       />
     </div>
   );

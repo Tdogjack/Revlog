@@ -13,4 +13,4 @@ export function siteUrl() {
 // Where people reach the operator about privacy, terms, or their account.
 export const CONTACT_EMAIL = "support@revlog.me";
 
-export const LEGAL_UPDATED = "October 29, 2026";
+export const LEGAL_UPDATED = "November 5, 2026";

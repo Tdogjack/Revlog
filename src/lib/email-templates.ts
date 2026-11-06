@@ -164,3 +164,30 @@ ${emailButton(garageUrl, "Open your garage")}`,
   const text = `Emails are working\n\nThis is a test from your Revlog settings.\n\nOpen your garage: ${garageUrl}`;
   return { subject, html, text };
 }
+
+// A note to the moderators about a report or block.
+export function moderationEmail({
+  subject,
+  lines,
+  url,
+}: {
+  subject: string;
+  lines: string[];
+  url: string;
+}) {
+  const paragraphs = lines
+    .map(
+      (line) =>
+        `<p style="margin:0 0 12px;color:${C.chalk};font-family:${FONT};font-size:15px;line-height:1.5;white-space:pre-line;">${escapeHtml(line)}</p>`,
+    )
+    .join("");
+  return {
+    subject,
+    html: emailLayout({
+      preheader: subject,
+      body: `${paragraphs}<p style="margin:0;font-family:${FONT};font-size:15px;"><a href="${escapeHtml(url)}" style="color:${C.redline};">Open in Revlog</a></p>`,
+      footer: "Sent to Revlog's moderators. Reports need a response within 24 hours.",
+    }),
+    text: [...lines, url].join("\n\n"),
+  };
+}

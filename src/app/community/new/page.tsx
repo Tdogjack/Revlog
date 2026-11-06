@@ -49,7 +49,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
   if (!car) return <ChooseCar userId={user.id} />;
   const mod = modId ? await getMod(user.id, car.id, modId) : null;
   const buildPostId = await getBuildPostId(user.id, car.id);
-  const build = isBuild && buildPostId ? await getPost(buildPostId) : null;
+  const build = isBuild && buildPostId ? await getPost(buildPostId, user.id) : null;
 
   // A mod post offers that mod's photos first, then the build library.
   const gallery = (await listPhotosForVehicle(user.id, car.id)).filter(

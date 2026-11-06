@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { LoaderCircle, ScanText } from "lucide-react";
+import { useAiConsent } from "@/components/ai-consent";
 import { PHOTO_ACCEPT, resizeImage } from "@/lib/resize-image";
 
 // "Scan" box at the top of the service and mod forms. Sends the photo to
@@ -22,12 +23,14 @@ export function ReceiptScanner<T>({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const consent = useAiConsent();
 
   async function read(file: File) {
     setError(null);
     setDone(false);
-    setScanning(true);
     try {
+      if (!(await consent.ensure())) return;
+      setScanning(true);
       const photo = await resizeImage(file, 1600);
       const fd = new FormData();
       fd.set("photo", photo);
@@ -53,7 +56,10 @@ export function ReceiptScanner<T>({
   return (
     <div className="rounded-md border border-graphite bg-carbon p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-steel">{intro}</p>
+        <div className="min-w-0 flex-1 basis-56">
+          <p className="text-sm text-steel">{intro}</p>
+          <p className="field-hint">Scans are read by Anthropic&apos;s AI.</p>
+        </div>
         <label
           className={`btn has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-redline ${
             scanning ? "cursor-default opacity-60" : "cursor-pointer"
@@ -91,6 +97,7 @@ export function ReceiptScanner<T>({
           {error}
         </p>
       )}
+      {consent.dialog}
     </div>
   );
 }

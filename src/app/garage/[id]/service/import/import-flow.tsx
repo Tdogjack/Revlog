@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CircleAlert, FileUp, LoaderCircle, Plus } from "lucide-react";
 import { uploadPhoto } from "@/app/garage/[id]/photos/actions";
+import { useAiConsent } from "@/components/ai-consent";
 import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import {
   draftProblem,
@@ -90,6 +91,7 @@ export function ImportFlow({
   const router = useRouter();
   const today = useToday();
   const storageKey = `revlog-history-${vehicleId}`;
+  const consent = useAiConsent();
   const [drafts, setDrafts] = useState<DraftRecord[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
@@ -212,6 +214,10 @@ export function ImportFlow({
       return;
     }
     try {
+      if (!(await consent.ensure())) {
+        updateJob(job, { status: "failed", message: "Not sent. Add it by hand instead." });
+        return;
+      }
       const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
       if (isPdf && file.size > MAX_PDF_BYTES) {
         throw new Error("That PDF is over 3.5 MB. Split it into smaller files and add those.");
@@ -271,11 +277,12 @@ export function ImportFlow({
 
   async function readSheetWithAi() {
     if (!sheet) return;
-    setReadingSheet(true);
     setError(null);
     const { selected } = sheet;
     const current = sheet.sheets[selected];
     try {
+      if (!(await consent.ensure())) return;
+      setReadingSheet(true);
       const result = await scanHistorySheet(sheetAsText(current));
       if ("error" in result) {
         setError({ text: result.error });
@@ -440,6 +447,8 @@ export function ImportFlow({
             <ConfirmEmailNote action="scan photos and PDFs. Spreadsheets work now" />
           </div>
         )}
+        <p className="field-hint">Photos and PDFs are read by Anthropic&apos;s AI.</p>
+        {consent.dialog}
 
         <details className="mt-4 text-sm">
           <summary className="w-fit cursor-pointer text-steel hover:text-chalk">

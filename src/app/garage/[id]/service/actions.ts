@@ -16,6 +16,7 @@ import {
   updateServiceRecord,
   type ServiceRecordInput,
 } from "@/lib/service-records";
+import { AI_CONSENT_NEEDED, hasAiConsent } from "@/lib/ai-consent";
 import { scanReceipt, type ScanResult } from "@/lib/receipt-scan";
 import { listServiceTypes, resolveServiceType } from "@/lib/service-types";
 import { getVehicle } from "@/lib/vehicles";
@@ -182,6 +183,7 @@ export async function editServiceRecord(
 export async function scanServiceReceipt(formData: FormData): Promise<ScanResult> {
   const user = await requireUser();
   if (!(await isEmailVerified(user.id))) return { error: CONFIRM_EMAIL_FIRST };
+  if (!(await hasAiConsent(user.id))) return { error: AI_CONSENT_NEEDED };
   const photo = formData.get("photo");
   if (!(photo instanceof File) || photo.size === 0) return { error: "Choose a receipt photo." };
   return scanReceipt(user.id, photo, await listServiceTypes(user.id));

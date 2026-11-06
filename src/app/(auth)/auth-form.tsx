@@ -241,19 +241,27 @@ export function SignupForm({ action }: { action: Action }) {
           <UsernameField defaultValue={state?.values?.username} />
           <EmailField defaultValue={state?.values?.email} />
           <NewPasswordField />
+          <label className="flex min-h-11 items-start gap-3 text-sm text-steel">
+            <input
+              type="checkbox"
+              name="agree"
+              required
+              className="mt-0.5 h-5 w-5 shrink-0 accent-redline"
+            />
+            <span>
+              I agree to the{" "}
+              <Link href="/terms" className="text-chalk hover:text-redline">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-chalk hover:text-redline">
+                Privacy Policy
+              </Link>
+              , including no abusive or objectionable content.
+            </span>
+          </label>
           <ErrorText error={state?.error} />
           <SubmitButton pending={pending} label="Create account" />
-          <p className="text-xs text-steel">
-            By creating an account, you agree to the{" "}
-            <Link href="/terms" className="text-chalk hover:text-redline">
-              Terms
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="text-chalk hover:text-redline">
-              Privacy Policy
-            </Link>
-            .
-          </p>
         </form>
       )}
     </AuthShell>

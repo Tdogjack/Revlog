@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { AI_CONSENT_NEEDED, hasAiConsent } from "@/lib/ai-consent";
 import { requireUser } from "@/lib/auth";
 import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import { scanHistoryFile, scanHistoryText, type HistoryScanResult } from "@/lib/history-scan";
@@ -20,6 +21,7 @@ import { getVehicle } from "@/lib/vehicles";
 export async function scanHistory(formData: FormData): Promise<HistoryScanResult> {
   const user = await requireUser();
   if (!(await isEmailVerified(user.id))) return { error: CONFIRM_EMAIL_FIRST };
+  if (!(await hasAiConsent(user.id))) return { error: AI_CONSENT_NEEDED };
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "Choose a file." };
   return scanHistoryFile(user.id, file, await listServiceTypes(user.id));
@@ -29,6 +31,7 @@ export async function scanHistory(formData: FormData): Promise<HistoryScanResult
 export async function scanHistorySheet(text: string): Promise<HistoryScanResult> {
   const user = await requireUser();
   if (!(await isEmailVerified(user.id))) return { error: CONFIRM_EMAIL_FIRST };
+  if (!(await hasAiConsent(user.id))) return { error: AI_CONSENT_NEEDED };
   return scanHistoryText(user.id, text, await listServiceTypes(user.id));
 }
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Search, Share2, X } from "lucide-react";
 import { getUser } from "@/lib/auth";
+import { isModerator } from "@/lib/moderation";
 import { FEED_PAGE, listPosts } from "@/lib/community";
 import { DEFAULT_SORT, isPostSort, type PostSort } from "@/lib/post-sorts";
 import { isPostTag, POST_TAGS, postTagLabel } from "@/lib/post-tags";
@@ -61,6 +62,7 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
   const sort = typeof rawSort === "string" && isPostSort(rawSort) ? rawSort : DEFAULT_SORT;
   const page = Math.max(1, Number.parseInt(typeof rawPage === "string" ? rawPage : "", 10) || 1);
   const user = await getUser();
+  const moderator = !!user && isModerator(user.id);
   const feed = await listPosts({ sort, page, tag, q, viewerId: user?.id });
 
   const controls = (
@@ -145,7 +147,13 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
       {controls}
       <div className="mt-6 space-y-4">
         {feed.map((post) => (
-          <PostCard key={post.id} post={post} signedIn={!!user} />
+          <PostCard
+            key={post.id}
+            post={post}
+            signedIn={!!user}
+            viewerId={user?.id ?? null}
+            moderator={moderator}
+          />
         ))}
       </div>
       {(page > 1 || feed.length === FEED_PAGE) && (

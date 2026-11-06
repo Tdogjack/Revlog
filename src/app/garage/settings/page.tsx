@@ -3,10 +3,18 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { PalettePicker } from "@/components/palette-picker";
 import { requireUser } from "@/lib/auth";
+import { hasAiConsent } from "@/lib/ai-consent";
 import { getEmailSettings } from "@/lib/email-settings";
 import { isEmailVerified } from "@/lib/email-verification";
+import { countOpenReports, isModerator, listBlockedUsers } from "@/lib/moderation";
+import { unblockAccount } from "../../community/actions";
 import { deleteAccount, resendConfirmation, saveEmailSettings, sendTestEmail } from "./actions";
-import { DeleteAccountForm, EmailSettingsForm, ResendConfirmationForm } from "./settings-forms";
+import {
+  AiScanToggle,
+  DeleteAccountForm,
+  EmailSettingsForm,
+  ResendConfirmationForm,
+} from "./settings-forms";
 
 export const metadata: Metadata = { title: "Settings · Revlog" };
 
@@ -26,9 +34,13 @@ export default function SettingsPage() {
 
 async function SettingsSections() {
   const user = await requireUser();
-  const [settings, verified] = await Promise.all([
+  const moderator = isModerator(user.id);
+  const [settings, verified, aiAllowed, blocked, openReports] = await Promise.all([
     getEmailSettings(user.id),
     isEmailVerified(user.id),
+    hasAiConsent(user.id),
+    listBlockedUsers(user.id),
+    moderator ? countOpenReports() : 0,
   ]);
 
   return (
@@ -68,6 +80,56 @@ async function SettingsSections() {
           reminderPercent={settings.reminderPercent}
         />
       </section>
+
+      <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+        <h2 className="font-display text-2xl leading-tight font-semibold">AI scanning</h2>
+        <AiScanToggle allowed={aiAllowed} />
+      </section>
+
+      <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+        <h2 className="font-display text-2xl leading-tight font-semibold">Blocked accounts</h2>
+        {blocked.length === 0 ? (
+          <p className="mt-2 text-sm text-steel">
+            No one is blocked. Block someone from the menu on their post, comment, or profile to
+            hide what they share.
+          </p>
+        ) : (
+          <ul className="mt-3">
+            {blocked.map((account) => (
+              <li
+                key={account.userId}
+                className="flex items-center justify-between gap-3 border-t border-rule py-3 text-sm first:border-t-0"
+              >
+                <Link
+                  href={`/u/${account.username}`}
+                  className="min-w-0 truncate text-chalk hover:text-redline"
+                >
+                  @{account.username}
+                </Link>
+                <form action={unblockAccount.bind(null, account.userId)}>
+                  <button type="submit" className="btn">
+                    Unblock
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {moderator && (
+        <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+          <h2 className="font-display text-2xl leading-tight font-semibold">Moderation</h2>
+          <p className="mt-2 text-sm text-steel">
+            {openReports === 0
+              ? "No open reports."
+              : `${openReports} open ${openReports === 1 ? "report" : "reports"}.`}
+          </p>
+          <Link href="/garage/moderation" className="btn mt-4">
+            Open moderation
+          </Link>
+        </section>
+      )}
 
       <section className="rounded-lg border border-overdue/40 bg-panel p-5 sm:p-6">
         <h2 className="mb-3 font-display text-2xl leading-tight font-semibold text-overdue">Delete account</h2>

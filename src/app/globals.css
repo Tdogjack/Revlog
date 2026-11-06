@@ -46,9 +46,10 @@
   --font-display: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Palettes people can pick in Settings. Redline, in @theme above, is the default;
-   each block overrides it when data-theme is set on <html>. The redline-named
-   tokens mean "the accent" here. Keep the list in src/lib/palettes.ts in step. */
+/* Palettes people can pick in Settings. Redline, in @theme above, is the base;
+   each block overrides it when data-theme is set on <html>, and the root layout
+   sets Shop floor as the default. The redline-named tokens mean "the accent"
+   here. Keep the list in src/lib/palettes.ts in step. */
 
 /* Shop floor: the hazard accent takes over amber, so "due" moves to rust orange. */
 [data-theme="shop-floor"] {
@@ -216,6 +217,16 @@ body {
     border-color: transparent;
     background: var(--color-redline-fill-hover);
   }
+  /* For actions that remove or block something. */
+  .btn-danger {
+    border-color: transparent;
+    background: var(--color-overdue-solid);
+    color: #fff;
+  }
+  .btn-danger:hover {
+    border-color: transparent;
+    opacity: 0.9;
+  }
   .btn:disabled {
     opacity: 0.6;
     cursor: default;
@@ -244,6 +255,41 @@ body {
   }
   .icon-btn-danger:hover {
     color: var(--color-overdue);
+  }
+
+  /* An on/off switch. It is a checkbox underneath, so keyboards and screen readers work. */
+  .switch {
+    appearance: none;
+    position: relative;
+    flex-shrink: 0;
+    width: 2.75rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    border: 1px solid var(--color-field-edge);
+    background: var(--color-carbon);
+    cursor: pointer;
+    transition:
+      background-color 120ms,
+      border-color 120ms;
+  }
+  .switch::before {
+    content: "";
+    position: absolute;
+    top: 0.1875rem;
+    left: 0.1875rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background: var(--color-steel);
+    transition: transform 120ms;
+  }
+  .switch:checked {
+    border-color: transparent;
+    background: var(--color-redline-fill);
+  }
+  .switch:checked::before {
+    background: var(--color-on-accent);
+    transform: translateX(1.25rem);
   }
 
   .field {
@@ -378,6 +424,10 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
     animation: none;
+  }
+  .switch,
+  .switch::before {
+    transition: none;
   }
   .preview-in {
     animation: preview-fade 150ms ease-out;

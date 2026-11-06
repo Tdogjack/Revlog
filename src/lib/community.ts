@@ -1,9 +1,12 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import {
+  accountSuspensions,
+  contentReports,
   mods,
   parts,
   postComments,
@@ -11,10 +14,12 @@ import {
   postPhotos,
   posts,
   profiles,
+  userBlocks,
   vehicles,
 } from "@/db/schema";
 import { getPhotosByIds } from "@/lib/gallery";
 import { getMod } from "@/lib/mods";
+import { isBlockedBy } from "@/lib/moderation";
 import type { PostSort } from "@/lib/post-sorts";
 import { supabaseUrl } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -23,6 +28,8 @@ import { getVehicle, isUuid } from "@/lib/vehicles";
 const BUCKET = "community-photos";
 export const MAX_POST_PHOTOS = 10;
 export const FEED_PAGE = 20;
+// Open reports from this many people hide content until a moderator looks.
+const AUTO_HIDE_REPORTS = 3;
 
 // The build on the landing page. If it's ever deleted, the best-liked build
 // with photos takes its place.
@@ -56,6 +63,40 @@ const postFields = {
   modPart: mods.part,
   modCategory: mods.category,
 };
+
+// What a viewer gets to see: nothing from suspended accounts, nothing held back
+// by reports (authors still see their own, so they can edit or delete it), and
+// nothing from people they blocked or that they reported themselves.
+function visibleTo(
+  kind: "post" | "comment",
+  id: AnyPgColumn,
+  authorId: AnyPgColumn,
+  viewerId?: string,
+) {
+  const target = sql.raw(`'${kind}'`);
+  const limit = sql.raw(String(AUTO_HIDE_REPORTS));
+  const held = sql`(
+    exists (select 1 from ${accountSuspensions} where ${accountSuspensions.userId} = ${authorId})
+    or (select count(*) from ${contentReports}
+        where ${contentReports.targetType} = ${target}
+          and ${contentReports.targetId} = ${id}
+          and ${contentReports.status} = 'open') >= ${limit}
+  )`;
+  if (!viewerId) return sql`not ${held}`;
+  return and(
+    or(eq(authorId, viewerId), sql`not ${held}`),
+    sql`not exists (
+      select 1 from ${userBlocks}
+      where ${userBlocks.userId} = ${viewerId} and ${userBlocks.blockedUserId} = ${authorId}
+    )`,
+    sql`not exists (
+      select 1 from ${contentReports}
+      where ${contentReports.reporterId} = ${viewerId}
+        and ${contentReports.targetType} = ${target}
+        and ${contentReports.targetId} = ${id}
+    )`,
+  );
+}
 
 type PostRow = Awaited<ReturnType<typeof selectPosts>>[number];
 export type FeedPost = PostRow & {
@@ -93,7 +134,12 @@ async function withExtras(rows: PostRow[], viewerId?: string): Promise<FeedPost[
     db
       .select({ postId: postComments.postId, n: count() })
       .from(postComments)
-      .where(inArray(postComments.postId, ids))
+      .where(
+        and(
+          inArray(postComments.postId, ids),
+          visibleTo("comment", postComments.id, postComments.userId, viewerId),
+        ),
+      )
       .groupBy(postComments.postId),
     viewerId
       ? db
@@ -172,6 +218,7 @@ export async function listPosts({
   tag,
   q,
   viewerId,
+  moderator = false,
 }: {
   sort?: PostSort;
   page?: number;
@@ -179,8 +226,11 @@ export async function listPosts({
   tag?: string;
   q?: string;
   viewerId?: string;
+  // Moderators reviewing a profile see what's hidden from everyone else.
+  moderator?: boolean;
 } = {}) {
   const filters = [
+    moderator ? undefined : visibleTo("post", posts.id, posts.userId, viewerId),
     username ? eq(profiles.username, username) : undefined,
     tag ? eq(posts.tag, tag) : undefined,
     q ? searchFilter(q) : undefined,
@@ -194,9 +244,15 @@ export async function listPosts({
   return withExtras(rows, viewerId);
 }
 
-export async function getPost(postId: string, viewerId?: string) {
+export async function getPost(postId: string, viewerId?: string, moderator = false) {
   if (!isUuid(postId)) return null;
-  const rows = await selectPosts().where(eq(posts.id, postId)).limit(1);
+  const rows = await selectPosts()
+    .where(
+      moderator
+        ? eq(posts.id, postId)
+        : and(eq(posts.id, postId), visibleTo("post", posts.id, posts.userId, viewerId)),
+    )
+    .limit(1);
   const [post] = await withExtras(rows, viewerId);
   return post ?? null;
 }
@@ -488,16 +544,19 @@ export async function deletePost(userId: string, postId: string) {
   }
 }
 
-async function postExists(postId: string) {
-  if (!isUuid(postId)) return false;
-  const [row] = await db.select({ id: posts.id }).from(posts).where(eq(posts.id, postId));
-  return !!row;
+async function postOwner(postId: string) {
+  if (!isUuid(postId)) return null;
+  const [row] = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, postId));
+  return row?.userId ?? null;
 }
 
-// Likes or unlikes a post. Returns the new state, or null if the post is gone.
+// Likes or unlikes a post. Returns the new state, or null if the post is gone
+// or its owner blocked this person.
 export async function setLike(userId: string, postId: string, liked: boolean) {
-  if (!(await postExists(postId))) return null;
+  const owner = await postOwner(postId);
+  if (!owner) return null;
   if (liked) {
+    if (await isBlockedBy(owner, userId)) return null;
     await db.insert(postLikes).values({ userId, postId }).onConflictDoNothing();
   } else {
     await db
@@ -514,7 +573,7 @@ export async function setLike(userId: string, postId: string, liked: boolean) {
 export type PostComment = Awaited<ReturnType<typeof listComments>>[number];
 
 // Oldest first, so a thread reads top to bottom.
-export function listComments(postId: string) {
+export function listComments(postId: string, viewerId?: string, moderator = false) {
   return db
     .select({
       id: postComments.id,
@@ -525,12 +584,21 @@ export function listComments(postId: string) {
     })
     .from(postComments)
     .innerJoin(profiles, eq(profiles.userId, postComments.userId))
-    .where(eq(postComments.postId, postId))
+    .where(
+      moderator
+        ? eq(postComments.postId, postId)
+        : and(
+            eq(postComments.postId, postId),
+            visibleTo("comment", postComments.id, postComments.userId, viewerId),
+          ),
+    )
     .orderBy(asc(postComments.createdAt));
 }
 
 export async function addComment(userId: string, postId: string, body: string) {
-  if (!(await postExists(postId))) return "That post wasn't found.";
+  const owner = await postOwner(postId);
+  if (!owner) return "That post wasn't found.";
+  if (await isBlockedBy(owner, userId)) return "You can't comment on this post.";
   await db.insert(postComments).values({ userId, postId, body });
   return null;
 }

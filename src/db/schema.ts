@@ -373,6 +373,92 @@ export const postComments = pgTable(
   (t) => [index("post_comments_post_idx").on(t.postId, t.createdAt), ownerPolicy("post_comments")],
 ).enableRLS();
 
+// People a user has chosen not to see. user_id is the one who blocked.
+export const userBlocks = pgTable(
+  "user_blocks",
+  {
+    ...ownerColumns,
+    blockedUserId: uuid("blocked_user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    uniqueIndex("user_blocks_pair_idx").on(t.userId, t.blockedUserId),
+    index("user_blocks_blocked_idx").on(t.blockedUserId),
+    check("user_blocks_not_self", sql`${t.userId} <> ${t.blockedUserId}`),
+    ownerPolicy("user_blocks"),
+  ],
+).enableRLS();
+
+export const reportTarget = pgEnum("report_target", ["post", "comment", "user"]);
+export const reportStatus = pgEnum("report_status", ["open", "actioned", "dismissed"]);
+
+// Reports of posts, comments, and accounts. The reported text is copied in, so
+// a report still makes sense after the content is deleted, and the report
+// outlives both accounts with the people unlinked. Reporters can read and add
+// their own rows; only the server resolves them.
+export const contentReports = pgTable(
+  "content_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reporterId: uuid("reporter_id")
+      .default(sql`auth.uid()`)
+      .references(() => authUsers.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    targetType: reportTarget("target_type").notNull(),
+    // The post, comment, or user id. Not a foreign key, since reports outlive it.
+    targetId: uuid("target_id").notNull(),
+    reportedUserId: uuid("reported_user_id").references(() => authUsers.id, {
+      onDelete: "set null",
+    }),
+    reportedUsername: text("reported_username").notNull(),
+    targetPath: text("target_path").notNull(),
+    contentSnapshot: text("content_snapshot"),
+    reason: text("reason").notNull(),
+    details: text("details"),
+    status: reportStatus("status").notNull().default("open"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("content_reports_once_idx").on(t.reporterId, t.targetType, t.targetId),
+    index("content_reports_target_idx").on(t.targetType, t.targetId, t.status),
+    index("content_reports_status_idx").on(t.status, t.createdAt),
+    pgPolicy("content_reports_reporter_select", {
+      for: "select",
+      to: authenticatedRole,
+      using: sql`${authUid} = reporter_id`,
+    }),
+    pgPolicy("content_reports_reporter_insert", {
+      for: "insert",
+      to: authenticatedRole,
+      withCheck: sql`${authUid} = reporter_id`,
+    }),
+  ],
+).enableRLS();
+
+// Accounts barred from the community. Kept apart from profiles, which users can
+// write to, and readable only by the server (RLS on, no policies).
+export const accountSuspensions = pgTable("account_suspensions", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => authUsers.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}).enableRLS();
+
+// A row means the user allowed their scans to be sent to Anthropic. Removing
+// it in Settings withdraws that permission.
+export const aiConsents = pgTable(
+  "ai_consents",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .default(sql`auth.uid()`)
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    grantedAt: timestamp("granted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  () => [ownerPolicy("ai_consents")],
+).enableRLS();
+
 export type Vehicle = typeof vehicles.$inferSelect;
 export type ServiceRecord = typeof serviceRecords.$inferSelect;
 export type Mod = typeof mods.$inferSelect;
