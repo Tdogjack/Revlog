@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
-import { paletteScript } from "@/lib/palettes";
+import { DEFAULT_PALETTE, paletteScript } from "@/lib/palettes";
 import "./globals.css";
 
 // One sturdy, technical family for everything: text, headings, and the
@@ -28,11 +28,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-theme={DEFAULT_PALETTE}
       className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
-        {/* Runs before first paint so a saved palette doesn't flash Redline. */}
+        {/* Runs before first paint so a saved palette doesn't flash the default. */}
         <script dangerouslySetInnerHTML={{ __html: paletteScript }} />
       </head>
       <body className="min-h-full flex flex-col font-sans">{children}</body>

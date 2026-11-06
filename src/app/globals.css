@@ -46,9 +46,10 @@
   --font-display: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Palettes people can pick in Settings. Redline, in @theme above, is the default;
-   each block overrides it when data-theme is set on <html>. The redline-named
-   tokens mean "the accent" here. Keep the list in src/lib/palettes.ts in step. */
+/* Palettes people can pick in Settings. Redline, in @theme above, is the base;
+   each block overrides it when data-theme is set on <html>, and the root layout
+   sets Shop floor as the default. The redline-named tokens mean "the accent"
+   here. Keep the list in src/lib/palettes.ts in step. */
 
 /* Shop floor: the hazard accent takes over amber, so "due" moves to rust orange. */
 [data-theme="shop-floor"] {

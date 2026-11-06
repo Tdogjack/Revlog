@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { DEFAULT_PALETTE, PALETTE_STORAGE_KEY, palettes } from "@/lib/palettes";
+import { BASE_PALETTE, DEFAULT_PALETTE, PALETTE_STORAGE_KEY, palettes } from "@/lib/palettes";
 
 const listeners = new Set<() => void>();
 
@@ -13,11 +13,11 @@ function subscribe(listener: () => void) {
 }
 
 function currentPalette() {
-  return document.documentElement.dataset.theme ?? DEFAULT_PALETTE;
+  return document.documentElement.dataset.theme ?? BASE_PALETTE;
 }
 
 function choosePalette(id: string) {
-  if (id === DEFAULT_PALETTE) delete document.documentElement.dataset.theme;
+  if (id === BASE_PALETTE) delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = id;
   try {
     localStorage.setItem(PALETTE_STORAGE_KEY, id);
