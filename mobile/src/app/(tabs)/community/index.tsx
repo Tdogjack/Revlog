@@ -129,6 +129,7 @@ export default function Community() {
     <FlatList
       style={styles.list}
       contentContainerStyle={styles.content}
+      contentInsetAdjustmentBehavior="automatic"
       data={posts}
       keyExtractor={(post) => post.id}
       keyboardShouldPersistTaps="handled"

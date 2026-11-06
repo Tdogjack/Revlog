@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import type { ReminderStatus } from "@revlog/api";
 import type { ReactNode } from "react";
 import {
@@ -14,7 +15,8 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
-import { colors, fonts, MAX_WIDTH, space, statusStyles } from "@/lib/theme";
+import { pressFeedback, tapFeedback } from "@/lib/haptics";
+import { colors, fonts, MAX_WIDTH, radius, space, statusStyles } from "@/lib/theme";
 
 export function Screen({
   children,
@@ -56,16 +58,95 @@ export function Heading({ children }: { children: ReactNode }) {
   );
 }
 
-// The mileage, set like the numbers on a dash. The one loud thing on a screen.
+// The mileage, set on wheels like a real odometer, last digit lit.
 export function Odometer({ miles, large = false }: { miles: number; large?: boolean }) {
+  const digits = String(Math.max(0, Math.round(miles))).padStart(6, "0").split("");
+  const firstReal = digits.findIndex((d) => d !== "0");
   return (
-    <Text
-      style={[styles.odometer, large && styles.odometerLarge]}
+    <View
+      accessible
       accessibilityLabel={`${miles.toLocaleString("en-US")} miles`}
+      style={styles.odometer}
     >
-      {miles.toLocaleString("en-US")}
-      <Text style={styles.odometerUnit}> mi</Text>
-    </Text>
+      {digits.map((digit, i) => {
+        const last = i === digits.length - 1;
+        const unused = firstReal === -1 ? !last : i < firstReal;
+        return (
+          <View
+            key={i}
+            style={[styles.wheel, large && styles.wheelLarge, last && styles.wheelLast]}
+          >
+            <Text
+              style={[
+                styles.digit,
+                large && styles.digitLarge,
+                unused && styles.digitUnused,
+                last && styles.digitLast,
+              ]}
+            >
+              {digit}
+            </Text>
+          </View>
+        );
+      })}
+      <Text style={[styles.odometerUnit, large && styles.odometerUnitLarge]}>mi</Text>
+    </View>
+  );
+}
+
+export function StatusPill({ status, count = 1 }: { status: ReminderStatus; count?: number }) {
+  const { text, bg, label } = statusStyles[status];
+  return (
+    <View style={[styles.pill, { backgroundColor: bg }]}>
+      <Text style={[styles.status, { color: text }]}>
+        {count > 1 ? `${count} ${label.toLowerCase()}` : label}
+      </Text>
+    </View>
+  );
+}
+
+export function Avatar({ name, large = false }: { name: string; large?: boolean }) {
+  return (
+    <View style={[styles.avatar, large && styles.avatarLarge]}>
+      <Text style={[styles.avatarLetter, large && styles.avatarLetterLarge]}>
+        {name.charAt(0).toUpperCase()}
+      </Text>
+    </View>
+  );
+}
+
+// Settings-style rows, grouped on one panel.
+export function ListGroup({ children }: { children: ReactNode }) {
+  return <View style={styles.group}>{children}</View>;
+}
+
+export function ListRow({
+  icon,
+  label,
+  danger = false,
+  showChevron = true,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Feather>["name"];
+  label: string;
+  danger?: boolean;
+  showChevron?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.listRow, pressed && styles.listRowPressed]}
+      onPress={() => {
+        tapFeedback();
+        onPress();
+      }}
+    >
+      <Feather name={icon} size={20} color={danger ? colors.overdue : colors.amber} />
+      <Text style={[styles.listLabel, danger && styles.buttonLabelDanger]}>{label}</Text>
+      {showChevron && <Feather name="chevron-right" size={20} color={colors.placeholder} />}
+    </Pressable>
   );
 }
 
@@ -89,10 +170,18 @@ export function Button({
       accessibilityState={{ busy }}
       accessibilityLabel={label}
       // Stays tappable; a second tap while saving just does nothing.
-      onPress={busy ? undefined : onPress}
+      onPress={
+        busy
+          ? undefined
+          : () => {
+              pressFeedback();
+              onPress();
+            }
+      }
       style={({ pressed }) => [
         styles.button,
         primary ? styles.buttonPrimary : styles.buttonSecondary,
+        pressed && styles.buttonPressed,
         pressed && (primary ? styles.buttonPrimaryPressed : styles.buttonSecondaryPressed),
         style,
       ]}
@@ -112,11 +201,6 @@ export function Button({
       )}
     </Pressable>
   );
-}
-
-export function StatusLabel({ status }: { status: ReminderStatus }) {
-  const { text, label } = statusStyles[status];
-  return <Text style={[styles.status, { color: text }]}>{label}</Text>;
 }
 
 export function FormError({ message }: { message: string | null }) {
@@ -177,16 +261,64 @@ export const styles = StyleSheet.create({
   body: { color: colors.chalk, fontFamily: fonts.regular, fontSize: 16, lineHeight: 24 },
   muted: { color: colors.steel },
   heading: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 22, lineHeight: 28 },
-  odometer: { color: colors.chalk, fontFamily: fonts.mono, fontSize: 18, lineHeight: 24 },
-  odometerLarge: { color: colors.amber, fontSize: 44, lineHeight: 52, letterSpacing: -1 },
-  odometerUnit: { color: colors.steel, fontFamily: fonts.regular, fontSize: 15 },
+  odometer: { flexDirection: "row", alignItems: "center", gap: 2 },
+  wheel: {
+    width: 20,
+    height: 28,
+    borderRadius: 3,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.graphite,
+  },
+  wheelLarge: { width: 38, height: 54, borderRadius: radius.sm },
+  wheelLast: { backgroundColor: colors.amber },
+  digit: { color: colors.chalk, fontFamily: fonts.mono, fontSize: 16, lineHeight: 22 },
+  digitLarge: { fontSize: 30, lineHeight: 38 },
+  digitUnused: { color: colors.placeholder },
+  digitLast: { color: colors.onAmber },
+  odometerUnit: {
+    marginLeft: space.xs,
+    color: colors.label,
+    fontFamily: fonts.medium,
+    fontSize: 13,
+  },
+  odometerUnitLarge: { marginLeft: space.sm, fontSize: 16 },
+  pill: {
+    paddingHorizontal: space.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.graphite,
+  },
+  avatarLarge: { width: 64, height: 64, borderRadius: 32 },
+  avatarLetter: { color: colors.amber, fontFamily: fonts.bold, fontSize: 15 },
+  avatarLetterLarge: { fontSize: 28 },
+  group: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.panel },
+  listRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    minHeight: 52,
+    paddingHorizontal: space.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.edge,
+  },
+  listRowPressed: { backgroundColor: colors.graphite },
+  listLabel: { flex: 1, color: colors.chalk, fontFamily: fonts.regular, fontSize: 16 },
   button: {
     minHeight: 48,
-    borderRadius: 8,
+    borderRadius: radius.md,
     paddingHorizontal: space.lg,
     alignItems: "center",
     justifyContent: "center",
   },
+  buttonPressed: { transform: [{ scale: 0.98 }] },
   buttonPrimary: { backgroundColor: colors.amber },
   buttonPrimaryPressed: { backgroundColor: colors.amberPressed },
   buttonSecondary: { borderWidth: 1, borderColor: colors.edge },

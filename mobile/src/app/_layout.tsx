@@ -9,6 +9,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { colors, fonts } from "@/lib/theme";
 
@@ -46,10 +47,23 @@ function Routes() {
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="add-car" options={{ title: "Add a car", presentation: "modal" }} />
-        <Stack.Screen name="car/[id]/index" options={{ title: "" }} />
+        <Stack.Screen
+          name="car/[id]/index"
+          options={{
+            title: "",
+            headerTransparent: true,
+            headerStyle: { backgroundColor: "transparent" },
+            headerTintColor: colors.chalk,
+          }}
+        />
         <Stack.Screen
           name="car/[id]/mileage"
-          options={{ title: "Update mileage", presentation: "modal" }}
+          options={{
+            title: "Update mileage",
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.6],
+            sheetGrabberVisible: true,
+          }}
         />
         <Stack.Screen
           name="car/[id]/service/new"
@@ -82,9 +96,11 @@ function Routes() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <StatusBar style="light" />
-      <Routes />
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.asphalt }}>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <Routes />
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -3,7 +3,7 @@ import type { Me, PostComment, PostDetail } from "@revlog/api";
 import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useRef, useState, type ComponentRef } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useContentMenu, type MenuTarget } from "@/components/content-menu";
 import { Field } from "@/components/fields";
 import { LikeButton } from "@/components/post-card";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { formatDay } from "@/lib/format";
-import { colors, fonts, space } from "@/lib/theme";
+import { colors, fonts, MAX_WIDTH, space } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
 function MenuButton({ label, onPress }: { label: string; onPress: () => void }) {
@@ -61,6 +61,8 @@ function CommentRow({
 
 export default function Post() {
   const { id, comments } = useLocalSearchParams<{ id: string; comments?: string }>();
+  const { width } = useWindowDimensions();
+  const photoWidth = Math.min(width, MAX_WIDTH);
   const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
   const jumped = useRef(false);
   const { data, error, reload } = useApi<PostDetail>(`/community/posts/${id}`);
@@ -120,12 +122,17 @@ export default function Post() {
       />
       <Screen scrollRef={scroller}>
         {post.photos.length > 0 && (
-          <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            style={styles.photos}
+          >
             {post.photos.map((photo) => (
               <Image
                 key={photo.id}
                 source={{ uri: photo.url }}
-                style={styles.photo}
+                style={[styles.photo, { width: photoWidth }]}
                 contentFit="cover"
                 accessibilityLabel="Post photo"
               />
@@ -210,13 +217,9 @@ export default function Post() {
 }
 
 const styles = StyleSheet.create({
-  photo: {
-    width: 340,
-    aspectRatio: 4 / 3,
-    borderRadius: 8,
-    marginRight: space.sm,
-    backgroundColor: colors.panel,
-  },
+  // Runs edge to edge, past the column padding.
+  photos: { marginTop: -space.lg, marginHorizontal: -space.lg },
+  photo: { aspectRatio: 4 / 3, backgroundColor: colors.panel },
   head: { gap: space.xs },
   title: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 24, lineHeight: 30 },
   meta: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
