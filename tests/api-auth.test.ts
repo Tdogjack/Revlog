@@ -35,6 +35,8 @@ const request = (body?: unknown) =>
     body: body ? JSON.stringify(body) : undefined,
   });
 const context = <P>(params: P) => ({ params: Promise.resolve(params) });
+// What Next.js passes to a route with no ids in its path.
+const noParams = { params: Promise.resolve(undefined) } as never;
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -42,7 +44,7 @@ describe("signed-in routes", () => {
   it("answers 401 JSON without a session, and reads nothing", async () => {
     getUser.mockResolvedValue(null);
     const { GET } = await import("@/app/api/v1/vehicles/route");
-    const res = await GET(request(), context({}));
+    const res = await GET(request(), noParams);
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: expect.any(String) });
     expect(garageView).not.toHaveBeenCalled();
@@ -52,7 +54,7 @@ describe("signed-in routes", () => {
     getUser.mockResolvedValue(USER);
     garageView.mockResolvedValue([]);
     const { GET } = await import("@/app/api/v1/vehicles/route");
-    const res = await GET(request(), context({}));
+    const res = await GET(request(), noParams);
     expect(res.status).toBe(200);
     expect(garageView).toHaveBeenCalledWith(USER.id);
   });
@@ -86,7 +88,7 @@ describe("signed-in routes", () => {
     garageView.mockRejectedValue(new Error("connection to postgres://secret failed"));
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { GET } = await import("@/app/api/v1/vehicles/route");
-    const res = await GET(request(), context({}));
+    const res = await GET(request(), noParams);
     expect(res.status).toBe(500);
     expect(JSON.stringify(await res.json())).not.toContain("secret");
   });

@@ -32,7 +32,8 @@ export function authed<P extends Record<string, string> = Record<string, never>>
     try {
       const user = await getUser();
       if (!user) return fail("Your session ended. Sign in again.", 401);
-      const params = await context.params;
+      // Routes with no ids in the path get no params at all.
+      const params = (await context.params) ?? ({} as P);
       if (!Object.values(params).every(isUuid)) return fail("That wasn't found.", 404);
       return await handler({ user, request, params });
     } catch (err) {
