@@ -44,8 +44,7 @@ function Routes() {
       }}
     >
       <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="index" options={{ title: "Your garage" }} />
-        <Stack.Screen name="account" options={{ title: "Account" }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="add-car" options={{ title: "Add a car", presentation: "modal" }} />
         <Stack.Screen name="car/[id]/index" options={{ title: "" }} />
         <Stack.Screen
@@ -62,6 +61,16 @@ function Routes() {
           options={{ title: "Add reminder", presentation: "modal" }}
         />
         <Stack.Screen name="car/[id]/reminders/[reminderId]" options={{ title: "Edit reminder" }} />
+        <Stack.Screen name="post/[id]" options={{ title: "" }} />
+        <Stack.Screen name="post/new" options={{ title: "Share a post", presentation: "modal" }} />
+        <Stack.Screen name="user/[username]" options={{ title: "" }} />
+        <Stack.Screen name="report" options={{ title: "Report", presentation: "modal" }} />
+        <Stack.Screen
+          name="username"
+          options={{ title: "Choose a username", presentation: "modal" }}
+        />
+        <Stack.Screen name="blocked" options={{ title: "Blocked accounts" }} />
+        <Stack.Screen name="moderation" options={{ title: "Moderation" }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />

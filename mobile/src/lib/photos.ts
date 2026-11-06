@@ -50,8 +50,10 @@ function chooseSource() {
   });
 }
 
-// Lets the owner pick a photo and returns a form ready to upload, or null.
-export async function choosePhotoForm(fields: Record<string, string> = {}) {
+export type ChosenPhoto = { uri: string; form: FormData };
+
+// Lets the owner pick a photo and returns it, ready to upload, or null.
+export async function choosePhoto(fields: Record<string, string> = {}): Promise<ChosenPhoto | null> {
   const source = await chooseSource();
   if (!source) return null;
   const result = await launch(source);
@@ -66,5 +68,9 @@ export async function choosePhotoForm(fields: Record<string, string> = {}) {
   const file = new File(uri);
   const part = { name: "photo.jpg", type: "image/jpeg", bytes: () => file.bytes() };
   form.append("photo", part as unknown as Blob);
-  return form;
+  return { uri, form };
+}
+
+export async function choosePhotoForm(fields: Record<string, string> = {}) {
+  return (await choosePhoto(fields))?.form ?? null;
 }

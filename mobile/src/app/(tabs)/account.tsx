@@ -1,4 +1,5 @@
 import type { Me } from "@revlog/api";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { Field } from "@/components/fields";
@@ -64,6 +65,14 @@ export default function Account() {
           <Button label="Resend confirmation link" kind="secondary" onPress={resend} />
         </View>
       )}
+      {!data.username && (
+        <View style={styles.group}>
+          <Body>Choose a username to post in the community.</Body>
+          <Button label="Choose username" kind="secondary" onPress={() => router.push("/username")} />
+        </View>
+      )}
+      {data.moderator && <Button label="Open moderation" onPress={() => router.push("/moderation")} />}
+      <Button label="Blocked accounts" kind="secondary" onPress={() => router.push("/blocked")} />
       <Button label="Log out" kind="secondary" onPress={signOut} />
 
       <View style={styles.danger}>

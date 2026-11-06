@@ -137,3 +137,10 @@ export type OpenReport = {
 };
 
 export type ModerationQueue = { reports: OpenReport[]; suspended: BlockedUser[] };
+
+export type CommunityOptions = {
+  defaultSort: string;
+  sorts: { value: string; label: string }[];
+  tags: { value: string; label: string }[];
+  reasons: { value: string; label: string }[];
+};
