@@ -47,6 +47,38 @@ export type CarRecord = {
   partCount: number;
 };
 
+export type CarPart = {
+  id: string;
+  name: string;
+  url: string | null;
+  quantity: number;
+  price: string | null;
+  trackPrice: boolean;
+  lowestPrice: number | null;
+  priceError: string | null;
+};
+
+export type ModStatus = "planned" | "installed" | "removed";
+
+export type CarMod = {
+  id: string;
+  part: string;
+  brand: string | null;
+  category: string | null;
+  categoryLabel: string;
+  status: ModStatus;
+  cost: string | null;
+  installedOn: string | null;
+  installedMileage: number | null;
+  notes: string | null;
+  parts: CarPart[];
+};
+
+export type ModOptions = {
+  categories: { value: string; label: string }[];
+  statuses: { value: ModStatus; label: string }[];
+};
+
 export type CarPhoto = {
   id: string;
   url: string;
@@ -69,9 +101,25 @@ export type CarDetail = {
   photoUrl: string | null;
   reminders: CarReminder[];
   records: CarRecord[];
+  mods: CarMod[];
+  buildPostId: string | null;
   photos: CarPhoto[];
   photoLimit: number;
   canUpload: boolean;
+};
+
+export type BuildDraft = {
+  post: {
+    id: string;
+    title: string;
+    body: string | null;
+    showParts: boolean;
+    photos: { id: string; url: string }[];
+  } | null;
+  defaultTitle: string;
+  partCount: number;
+  maxPhotos: number;
+  gallery: { id: string; url: string }[];
 };
 
 export type ServiceType = { value: string; label: string };

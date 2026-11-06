@@ -5,32 +5,13 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import { photoPathsFor, removePhotoFiles } from "@/lib/gallery";
-import {
-  createMod,
-  deleteMod,
-  modInput,
-  modStatusInput,
-  setModStatus,
-  updateMod,
-} from "@/lib/mods";
+import { editModEntry, logMod, readModFields } from "@/lib/mod-log";
+import { deleteMod, modStatusInput, setModStatus } from "@/lib/mods";
 import { AI_CONSENT_NEEDED, hasAiConsent } from "@/lib/ai-consent";
 import { scanModReceipt, type ModScanResult } from "@/lib/mod-scan";
-import { parsePartRows, settlePartsCost, syncParts } from "@/lib/parts";
 
 export type ModFormState =
   { error?: string; values?: Record<string, string>; savedId?: string } | undefined;
-
-const FIELDS = [
-  "part",
-  "brand",
-  "category",
-  "status",
-  "cost",
-  "installedOn",
-  "installedMileage",
-  "notes",
-  "parts",
-];
 
 export async function addMod(
   vehicleId: string,
@@ -38,21 +19,12 @@ export async function addMod(
   formData: FormData,
 ): Promise<ModFormState> {
   const user = await requireUser();
-  const raw = Object.fromEntries(FIELDS.map((k) => [k, String(formData.get(k) ?? "")]));
-
-  const parsed = modInput.safeParse(raw);
-  if (!parsed.success) return { error: parsed.error.issues[0].message, values: raw };
-  const partRows = parsePartRows(raw.parts);
-  if ("error" in partRows) return { error: partRows.error, values: raw };
-
-  const mod = await createMod(user.id, vehicleId, parsed.data);
-  if (!mod) return { error: "That car wasn't found.", values: raw };
-  const parent = { modId: mod.id };
-  const toCheck = await syncParts(user.id, vehicleId, parent, partRows.rows);
-  await settlePartsCost(user.id, parent, toCheck, parsed.data.cost != null);
+  const raw = readModFields((k) => formData.get(k));
+  const result = await logMod(user.id, vehicleId, raw);
+  if ("error" in result) return { error: result.error, values: raw };
 
   // With photos waiting, the form uploads them to the new mod, then leaves.
-  if (formData.get("stay")) return { savedId: mod.id };
+  if (formData.get("stay")) return { savedId: result.id };
   redirect(`/garage/${vehicleId}`);
 }
 
@@ -74,18 +46,9 @@ export async function editMod(
   formData: FormData,
 ): Promise<ModFormState> {
   const user = await requireUser();
-  const raw = Object.fromEntries(FIELDS.map((k) => [k, String(formData.get(k) ?? "")]));
-
-  const parsed = modInput.safeParse(raw);
-  if (!parsed.success) return { error: parsed.error.issues[0].message, values: raw };
-  const partRows = parsePartRows(raw.parts);
-  if ("error" in partRows) return { error: partRows.error, values: raw };
-
-  const mod = await updateMod(user.id, vehicleId, modId, parsed.data);
-  if (!mod) return { error: "That mod wasn't found.", values: raw };
-  const parent = { modId: mod.id };
-  const toCheck = await syncParts(user.id, vehicleId, parent, partRows.rows);
-  await settlePartsCost(user.id, parent, toCheck, parsed.data.cost != null);
+  const raw = readModFields((k) => formData.get(k));
+  const error = await editModEntry(user.id, vehicleId, modId, raw);
+  if (error) return { error, values: raw };
 
   redirect(`/garage/${vehicleId}`);
 }

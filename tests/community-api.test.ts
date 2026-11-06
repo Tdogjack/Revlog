@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   getProfileByUsername: vi.fn(),
   hasBlockedWords: vi.fn((text: string) => text.includes("slur")),
   createPost: vi.fn(async () => ({ id: "post" })),
+  getBuildPostId: vi.fn(async () => null as string | null),
+  updateBuildPost: vi.fn(async () => null as string | null),
   addComment: vi.fn(async () => null),
   countRecentComments: vi.fn(async () => 0),
   listPosts: vi.fn(async () => []),
@@ -42,6 +44,10 @@ vi.mock("@/lib/community", () => ({
   addPostPhoto: vi.fn(),
   countRecentComments: mocks.countRecentComments,
   createPost: mocks.createPost,
+  getBuildPostId: mocks.getBuildPostId,
+  updateBuildPost: mocks.updateBuildPost,
+  MAX_POST_PHOTOS: 10,
+  countShareableParts: vi.fn(async () => 0),
   setLike: mocks.setLike,
   listPosts: mocks.listPosts,
   getPost: mocks.getPost,
@@ -78,10 +84,12 @@ vi.mock("@/lib/email-verification", () => ({
   CONFIRM_EMAIL_FIRST: "confirm",
   isEmailVerified: vi.fn(async () => true),
 }));
-vi.mock("@/lib/photos", () => ({ readPhoto: vi.fn() }));
+vi.mock("@/lib/photos", () => ({ readPhoto: vi.fn(), signedPhotoUrls: vi.fn(async () => new Map()) }));
+vi.mock("@/lib/gallery", () => ({ listPhotosForVehicle: vi.fn(async () => []) }));
 vi.mock("@/lib/vehicles", () => ({
   isUuid: (id: string) => /^[0-9a-f-]{36}$/.test(id),
   vehicleName: () => "2014 Honda Civic",
+  getVehicle: vi.fn(async () => null),
 }));
 
 const ID = "11111111-1111-1111-1111-111111111111";
@@ -97,6 +105,62 @@ beforeEach(() => {
   mocks.isModerator.mockReset();
   mocks.isModerator.mockReturnValue(false);
   mocks.getUser.mockResolvedValue(USER);
+});
+
+describe("public builds", () => {
+  const put = (body: unknown) =>
+    new NextRequest("http://localhost/api", { method: "PUT", body: JSON.stringify(body) });
+  const build = { vehicleId: ID, title: "My build", body: "", keepPhotoIds: [], photoIds: [] };
+
+  it("posts a build the car doesn't have yet", async () => {
+    const { PUT } = await import("@/app/api/v1/community/build/route");
+    const res = await PUT(put(build), noParams);
+    expect(res.status).toBe(200);
+    expect(mocks.createPost).toHaveBeenCalledWith(
+      USER.id,
+      expect.objectContaining({ tag: "build", modId: null }),
+    );
+  });
+
+  it("updates the car's one build instead of adding another", async () => {
+    mocks.getBuildPostId.mockResolvedValueOnce("existing");
+    const { PUT } = await import("@/app/api/v1/community/build/route");
+    const res = await PUT(put({ ...build, keepPhotoIds: ["photo"] }), noParams);
+    expect(await res.json()).toMatchObject({ id: "existing" });
+    expect(mocks.createPost).not.toHaveBeenCalled();
+    expect(mocks.updateBuildPost).toHaveBeenCalledWith(
+      USER.id,
+      "existing",
+      expect.objectContaining({ keepPhotoIds: ["photo"] }),
+    );
+  });
+
+  it("stops suspended accounts", async () => {
+    mocks.isSuspended.mockResolvedValueOnce(true);
+    const { PUT } = await import("@/app/api/v1/community/build/route");
+    const res = await PUT(put(build), noParams);
+    expect(res.status).toBe(400);
+    expect(mocks.createPost).not.toHaveBeenCalled();
+  });
+
+  it("stops wording the text filter blocks", async () => {
+    const { PUT } = await import("@/app/api/v1/community/build/route");
+    const res = await PUT(put({ ...build, body: "a slur" }), noParams);
+    expect(res.status).toBe(400);
+    expect(mocks.updateBuildPost).not.toHaveBeenCalled();
+  });
+
+  it("asks for a username first", async () => {
+    mocks.getProfile.mockResolvedValueOnce(null);
+    const { PUT } = await import("@/app/api/v1/community/build/route");
+    expect((await PUT(put(build), noParams)).status).toBe(409);
+  });
+
+  it("won't open another person's car", async () => {
+    const { GET } = await import("@/app/api/v1/community/build/route");
+    const req = new NextRequest(`http://localhost/api?vehicleId=${ID}`);
+    expect((await GET(req, noParams)).status).toBe(404);
+  });
 });
 
 describe("posting", () => {

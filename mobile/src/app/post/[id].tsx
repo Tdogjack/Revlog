@@ -1,16 +1,14 @@
 import { Feather } from "@expo/vector-icons";
 import type { Me, PostComment, PostDetail } from "@revlog/api";
-import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { CommentBox, useCommentBoxSpace } from "@/components/comment-box";
 import { useContentMenu, type MenuTarget } from "@/components/content-menu";
-import { Field } from "@/components/fields";
+import { PhotoPager } from "@/components/photo-pager";
 import { LikeButton } from "@/components/post-card";
 import {
   Body,
-  Button,
-  FormError,
   Heading,
   LoadFailed,
   Loading,
@@ -61,6 +59,7 @@ function CommentRow({
 
 export default function Post() {
   const { id, comments } = useLocalSearchParams<{ id: string; comments?: string }>();
+  const commentBoxSpace = useCommentBoxSpace();
   const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
   const jumped = useRef(false);
   const { data, error, reload } = useApi<PostDetail>(`/community/posts/${id}`);
@@ -89,6 +88,8 @@ export default function Post() {
       await api(`/community/posts/${id}/comments`, { method: "POST", body: { body: draft } });
       setDraft("");
       await reload();
+      // Show the new comment, which lands at the end of the thread.
+      scroller.current?.scrollToEnd();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) router.push("/username");
       else setSendError(errorMessage(err));
@@ -118,19 +119,11 @@ export default function Post() {
           ),
         }}
       />
-      <Screen scrollRef={scroller}>
+      <Screen scrollRef={scroller} avoidKeyboard={false} bottomSpace={commentBoxSpace}>
         {post.photos.length > 0 && (
-          <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-            {post.photos.map((photo) => (
-              <Image
-                key={photo.id}
-                source={{ uri: photo.url }}
-                style={styles.photo}
-                contentFit="cover"
-                accessibilityLabel="Post photo"
-              />
-            ))}
-          </ScrollView>
+          <View style={styles.photos}>
+            <PhotoPager photos={post.photos} />
+          </View>
         )}
         <View style={styles.head}>
           <Text style={styles.title} accessibilityRole="header">
@@ -193,30 +186,23 @@ export default function Post() {
               }
             />
           ))}
-          <Field
-            label="Add a comment"
-            value={draft}
-            onChangeText={setDraft}
-            multiline
-            maxLength={1000}
-          />
-          <FormError message={sendError} />
-          <Button label="Post comment" busy={sending} onPress={send} />
         </View>
       </Screen>
+      <CommentBox
+        value={draft}
+        onChangeText={setDraft}
+        sending={sending}
+        error={sendError}
+        onSend={send}
+      />
       {menu}
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  photo: {
-    width: 340,
-    aspectRatio: 4 / 3,
-    borderRadius: 8,
-    marginRight: space.sm,
-    backgroundColor: colors.panel,
-  },
+  // Runs edge to edge, past the column padding.
+  photos: { marginTop: -space.lg, marginHorizontal: -space.lg },
   head: { gap: space.xs },
   title: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 24, lineHeight: 30 },
   meta: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },

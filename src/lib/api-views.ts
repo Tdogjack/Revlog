@@ -1,8 +1,11 @@
 import "server-only";
 import type { CarDetail, GarageCar, ServiceType } from "@/lib/api-types";
+import { getBuildPostId } from "@/lib/community";
 import { getEmailSettings } from "@/lib/email-settings";
 import { isEmailVerified } from "@/lib/email-verification";
 import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
+import { modCategoryLabel } from "@/lib/mod-categories";
+import { listMods } from "@/lib/mods";
 import { listPartsForVehicle } from "@/lib/parts";
 import { signedPhotoUrls } from "@/lib/photos";
 import { listAllReminders, listReminders } from "@/lib/reminder-store";
@@ -42,8 +45,20 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
   const car = await getVehicle(userId, vehicleId);
   if (!car) return null;
 
-  const [records, reminders, types, parts, gallery, settings, canUpload] = await Promise.all([
+  const [
+    records,
+    mods,
+    buildPostId,
+    reminders,
+    types,
+    parts,
+    gallery,
+    settings,
+    canUpload,
+  ] = await Promise.all([
     listServiceRecords(userId, car.id),
+    listMods(userId, car.id),
+    getBuildPostId(userId, car.id),
     listReminders(userId, car.id),
     listServiceTypes(userId),
     listPartsForVehicle(userId, car.id),
@@ -89,6 +104,31 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
       notes: r.notes,
       partCount: parts.filter((p) => p.serviceRecordId === r.id).length,
     })),
+    mods: mods.map((m) => ({
+      id: m.id,
+      part: m.part,
+      brand: m.brand,
+      category: m.category,
+      categoryLabel: modCategoryLabel(m.category),
+      status: m.status,
+      cost: m.cost,
+      installedOn: m.installedOn,
+      installedMileage: m.installedMileage,
+      notes: m.notes,
+      parts: parts
+        .filter((p) => p.modId === m.id)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          url: p.url,
+          quantity: p.quantity,
+          price: p.price,
+          trackPrice: p.trackPrice,
+          lowestPrice: p.lowestPrice,
+          priceError: p.lastCheckError,
+        })),
+    })),
+    buildPostId,
     photos: gallery.flatMap((p) => {
       const url = urls.get(p.storagePath);
       return url ? [{ id: p.id, url, recordId: p.serviceRecordId, modId: p.modId }] : [];

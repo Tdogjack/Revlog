@@ -30,12 +30,17 @@ export const fonts = {
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
+export const radius = { sm: 6, md: 8, lg: 14 } as const;
+
+// Keeps text readable over a car photo.
+export const scrim = ["rgba(28, 28, 30, 0)", "rgba(28, 28, 30, 0.94)"] as const;
+
 // Keeps lines readable on iPad.
 export const MAX_WIDTH = 640;
 
 export const statusStyles = {
-  overdue: { text: colors.overdue, label: "Overdue" },
-  due_soon: { text: colors.due, label: "Due soon" },
-  unknown: { text: colors.steel, label: "Not logged" },
-  ok: { text: colors.done, label: "On track" },
+  overdue: { text: colors.overdue, bg: colors.overdueBg, label: "Overdue" },
+  due_soon: { text: colors.due, bg: colors.dueBg, label: "Due soon" },
+  unknown: { text: colors.steel, bg: colors.graphite, label: "Not logged" },
+  ok: { text: colors.done, bg: colors.doneBg, label: "On track" },
 } as const;

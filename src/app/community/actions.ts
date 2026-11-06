@@ -3,28 +3,17 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getUser, requireUser } from "@/lib/auth";
+import { deleteComment, deletePost, FEATURED_BUILD_TAG } from "@/lib/community";
 import {
-  createPost,
-  deleteComment,
-  deletePost,
-  FEATURED_BUILD_TAG,
-  getBuildPostId,
-  updateBuildPost,
-} from "@/lib/community";
-import {
-  atPostLimit,
-  checkPostText,
   fileReport,
   likePost,
-  POST_LIMIT_REACHED,
-  postingProblem,
+  publishBuild,
   publishComment,
   publishPost,
   savePostPhoto,
 } from "@/lib/community-rules";
 import { blockUser, unblockUser } from "@/lib/moderation";
 import type { ReportKind } from "@/lib/report-reasons";
-import { isUuid } from "@/lib/vehicles";
 
 export type PostFormState =
   { error?: string; values?: Record<string, string>; postId?: string } | undefined;
@@ -56,50 +45,25 @@ export async function sharePost(_prev: PostFormState, formData: FormData): Promi
 // Posts the car's public build, or updates it if the car already has one.
 export async function saveBuild(_prev: PostFormState, formData: FormData): Promise<PostFormState> {
   const user = await requireUser();
-  const problem = await postingProblem(user.id);
-  if (problem && "needsUsername" in problem) redirect("/username?next=/community");
-  if (problem) return { error: problem.error };
-
   const vehicleId = String(formData.get("vehicleId") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
   const values = { title, body };
-  if (!isUuid(vehicleId)) return { error: "Pick a car to share." };
-  const invalid = checkPostText(title, body);
-  if (invalid) return { error: invalid, values };
-  const showParts = formData.get("showParts") === "on";
-  const photoIds = formData.getAll("photoIds").map(String);
 
-  const existing = await getBuildPostId(user.id, vehicleId);
-  if (existing) {
-    const error = await updateBuildPost(user.id, existing, {
-      title,
-      body: body || null,
-      showParts,
-      keepPhotoIds: formData.getAll("keepPhotoIds").map(String),
-      photoIds,
-    });
-    if (error) return { error, values };
-    updateTag(FEATURED_BUILD_TAG);
-    revalidatePath("/community");
-    revalidatePath(`/community/${existing}`);
-    revalidatePath(`/garage/${vehicleId}`);
-    return { postId: existing };
-  }
-
-  if (await atPostLimit(user.id)) return { error: POST_LIMIT_REACHED, values };
-  const result = await createPost(user.id, {
+  const result = await publishBuild(user.id, {
     vehicleId,
-    modId: null,
     title,
-    body: body || null,
-    photoIds,
-    showParts,
-    tag: "build",
+    body,
+    showParts: formData.get("showParts") === "on",
+    photoIds: formData.getAll("photoIds").map(String),
+    keepPhotoIds: formData.getAll("keepPhotoIds").map(String),
   });
+  if ("needsUsername" in result) redirect("/username?next=/community");
   if ("error" in result) return { error: result.error, values };
+
   updateTag(FEATURED_BUILD_TAG);
   revalidatePath("/community");
+  revalidatePath(`/community/${result.id}`);
   revalidatePath(`/garage/${vehicleId}`);
   return { postId: result.id };
 }

@@ -2,7 +2,15 @@ import "server-only";
 import { and, count, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { posts } from "@/db/schema";
-import { addComment, addPostPhoto, countRecentComments, createPost, setLike } from "@/lib/community";
+import {
+  addComment,
+  addPostPhoto,
+  countRecentComments,
+  createPost,
+  getBuildPostId,
+  setLike,
+  updateBuildPost,
+} from "@/lib/community";
 import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import { createReport, isSuspended, SUSPENDED_MESSAGE } from "@/lib/moderation";
 import { readPhoto } from "@/lib/photos";
@@ -71,6 +79,50 @@ export async function publishPost(
   if (await atPostLimit(userId)) return { error: POST_LIMIT_REACHED };
 
   return createPost(userId, { ...input, tag, body: body || null });
+}
+
+// Posts a car's public build, or updates it if the car already has one.
+export async function publishBuild(
+  userId: string,
+  input: {
+    vehicleId: string;
+    title: string;
+    body: string;
+    showParts: boolean;
+    photoIds: string[];
+    keepPhotoIds: string[];
+  },
+): Promise<Blocked | { id: string }> {
+  const problem = await postingProblem(userId);
+  if (problem) return problem;
+
+  const { vehicleId, title, body, showParts, photoIds, keepPhotoIds } = input;
+  if (!isUuid(vehicleId)) return { error: "Pick a car to share." };
+  const invalid = checkPostText(title, body);
+  if (invalid) return { error: invalid };
+
+  const existing = await getBuildPostId(userId, vehicleId);
+  if (existing) {
+    const error = await updateBuildPost(userId, existing, {
+      title,
+      body: body || null,
+      showParts,
+      keepPhotoIds,
+      photoIds,
+    });
+    return error ? { error } : { id: existing };
+  }
+
+  if (await atPostLimit(userId)) return { error: POST_LIMIT_REACHED };
+  return createPost(userId, {
+    vehicleId,
+    modId: null,
+    title,
+    body: body || null,
+    photoIds,
+    showParts,
+    tag: "build",
+  });
 }
 
 export async function publishComment(
