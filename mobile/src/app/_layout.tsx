@@ -56,6 +56,7 @@ function Routes() {
             headerTintColor: colors.chalk,
           }}
         />
+        <Stack.Screen name="car/[id]/edit" options={{ title: "Edit car", presentation: "modal" }} />
         <Stack.Screen
           name="car/[id]/mileage"
           options={{

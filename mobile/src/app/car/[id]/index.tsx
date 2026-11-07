@@ -309,16 +309,27 @@ export default function Car() {
         options={{
           title: "",
           headerRight: () => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ selected: starred }}
-              accessibilityLabel={starred ? "Remove from favorites" : "Add to favorites"}
-              hitSlop={8}
-              style={styles.headerButton}
-              onPress={toggleFavorite}
-            >
-              <Feather name="star" size={22} color={starred ? colors.amber : colors.chalk} />
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: starred }}
+                accessibilityLabel={starred ? "Remove from favorites" : "Add to favorites"}
+                hitSlop={8}
+                style={styles.headerButton}
+                onPress={toggleFavorite}
+              >
+                <Feather name="star" size={22} color={starred ? colors.amber : colors.chalk} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Edit car"
+                hitSlop={8}
+                style={styles.headerButton}
+                onPress={() => router.push(`/car/${id}/edit`)}
+              >
+                <Feather name="settings" size={22} color={colors.chalk} />
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -493,6 +504,7 @@ export default function Car() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.asphalt },
+  headerActions: { flexDirection: "row", alignItems: "center" },
   headerButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   heroFrame: { overflow: "hidden", backgroundColor: colors.panel, justifyContent: "flex-end" },
   noHero: { flex: 1, alignItems: "center", justifyContent: "center" },
