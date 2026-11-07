@@ -74,15 +74,26 @@ export default function Garage() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Add a car"
-              hitSlop={8}
-              style={styles.headerButton}
-              onPress={() => router.push("/add-car")}
-            >
-              <Feather name="plus" size={24} color={colors.amber} />
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Costs"
+                hitSlop={8}
+                style={styles.headerButton}
+                onPress={() => router.push("/costs")}
+              >
+                <Feather name="bar-chart-2" size={22} color={colors.amber} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Add a car"
+                hitSlop={8}
+                style={styles.headerButton}
+                onPress={() => router.push("/add-car")}
+              >
+                <Feather name="plus" size={24} color={colors.amber} />
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -114,6 +125,7 @@ export default function Garage() {
 }
 
 const styles = StyleSheet.create({
+  headerActions: { flexDirection: "row", alignItems: "center" },
   headerButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   plate: {
     aspectRatio: 4 / 3,

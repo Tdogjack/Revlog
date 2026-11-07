@@ -91,6 +91,8 @@ export default function Account() {
       )}
 
       <ListGroup>
+        <ListRow icon="bar-chart-2" label="Costs" onPress={() => router.push("/costs")} />
+        <ListRow icon="mail" label="Email reminders" onPress={() => router.push("/email-settings")} />
         {data.moderator && (
           <ListRow icon="shield" label="Moderation" onPress={() => router.push("/moderation")} />
         )}

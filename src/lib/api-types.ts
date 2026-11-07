@@ -159,6 +159,18 @@ export type BuildDraft = {
   gallery: { id: string; url: string }[];
 };
 
+export type Costs = {
+  total: number;
+  lastYear: number;
+  serviceTotal: number;
+  modsTotal: number;
+  months: { month: string; label: string; service: number; mods: number }[];
+  perCar: { id: string; name: string; service: number; mods: number }[];
+  topCategories: { label: string; amount: number }[];
+};
+
+export type EmailSettings = { reminderEmails: boolean; reminderPercent: number | null };
+
 export type ServiceType = { value: string; label: string };
 
 export type FeedPost = {

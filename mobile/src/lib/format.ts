@@ -18,6 +18,13 @@ export const formatMiles = (miles: number) => `${miles.toLocaleString("en-US")} 
 export const formatMoney = (amount: string) =>
   Number(amount).toLocaleString("en-US", { style: "currency", currency: "USD" });
 
+export const formatDollars = (amount: number) =>
+  amount.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
+
 // For server timestamps, shown in the person's own time zone.
 export const formatDay = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
