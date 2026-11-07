@@ -1,12 +1,12 @@
 import "server-only";
-import type { CarDetail, GarageCar, ServiceType } from "@/lib/api-types";
+import type { CarDetail, CarPart, GarageCar, ServiceType } from "@/lib/api-types";
 import { getBuildPostId } from "@/lib/community";
 import { getEmailSettings } from "@/lib/email-settings";
 import { isEmailVerified } from "@/lib/email-verification";
 import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { listMods } from "@/lib/mods";
-import { listPartsForVehicle } from "@/lib/parts";
+import { listPartsForVehicle, type PartWithHistory } from "@/lib/parts";
 import { signedPhotoUrls } from "@/lib/photos";
 import { listAllReminders, listReminders } from "@/lib/reminder-store";
 import { carUrgency, describeDue, rankReminders } from "@/lib/reminders";
@@ -14,6 +14,17 @@ import { categoryLabel, SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { listServiceDates, listServiceRecords } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, listVehicles, vehicleName } from "@/lib/vehicles";
+
+const partView = (p: PartWithHistory): CarPart => ({
+  id: p.id,
+  name: p.name,
+  url: p.url,
+  quantity: p.quantity,
+  price: p.price,
+  trackPrice: p.trackPrice,
+  lowestPrice: p.lowestPrice,
+  priceError: p.lastCheckError,
+});
 
 export async function garageView(userId: string): Promise<GarageCar[]> {
   const cars = await listVehicles(userId);
@@ -103,6 +114,7 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
       shop: r.shop,
       notes: r.notes,
       partCount: parts.filter((p) => p.serviceRecordId === r.id).length,
+      parts: parts.filter((p) => p.serviceRecordId === r.id).map(partView),
     })),
     mods: mods.map((m) => ({
       id: m.id,
@@ -115,18 +127,7 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
       installedOn: m.installedOn,
       installedMileage: m.installedMileage,
       notes: m.notes,
-      parts: parts
-        .filter((p) => p.modId === m.id)
-        .map((p) => ({
-          id: p.id,
-          name: p.name,
-          url: p.url,
-          quantity: p.quantity,
-          price: p.price,
-          trackPrice: p.trackPrice,
-          lowestPrice: p.lowestPrice,
-          priceError: p.lastCheckError,
-        })),
+      parts: parts.filter((p) => p.modId === m.id).map(partView),
     })),
     buildPostId,
     photos: gallery.flatMap((p) => {

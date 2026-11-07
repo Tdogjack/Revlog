@@ -52,6 +52,27 @@ function chooseSource() {
 
 export type ChosenPhoto = { uri: string; form: FormData };
 
+// Expo's fetch reads any part with bytes() and refuses React Native's { uri }
+// form. The type is set here because the server only accepts known types.
+export function fileForm(
+  uri: string,
+  type: string,
+  name: string,
+  fields: Record<string, string> = {},
+  field = "file",
+) {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) form.append(key, value);
+  const file = new File(uri);
+  const part = { name, type, bytes: () => file.bytes() };
+  form.append(field, part as unknown as Blob);
+  return form;
+}
+
+// A form holding an already-chosen photo, which can be sent again.
+export const photoForm = (uri: string, fields: Record<string, string> = {}, field = "photo") =>
+  fileForm(uri, "image/jpeg", "photo.jpg", fields, field);
+
 // Lets the owner pick a photo and returns it, ready to upload, or null.
 export async function choosePhoto(fields: Record<string, string> = {}): Promise<ChosenPhoto | null> {
   const source = await chooseSource();
@@ -60,15 +81,7 @@ export async function choosePhoto(fields: Record<string, string> = {}): Promise<
   if (!result || result.canceled) return null;
   const asset = result.assets[0];
   const uri = await shrink(asset.uri, asset.width, asset.height);
-
-  const form = new FormData();
-  for (const [key, value] of Object.entries(fields)) form.append(key, value);
-  // Expo's fetch reads any part with bytes() and refuses React Native's { uri }
-  // form. The type is set here because the server only accepts image types.
-  const file = new File(uri);
-  const part = { name: "photo.jpg", type: "image/jpeg", bytes: () => file.bytes() };
-  form.append("photo", part as unknown as Blob);
-  return { uri, form };
+  return { uri, form: photoForm(uri, fields) };
 }
 
 export async function choosePhotoForm(fields: Record<string, string> = {}) {

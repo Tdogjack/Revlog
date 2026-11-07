@@ -45,6 +45,7 @@ export type CarRecord = {
   shop: string | null;
   notes: string | null;
   partCount: number;
+  parts: CarPart[];
 };
 
 export type CarPart = {
@@ -73,6 +74,42 @@ export type CarMod = {
   notes: string | null;
   parts: CarPart[];
 };
+
+// What a scan reads from a photo, for the person to check before saving.
+export type ScannedPart = {
+  name: string;
+  url: string;
+  quantity: string;
+  price: string;
+  trackPrice: boolean;
+};
+
+export type ExtraService = { category: string; title: string; cost: string };
+
+export type ScannedReceipt = {
+  values: Record<string, string>;
+  parts: ScannedPart[];
+  extras: ExtraService[];
+};
+
+export type ScannedMod = { values: Record<string, string>; parts: ScannedPart[] };
+
+export type DraftRecord = {
+  category: string;
+  title: string;
+  servicedOn: string;
+  mileage: string;
+  cost: string;
+  shop: string;
+  notes: string;
+  parts: ScannedPart[];
+};
+
+export type ScannedHistory = { entries: DraftRecord[]; unreadable: string | null };
+
+export type SaveHistoryResult =
+  | { error: string; rowKey?: number }
+  | { saved: { key: number; id: string }[] };
 
 export type ModOptions = {
   categories: { value: string; label: string }[];

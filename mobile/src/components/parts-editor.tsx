@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import type { CarPart } from "@revlog/api";
+import type { CarPart, ScannedPart } from "@revlog/api";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { Field } from "@/components/fields";
 import { Button } from "@/components/ui";
@@ -28,6 +28,12 @@ export const blankPart = (): PartValues => ({
   quantity: "1",
   price: "",
   trackPrice: false,
+});
+
+export const scannedPart = (part: ScannedPart): PartValues => ({
+  ...blankPart(),
+  ...part,
+  quantity: part.quantity || "1",
 });
 
 export const toPartValues = (part: CarPart): PartValues => ({

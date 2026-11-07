@@ -3,12 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import { photoPathsFor, removePhotoFiles } from "@/lib/gallery";
 import { editModEntry, logMod, readModFields } from "@/lib/mod-log";
 import { deleteMod, modStatusInput, setModStatus } from "@/lib/mods";
-import { AI_CONSENT_NEEDED, hasAiConsent } from "@/lib/ai-consent";
 import { scanModReceipt, type ModScanResult } from "@/lib/mod-scan";
+import { scanBlocked } from "@/lib/scan-gate";
 
 export type ModFormState =
   { error?: string; values?: Record<string, string>; savedId?: string } | undefined;
@@ -32,8 +31,8 @@ export async function addMod(
 // Nothing is saved here.
 export async function scanModPhoto(formData: FormData): Promise<ModScanResult> {
   const user = await requireUser();
-  if (!(await isEmailVerified(user.id))) return { error: CONFIRM_EMAIL_FIRST };
-  if (!(await hasAiConsent(user.id))) return { error: AI_CONSENT_NEEDED };
+  const blocked = await scanBlocked(user.id);
+  if (blocked) return { error: blocked };
   const photo = formData.get("photo");
   if (!(photo instanceof File) || photo.size === 0) return { error: "Choose a photo to scan." };
   return scanModReceipt(user.id, photo);

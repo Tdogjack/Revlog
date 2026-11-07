@@ -1,12 +1,14 @@
-import type { ModOptions, ModStatus } from "@revlog/api";
+import type { ModOptions, ModStatus, ScannedMod } from "@revlog/api";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert } from "react-native";
 import { DateField, Field, SelectField } from "@/components/fields";
-import { partsPayload, PartsEditor, type PartValues } from "@/components/parts-editor";
+import { partsPayload, PartsEditor, scannedPart, type PartValues } from "@/components/parts-editor";
+import { ScanBox } from "@/components/scan-box";
 import { Button, FormError, Loading, Screen } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { formatMiles, today } from "@/lib/format";
+import { photoForm } from "@/lib/photos";
 import { useApi } from "@/lib/use-api";
 
 export type ModValues = {
@@ -37,6 +39,7 @@ export function ModForm({
   initial,
   initialParts = [],
   modId,
+  canUpload = true,
   children,
 }: {
   carId: string;
@@ -44,6 +47,7 @@ export function ModForm({
   initial: ModValues;
   initialParts?: PartValues[];
   modId?: string;
+  canUpload?: boolean;
   children?: React.ReactNode;
 }) {
   const options = useApi<ModOptions>("/mod-options");
@@ -52,6 +56,7 @@ export function ModForm({
   const [partError, setPartError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [scannedPhoto, setScannedPhoto] = useState<string | null>(null);
   const set = (key: keyof ModValues) => (value: string) =>
     setValues((v) => ({ ...v, [key]: value }));
 
@@ -61,6 +66,15 @@ export function ModForm({
 
   const planned = values.status === "planned";
 
+  // Keeps what's already typed wherever the photo had nothing, and adds the
+  // photo's items after any parts already listed.
+  const applyScan = (scan: ScannedMod, photoUri: string) => {
+    const found = Object.fromEntries(Object.entries(scan.values).filter(([, v]) => v));
+    setValues((v) => ({ ...v, ...found }));
+    setParts((current) => [...current, ...scan.parts.map(scannedPart)]);
+    setScannedPhoto(photoUri);
+  };
+
   const save = async () => {
     if (!values.part.trim()) {
       setPartError("Enter the part, like Cold air intake.");
@@ -69,10 +83,17 @@ export function ModForm({
     setSaving(true);
     setError(null);
     try {
-      await api(`/vehicles/${carId}/mods${modId ? `/${modId}` : ""}`, {
+      const saved = await api<{ id?: string }>(`/vehicles/${carId}/mods${modId ? `/${modId}` : ""}`, {
         method: modId ? "PUT" : "POST",
         body: { ...values, parts: partsPayload(parts) },
       });
+      // The mod is saved by now, so a failed photo doesn't lose it.
+      if (scannedPhoto && saved.id) {
+        await api(`/vehicles/${carId}/photos`, {
+          method: "POST",
+          form: photoForm(scannedPhoto, { kind: "mod", targetId: saved.id }),
+        }).catch(() => Alert.alert("Mod saved", "The scanned photo didn't upload."));
+      }
       router.back();
     } catch (err) {
       setError(errorMessage(err));
@@ -100,6 +121,15 @@ export function ModForm({
 
   return (
     <Screen>
+      {!modId && (
+        <ScanBox<ScannedMod>
+          path="/scans/mod"
+          label="Scan a receipt or listing"
+          intro="Have an order email, receipt, or listing? Scan it and the form fills itself in."
+          canUpload={canUpload}
+          onScanned={applyScan}
+        />
+      )}
       <Field
         label="Part"
         placeholder="Cold air intake"

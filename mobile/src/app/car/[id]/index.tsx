@@ -469,6 +469,11 @@ export default function Car() {
                 ))}
               </View>
             )}
+            <Button
+              label="Import service history"
+              kind="secondary"
+              onPress={() => router.push(`/car/${id}/history`)}
+            />
           </Section>
 
           <Section title="Photos">

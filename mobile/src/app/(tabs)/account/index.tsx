@@ -2,7 +2,7 @@ import type { Me } from "@revlog/api";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, Switch, Text, View } from "react-native";
 import { Field } from "@/components/fields";
 import {
   Avatar,
@@ -19,7 +19,7 @@ import {
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { SITE_URL } from "@/lib/config";
-import { colors, space } from "@/lib/theme";
+import { colors, fonts, space } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
 export default function Account() {
@@ -44,6 +44,15 @@ export default function Account() {
       );
     } catch (err) {
       Alert.alert("Link not sent", errorMessage(err));
+    }
+  };
+
+  const setAiScans = async (allowed: boolean) => {
+    try {
+      await api("/me/ai-consent", { method: allowed ? "POST" : "DELETE", body: {} });
+      await reload();
+    } catch (err) {
+      Alert.alert("Setting not saved", errorMessage(err));
     }
   };
 
@@ -87,6 +96,19 @@ export default function Account() {
         )}
         <ListRow icon="slash" label="Blocked accounts" onPress={() => router.push("/blocked")} />
       </ListGroup>
+
+      <View style={styles.setting}>
+        <View style={styles.settingText}>
+          <Text style={styles.settingLabel}>AI scanning</Text>
+          <Body style={styles.hint}>Scans you start are read by Anthropic&apos;s AI.</Body>
+        </View>
+        <Switch
+          accessibilityLabel="Allow AI scanning"
+          value={data.aiConsent}
+          trackColor={{ true: colors.amber, false: colors.graphite }}
+          onValueChange={setAiScans}
+        />
+      </View>
 
       <ListGroup>
         <ListRow
@@ -138,4 +160,8 @@ const styles = StyleSheet.create({
   group: { gap: space.sm },
   muted: { color: colors.steel },
   danger: { gap: space.md },
+  setting: { flexDirection: "row", alignItems: "center", gap: space.md },
+  settingText: { flex: 1, gap: 2 },
+  settingLabel: { color: colors.chalk, fontFamily: fonts.regular, fontSize: 16 },
+  hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },
 });
