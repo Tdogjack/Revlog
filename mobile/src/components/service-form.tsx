@@ -1,11 +1,14 @@
-import type { ServiceType } from "@revlog/api";
+import type { ExtraService, ScannedReceipt, ServiceType } from "@revlog/api";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, Text } from "react-native";
 import { DateField, Field, SelectField } from "@/components/fields";
+import { partsPayload, PartsEditor, scannedPart, type PartValues } from "@/components/parts-editor";
+import { ScanBox } from "@/components/scan-box";
 import { Button, FormError, Loading, Screen } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { today } from "@/lib/format";
+import { photoForm } from "@/lib/photos";
 import { useApi } from "@/lib/use-api";
 import { colors, fonts } from "@/lib/theme";
 
@@ -37,18 +40,23 @@ export function ServiceForm({
   initial,
   recordId,
   reminderId,
-  partCount = 0,
+  initialParts = [],
+  canUpload = true,
   children,
 }: {
   carId: string;
   initial: ServiceValues;
   recordId?: string;
   reminderId?: string;
-  partCount?: number;
+  initialParts?: PartValues[];
+  canUpload?: boolean;
   children?: React.ReactNode;
 }) {
   const types = useApi<ServiceType[]>("/service-types");
   const [values, setValues] = useState(initial);
+  const [parts, setParts] = useState(initialParts);
+  const [extras, setExtras] = useState<ExtraService[]>([]);
+  const [scannedPhoto, setScannedPhoto] = useState<string | null>(null);
   const [newType, setNewType] = useState("");
   const [typeError, setTypeError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +66,17 @@ export function ServiceForm({
 
   if (!types.data) return <Loading />;
 
+  // Keeps what's already typed wherever the photo had nothing, and adds the
+  // photo's parts after any already listed.
+  const applyScan = (scan: ScannedReceipt, photoUri: string) => {
+    const found = Object.fromEntries(Object.entries(scan.values).filter(([, v]) => v));
+    setValues((v) => ({ ...v, ...found }));
+    setParts((current) => [...current, ...scan.parts.map(scannedPart)]);
+    setExtras(scan.extras);
+    setScannedPhoto(photoUri);
+    setTypeError(null);
+  };
+
   const save = async () => {
     if (!values.category) {
       setTypeError("Pick what kind of service this was.");
@@ -66,12 +85,24 @@ export function ServiceForm({
     setSaving(true);
     setError(null);
     try {
-      // No "parts" here, so anything added on the website stays on the record.
-      const body = { ...values, newType, reminderId };
-      await api(`/vehicles/${carId}/service${recordId ? `/${recordId}` : ""}`, {
-        method: recordId ? "PUT" : "POST",
-        body,
-      });
+      const body = {
+        ...values,
+        newType,
+        reminderId,
+        parts: partsPayload(parts),
+        extraServices: extras.length > 0 ? JSON.stringify(extras) : undefined,
+      };
+      const saved = await api<{ id?: string }>(
+        `/vehicles/${carId}/service${recordId ? `/${recordId}` : ""}`,
+        { method: recordId ? "PUT" : "POST", body },
+      );
+      // The record is saved by now, so a failed photo doesn't lose it.
+      if (scannedPhoto && saved.id) {
+        await api(`/vehicles/${carId}/photos`, {
+          method: "POST",
+          form: photoForm(scannedPhoto, { kind: "record", targetId: saved.id }),
+        }).catch(() => Alert.alert("Service saved", "The scanned photo didn't upload."));
+      }
       router.back();
     } catch (err) {
       setError(errorMessage(err));
@@ -99,6 +130,15 @@ export function ServiceForm({
 
   return (
     <Screen>
+      {!recordId && (
+        <ScanBox<ScannedReceipt>
+          path="/scans/receipt"
+          label="Scan a receipt"
+          intro="Scan a receipt and the form fills itself in."
+          canUpload={canUpload}
+          onScanned={applyScan}
+        />
+      )}
       <SelectField
         label="Service"
         value={values.category}
@@ -144,10 +184,11 @@ export function ServiceForm({
         multiline
         maxLength={2000}
       />
-      {partCount > 0 && (
-        <Text style={{ color: colors.steel, fontFamily: fonts.regular, fontSize: 14 }}>
-          {partCount === 1 ? "1 part is" : `${partCount} parts are`} saved with this record. Edit
-          parts on revlog.me.
+      <PartsEditor label="Parts used" parts={parts} onChange={setParts} />
+      {extras.length > 0 && (
+        <Text style={{ color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 }}>
+          Also on this receipt, saved as separate records:{" "}
+          {extras.map((e) => e.title).join(", ")}.
         </Text>
       )}
       {children}

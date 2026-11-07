@@ -6,6 +6,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    // The rest of the error response, for routes that say more than a message.
+    readonly data?: unknown,
   ) {
     super(message);
   }
@@ -83,7 +85,7 @@ export async function api<T = unknown>(path: string, options: Options = {}): Pro
 
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(data?.error ?? "Something went wrong. Try again.", res.status);
+    throw new ApiError(data?.error ?? "Something went wrong. Try again.", res.status, data);
   }
   return data as T;
 }

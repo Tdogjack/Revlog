@@ -12,6 +12,7 @@ export const POST = authed<{ id: string }>(async ({ user, request, params }) => 
     params.id,
     reminderId,
     readServiceFields((k) => body[k]),
+    body.extraServices,
   );
   return "error" in result ? fail(result.error) : ok({ id: result.id }, 201);
 });

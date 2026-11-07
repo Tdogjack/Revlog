@@ -1,5 +1,6 @@
 import type { CarDetail } from "@revlog/api";
 import { useLocalSearchParams } from "expo-router";
+import { toPartValues } from "@/components/parts-editor";
 import { PhotoStrip } from "@/components/photo-strip";
 import { ServiceForm } from "@/components/service-form";
 import { Heading, LoadFailed, Loading } from "@/components/ui";
@@ -19,7 +20,7 @@ export default function EditService() {
     <ServiceForm
       carId={id}
       recordId={recordId}
-      partCount={record.partCount}
+      initialParts={record.parts.map(toPartValues)}
       initial={{
         category: record.category,
         title: record.title,
