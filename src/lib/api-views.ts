@@ -1,5 +1,6 @@
 import "server-only";
 import type { CarDetail, CarPart, GarageCar, ServiceType } from "@/lib/api-types";
+import { carTimeline } from "@/lib/car-timeline";
 import { getBuildPostId } from "@/lib/community";
 import { listCostItems, summarizeCosts, type CostSummary } from "@/lib/costs";
 import { getEmailSettings } from "@/lib/email-settings";
@@ -14,7 +15,7 @@ import { carUrgency, describeDue, rankReminders } from "@/lib/reminders";
 import { categoryLabel, SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { listServiceDates, listServiceRecords } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
-import { getVehicle, listVehicles, vehicleName } from "@/lib/vehicles";
+import { getVehicle, listMileageReadings, listVehicles, vehicleName } from "@/lib/vehicles";
 
 const partView = (p: PartWithHistory): CarPart => ({
   id: p.id,
@@ -75,6 +76,7 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
     records,
     mods,
     buildPostId,
+    readings,
     reminders,
     types,
     parts,
@@ -85,6 +87,7 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
     listServiceRecords(userId, car.id),
     listMods(userId, car.id),
     getBuildPostId(userId, car.id),
+    listMileageReadings(userId, car.id),
     listReminders(userId, car.id),
     listServiceTypes(userId),
     listPartsForVehicle(userId, car.id),
@@ -93,6 +96,9 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
     isEmailVerified(userId),
   ]);
   const urls = await signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]);
+  const ranked = rankReminders(reminders, car, records, {
+    dueSoonPercent: settings.reminderPercent,
+  });
 
   return {
     id: car.id,
@@ -107,9 +113,7 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
     currentMileage: car.currentMileage,
     favorite: car.favorite,
     photoUrl: (car.photoPath && urls.get(car.photoPath)) || null,
-    reminders: rankReminders(reminders, car, records, {
-      dueSoonPercent: settings.reminderPercent,
-    }).map(({ reminder, result }) => ({
+    reminders: ranked.map(({ reminder, result }) => ({
       id: reminder.id,
       task: reminder.task,
       serviceCategory: reminder.serviceCategory,
@@ -145,6 +149,15 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
       parts: parts.filter((p) => p.modId === m.id).map(partView),
     })),
     buildPostId,
+    timeline: carTimeline({
+      currentMileage: car.currentMileage,
+      readings,
+      records,
+      mods,
+      reminders: ranked.map(({ reminder }) => reminder),
+      href: (kind, itemId) =>
+        `/car/${car.id}/${{ service: "service", mod: "mods", reminder: "reminders" }[kind]}/${itemId}`,
+    }),
     photos: gallery.flatMap((p) => {
       const url = urls.get(p.storagePath);
       return url ? [{ id: p.id, url, recordId: p.serviceRecordId, modId: p.modId }] : [];

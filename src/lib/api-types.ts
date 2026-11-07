@@ -123,6 +123,29 @@ export type CarPhoto = {
   modId: string | null;
 };
 
+export type TimelineKind = "service" | "mod" | "reading" | "due";
+
+export type TimelinePoint = { t: number; miles: number };
+
+export type TimelineEntry = {
+  key: string;
+  kind: TimelineKind;
+  label: string;
+  t: number;
+  miles: number;
+  estimated: boolean;
+  overdue?: boolean;
+  href?: string;
+};
+
+export type CarTimeline = {
+  line: TimelinePoint[];
+  events: TimelineEntry[];
+  start: number;
+  end: number;
+  projection: TimelinePoint[] | null;
+};
+
 export type CarDetail = {
   id: string;
   name: string;
@@ -140,6 +163,7 @@ export type CarDetail = {
   records: CarRecord[];
   mods: CarMod[];
   buildPostId: string | null;
+  timeline: CarTimeline | null;
   photos: CarPhoto[];
   photoLimit: number;
   canUpload: boolean;

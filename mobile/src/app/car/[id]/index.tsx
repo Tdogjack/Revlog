@@ -21,6 +21,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
+import { MileageGraph } from "@/components/mileage-graph";
 import { PhotoStrip } from "@/components/photo-strip";
 import {
   Button,
@@ -408,6 +409,12 @@ export default function Car() {
             <QuickAction icon="zap" label="Add mod" onPress={addMod} />
             <QuickAction icon="bell" label="Add reminder" onPress={addReminder} />
           </View>
+
+          {car.timeline && (
+            <Section title="Mileage">
+              <MileageGraph timeline={car.timeline} />
+            </Section>
+          )}
 
           <Section title="Reminders">
             {car.reminders.length === 0 ? (
