@@ -60,9 +60,9 @@ export function ScanBox<T>({
         onPress={scanning ? undefined : scan}
       >
         {scanning ? (
-          <ActivityIndicator color={colors.onAmber} />
+          <ActivityIndicator color={colors.amber} />
         ) : (
-          <Feather name="camera" size={20} color={colors.onAmber} />
+          <Feather name="camera" size={20} color={colors.amber} />
         )}
         <Text style={styles.label}>{scanning ? "Reading photo" : label}</Text>
       </Pressable>
@@ -87,10 +87,12 @@ const styles = StyleSheet.create({
     gap: space.sm,
     minHeight: 48,
     borderRadius: radius.md,
-    backgroundColor: colors.amber,
+    borderWidth: 1,
+    borderColor: colors.edge,
   },
-  pressed: { backgroundColor: colors.amberPressed },
-  label: { color: colors.onAmber, fontFamily: fonts.bold, fontSize: 16 },
+  // Secondary, so the form's own save stays the one amber button.
+  pressed: { backgroundColor: colors.graphite, transform: [{ scale: 0.98 }] },
+  label: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 16 },
   hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },
   done: { color: colors.done, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
 });

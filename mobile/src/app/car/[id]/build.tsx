@@ -183,5 +183,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: space.xs,
   },
-  addLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 13 },
+  addLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
 });

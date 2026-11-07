@@ -1,12 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import type { ReminderStatus } from "@revlog/api";
-import type { ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -15,6 +13,12 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import {
+  KeyboardAwareScrollView,
+  KeyboardController,
+  KeyboardStickyView,
+  KeyboardToolbar,
+} from "react-native-keyboard-controller";
 import { pressFeedback, tapFeedback } from "@/lib/haptics";
 import { colors, fonts, MAX_WIDTH, radius, space, statusStyles } from "@/lib/theme";
 
@@ -27,31 +31,79 @@ export function Screen({
 }: {
   children: ReactNode;
   refreshControl?: React.ReactElement<RefreshControlProps>;
-  scrollRef?: React.Ref<React.ComponentRef<typeof ScrollView>>;
+  scrollRef?: React.Ref<React.ComponentRef<typeof KeyboardAwareScrollView>>;
   // Off when something pinned below the screen moves with the keyboard instead.
   avoidKeyboard?: boolean;
   // Extra room under the content, for something floating over the page.
   bottomSpace?: number;
 }) {
+  const [numberPadUp, setNumberPadUp] = useState(false);
   return (
-    <KeyboardAvoidingView
-      style={styles.fill}
-      enabled={avoidKeyboard}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
+    <NumberPadContext.Provider value={setNumberPadUp}>
+      {/* Keeps the focused field clear of the keyboard and its toolbar. */}
+      <KeyboardAwareScrollView
         ref={scrollRef}
+        enabled={avoidKeyboard}
+        bottomOffset={avoidKeyboard ? TOOLBAR_CLEARANCE : 0}
         style={styles.fill}
         contentContainerStyle={styles.scroll}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         refreshControl={refreshControl}
       >
         <View style={[styles.column, bottomSpace != null && { paddingBottom: bottomSpace }]}>
           {children}
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+      {avoidKeyboard && <FormToolbar numberPadNext={numberPadUp} />}
+    </NumberPadContext.Provider>
+  );
+}
+
+// Fields tell their screen when a number pad opens, since iOS number pads
+// have no return key to move on with.
+const NumberPadContext = createContext<(up: boolean) => void>(() => {});
+export const useNumberPadFocus = () => useContext(NumberPadContext);
+
+const TOOLBAR_HEIGHT = 42;
+// Room between the focused field and the top of the toolbar, or of the
+// Next button above it.
+const TOOLBAR_CLEARANCE = TOOLBAR_HEIGHT + 48 + space.lg;
+
+const toolbarColors = {
+  primary: colors.amber,
+  disabled: colors.edge,
+  background: colors.panel,
+  ripple: colors.graphite,
+};
+
+// Previous, Next and Done, riding on top of the keyboard for every text box.
+// The toolbar stays put; on a number pad a Next button sits just above it.
+export function FormToolbar({ numberPadNext = false }: { numberPadNext?: boolean }) {
+  return (
+    <>
+      {numberPadNext && (
+        <KeyboardStickyView
+          style={styles.nextHolder}
+          offset={{ closed: 0, opened: -(TOOLBAR_HEIGHT + space.sm) }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Next field"
+            style={({ pressed }) => [styles.nextButton, pressed && styles.nextButtonPressed]}
+            onPress={() => {
+              tapFeedback();
+              KeyboardController.setFocusTo("next");
+            }}
+          >
+            <Text style={styles.nextLabel}>Next</Text>
+            <Feather name="arrow-down" size={18} color={colors.onAmber} />
+          </Pressable>
+        </KeyboardStickyView>
+      )}
+      <KeyboardToolbar theme={{ light: toolbarColors, dark: toolbarColors }} />
+    </>
   );
 }
 
@@ -69,7 +121,9 @@ export function Heading({ children }: { children: ReactNode }) {
 
 // The mileage, set on wheels like a real odometer, last digit lit.
 export function Odometer({ miles, large = false }: { miles: number; large?: boolean }) {
-  const digits = String(Math.max(0, Math.round(miles))).padStart(6, "0").split("");
+  const digits = String(Math.max(0, Math.round(miles)))
+    .padStart(6, "0")
+    .split("");
   const firstReal = digits.findIndex((d) => d !== "0");
   return (
     <View
@@ -258,6 +312,18 @@ export function EmptyState({
 
 export const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.asphalt },
+  nextHolder: { position: "absolute", right: space.lg, bottom: 0 },
+  nextButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    minHeight: 44,
+    paddingHorizontal: space.lg,
+    borderRadius: 22,
+    backgroundColor: colors.amber,
+  },
+  nextButtonPressed: { backgroundColor: colors.amberPressed, transform: [{ scale: 0.96 }] },
+  nextLabel: { color: colors.onAmber, fontFamily: fonts.bold, fontSize: 16 },
   scroll: { flexGrow: 1, alignItems: "center" },
   column: {
     width: "100%",
@@ -289,7 +355,7 @@ export const styles = StyleSheet.create({
     marginLeft: space.xs,
     color: colors.label,
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: 14,
   },
   odometerUnitLarge: { marginLeft: space.sm, fontSize: 16 },
   pill: {

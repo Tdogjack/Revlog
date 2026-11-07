@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import type { Me } from "@revlog/api";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -99,18 +100,22 @@ export default function Account() {
         <ListRow icon="slash" label="Blocked accounts" onPress={() => router.push("/blocked")} />
       </ListGroup>
 
-      <View style={styles.setting}>
-        <View style={styles.settingText}>
-          <Text style={styles.settingLabel}>AI scanning</Text>
-          <Body style={styles.hint}>Scans you start are read by Anthropic&apos;s AI.</Body>
+      <ListGroup>
+        <View style={styles.setting}>
+          <Feather name="camera" size={20} color={colors.amber} />
+          <View style={styles.settingText}>
+            <Text style={styles.settingLabel}>AI scanning</Text>
+            <Body style={styles.hint}>Scans you start are read by Anthropic&apos;s AI.</Body>
+          </View>
+          <Switch
+            accessibilityLabel="Allow AI scanning"
+            value={data.aiConsent}
+            trackColor={{ true: colors.amber, false: colors.graphite }}
+            thumbColor={colors.chalk}
+            onValueChange={setAiScans}
+          />
         </View>
-        <Switch
-          accessibilityLabel="Allow AI scanning"
-          value={data.aiConsent}
-          trackColor={{ true: colors.amber, false: colors.graphite }}
-          onValueChange={setAiScans}
-        />
-      </View>
+      </ListGroup>
 
       <ListGroup>
         <ListRow
@@ -162,7 +167,14 @@ const styles = StyleSheet.create({
   group: { gap: space.sm },
   muted: { color: colors.steel },
   danger: { gap: space.md },
-  setting: { flexDirection: "row", alignItems: "center", gap: space.md },
+  setting: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    minHeight: 64,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+  },
   settingText: { flex: 1, gap: 2 },
   settingLabel: { color: colors.chalk, fontFamily: fonts.regular, fontSize: 16 },
   hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },

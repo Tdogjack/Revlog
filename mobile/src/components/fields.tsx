@@ -12,8 +12,9 @@ import {
   View,
   type TextInputProps,
 } from "react-native";
+import { KeyboardController } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button } from "@/components/ui";
+import { Button, useNumberPadFocus } from "@/components/ui";
 import { formatDate, fromIsoDate, toIsoDate } from "@/lib/format";
 import { colors, fonts, MAX_WIDTH, space } from "@/lib/theme";
 
@@ -39,10 +40,23 @@ type FieldProps = Omit<TextInputProps, "value" | "onChangeText" | "onBlur"> & {
   error?: string | null;
 };
 
+const NUMBER_PADS = new Set(["number-pad", "decimal-pad", "numeric", "phone-pad"]);
+
 export function Field({ label, value, onChangeText, validate, error, ...input }: FieldProps) {
   const [blurError, setBlurError] = useState<string | null>(null);
   const [engaged, setEngaged] = useState(false);
   const message = engaged ? null : (blurError ?? error);
+
+  // Return moves to the next field; Done on the toolbar closes the keyboard.
+  const goNext = () => KeyboardController.setFocusTo("next");
+  const ownSubmit = !!input.onSubmitEditing;
+  const setNumberPadUp = useNumberPadFocus();
+  // iOS number pads have no return key. Setting one makes React Native add its
+  // own button above the pad, which pushes the toolbar up, so the screen shows
+  // a Next button above the toolbar instead.
+  const numberPad = Platform.OS === "ios" && NUMBER_PADS.has(input.keyboardType ?? "default");
+  const returnKey = input.multiline || ownSubmit || numberPad ? undefined : "next";
+
   return (
     <View style={styles.field}>
       <Label text={label} />
@@ -50,6 +64,9 @@ export function Field({ label, value, onChangeText, validate, error, ...input }:
         accessibilityLabel={label}
         placeholderTextColor={colors.placeholder}
         selectionColor={colors.amber}
+        returnKeyType={returnKey}
+        submitBehavior={returnKey ? "submit" : undefined}
+        onSubmitEditing={input.multiline ? undefined : goNext}
         {...input}
         style={[styles.input, input.multiline && styles.multiline, !!message && styles.inputError]}
         value={value}
@@ -57,9 +74,13 @@ export function Field({ label, value, onChangeText, validate, error, ...input }:
           setBlurError(null);
           onChangeText(next);
         }}
-        onFocus={() => setEngaged(true)}
+        onFocus={() => {
+          setEngaged(true);
+          setNumberPadUp(numberPad);
+        }}
         onBlur={() => {
           setEngaged(false);
+          setNumberPadUp(false);
           setBlurError(validate?.(value) ?? null);
         }}
       />
@@ -182,9 +203,7 @@ export function SelectField({
                   }}
                 >
                   <Text style={styles.inputText}>{item.label}</Text>
-                  {item.value === value && (
-                    <Feather name="check" size={20} color={colors.amber} />
-                  )}
+                  {item.value === value && <Feather name="check" size={20} color={colors.amber} />}
                 </Pressable>
               )}
             />

@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: space.xs,
   },
-  addLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 13 },
+  addLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
   thumb: { width: THUMB, height: THUMB, borderRadius: 8, backgroundColor: colors.panel },
   viewer: { flex: 1, backgroundColor: "#000" },
   full: { flex: 1 },

@@ -10,6 +10,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { colors, fonts } from "@/lib/theme";
 
@@ -61,9 +62,7 @@ function Routes() {
           name="car/[id]/mileage"
           options={{
             title: "Update mileage",
-            presentation: "formSheet",
-            sheetAllowedDetents: [0.6],
-            sheetGrabberVisible: true,
+            presentation: "modal",
           }}
         />
         <Stack.Screen
@@ -113,10 +112,12 @@ function Routes() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.asphalt }}>
-      <AuthProvider>
-        <StatusBar style="light" />
-        <Routes />
-      </AuthProvider>
+      <KeyboardProvider>
+        <AuthProvider>
+          <StatusBar style="light" />
+          <Routes />
+        </AuthProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
