@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Local editor and agent settings
 .claude/
+
+# graphify
+/graphify-out/
