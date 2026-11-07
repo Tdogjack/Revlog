@@ -20,7 +20,13 @@ export default function NewService() {
       carId={id}
       reminderId={reminderId}
       canUpload={car.data.canUpload}
-      initial={{ ...blankService(), category: category ?? "", title: title ?? "" }}
+      initial={{
+        ...blankService(),
+        category: category ?? "",
+        title: title ?? "",
+        // Most services get logged the day they happen, at today's mileage.
+        mileage: String(car.data.currentMileage),
+      }}
     />
   );
 }

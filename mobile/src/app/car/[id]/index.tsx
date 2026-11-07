@@ -17,16 +17,20 @@ import {
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, {
   interpolate,
+  useAnimatedReaction,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import { MileageGraph } from "@/components/mileage-graph";
 import { PhotoStrip } from "@/components/photo-strip";
 import {
   Button,
   EmptyState,
   Heading,
+  ListGroup,
+  ListRow,
   LoadFailed,
   Loading,
   Odometer,
@@ -48,7 +52,12 @@ function Section({
   children,
 }: {
   title: string;
-  action?: { label: string; onPress: () => void };
+  action?: {
+    label: string;
+    icon?: React.ComponentProps<typeof Feather>["name"];
+    hint?: string;
+    onPress: () => void;
+  };
   children: React.ReactNode;
 }) {
   return (
@@ -58,12 +67,15 @@ function Section({
         {action && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={action.label}
+            accessibilityLabel={action.hint ?? action.label}
             hitSlop={8}
-            style={styles.sectionAction}
-            onPress={action.onPress}
+            style={({ pressed }) => [styles.sectionAction, pressed && styles.pressed]}
+            onPress={() => {
+              tapFeedback();
+              action.onPress();
+            }}
           >
-            <Feather name="plus" size={18} color={colors.amber} />
+            <Feather name={action.icon ?? "plus"} size={18} color={colors.amber} />
             <Text style={styles.sectionActionLabel}>{action.label}</Text>
           </Pressable>
         )}
@@ -141,7 +153,8 @@ function ReminderRow({ carId, reminder }: { carId: string; reminder: CarReminder
             {reminder.due}
           </Text>
         </Pressable>
-        <StatusPill status={reminder.status} />
+        {/* "No service logged" already says it; a pill would repeat it. */}
+        {reminder.status !== "unknown" && <StatusPill status={reminder.status} />}
       </View>
     </ReanimatedSwipeable>
   );
@@ -234,12 +247,23 @@ export default function Car() {
   const [refreshing, setRefreshing] = useState(false);
   const [changingPhoto, setChangingPhoto] = useState(false);
   const [favorite, setFavorite] = useState<boolean | null>(null);
+  const [solidHeader, setSolidHeader] = useState(false);
   const scrollY = useSharedValue(0);
   const heroHeight = Math.min(width * 0.95, MAX_HERO);
 
   const onScroll = useAnimatedScrollHandler((event) => {
     scrollY.set(event.contentOffset.y);
   });
+
+  // Once the photo has scrolled away, the header gets a solid bar and the
+  // car's name, so its buttons never sit on top of the page.
+  useAnimatedReaction(
+    () => scrollY.get() > heroHeight - 120,
+    (past, before) => {
+      if (past !== before) scheduleOnRN(setSolidHeader, past);
+    },
+    [heroHeight],
+  );
 
   // The photo stretches on pull and drifts slower than the page on scroll.
   const heroMotion = useAnimatedStyle(() => {
@@ -308,7 +332,8 @@ export default function Car() {
     <>
       <Stack.Screen
         options={{
-          title: "",
+          title: solidHeader ? (car.nickname ?? car.name) : "",
+          headerStyle: { backgroundColor: solidHeader ? colors.asphalt : "transparent" },
           headerRight: () => (
             <View style={styles.headerActions}>
               <Pressable
@@ -432,7 +457,12 @@ export default function Car() {
             )}
           </Section>
 
-          <Section title="Build" action={{ label: "Add", onPress: addMod }}>
+          <Section
+            title="Build"
+            action={
+              car.mods.length > 0 ? { label: "Add", hint: "Add a mod", onPress: addMod } : undefined
+            }
+          >
             {car.mods.length === 0 ? (
               <EmptyState
                 title="No mods yet"
@@ -453,21 +483,31 @@ export default function Car() {
                 </View>
               </>
             )}
-            {car.buildPostId && (
-              <Button
-                label="View public build"
-                kind="secondary"
-                onPress={() => router.push(`/post/${car.buildPostId}`)}
+            <ListGroup>
+              {car.buildPostId && (
+                <ListRow
+                  icon="eye"
+                  label="View public build"
+                  onPress={() => router.push(`/post/${car.buildPostId}`)}
+                />
+              )}
+              <ListRow
+                icon="share"
+                label={car.buildPostId ? "Update public build" : "Post public build"}
+                onPress={() => router.push(`/car/${id}/build`)}
               />
-            )}
-            <Button
-              label={car.buildPostId ? "Update public build" : "Post public build"}
-              kind="secondary"
-              onPress={() => router.push(`/car/${id}/build`)}
-            />
+            </ListGroup>
           </Section>
 
-          <Section title="Service log">
+          <Section
+            title="Service log"
+            action={{
+              label: "Import",
+              icon: "download",
+              hint: "Import service history",
+              onPress: () => router.push(`/car/${id}/history`),
+            }}
+          >
             {car.records.length === 0 ? (
               <EmptyState
                 title="No services logged"
@@ -487,11 +527,6 @@ export default function Car() {
                 ))}
               </View>
             )}
-            <Button
-              label="Import service history"
-              kind="secondary"
-              onPress={() => router.push(`/car/${id}/history`)}
-            />
           </Section>
 
           <Section title="Photos">
@@ -561,8 +596,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.panel,
   },
   quickActionPressed: { backgroundColor: colors.graphite, transform: [{ scale: 0.97 }] },
-  quickLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 13 },
-  section: { gap: space.md, marginTop: space.md },
+  quickLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
+  section: { gap: space.md, marginTop: space.sm },
   sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionAction: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44 },
   sectionActionLabel: { color: colors.amber, fontFamily: fonts.medium, fontSize: 15 },
@@ -598,7 +633,7 @@ const styles = StyleSheet.create({
     borderColor: colors.rule,
   },
   statValue: { color: colors.chalk, fontFamily: fonts.mono, fontSize: 16, lineHeight: 22 },
-  statLabel: { color: colors.steel, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
+  statLabel: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
   mod: {
     gap: 2,
     paddingHorizontal: space.lg,
@@ -615,7 +650,7 @@ const styles = StyleSheet.create({
   dotNewest: { backgroundColor: colors.amber },
   railLine: { flex: 1, width: 2, marginTop: space.xs, backgroundColor: colors.rule },
   recordBody: { flex: 1, gap: 2, paddingBottom: space.xl },
-  recordDate: { color: colors.steel, fontFamily: fonts.mono, fontSize: 13, lineHeight: 18 },
+  recordDate: { color: colors.steel, fontFamily: fonts.mono, fontSize: 14, lineHeight: 20 },
   pressed: { opacity: 0.7 },
   rowTitle: {
     flexShrink: 1,

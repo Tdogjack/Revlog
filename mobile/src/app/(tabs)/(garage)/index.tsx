@@ -9,6 +9,8 @@ import {
   Body,
   Button,
   EmptyState,
+  ListGroup,
+  ListRow,
   LoadFailed,
   Loading,
   Odometer,
@@ -21,7 +23,11 @@ import { colors, fonts, radius, scrim, space } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
 function CarPlate({ car }: { car: GarageCar }) {
-  const attention = car.urgency && car.urgency.status !== "ok" ? car.urgency : null;
+  // Only work that's due earns a badge; "not logged" waits on the car page.
+  const attention =
+    car.urgency && (car.urgency.status === "overdue" || car.urgency.status === "due_soon")
+      ? car.urgency
+      : null;
   return (
     <Pressable
       accessibilityRole="button"
@@ -124,7 +130,12 @@ function ReorderRow({
       </Text>
       {car.favorite && <Feather name="star" size={18} color={colors.amber} />}
       <MoveButton direction="up" name={name} enabled={canMoveUp} onPress={() => onMove("up")} />
-      <MoveButton direction="down" name={name} enabled={canMoveDown} onPress={() => onMove("down")} />
+      <MoveButton
+        direction="down"
+        name={name}
+        enabled={canMoveDown}
+        onPress={() => onMove("down")}
+      />
     </View>
   );
 }
@@ -224,7 +235,9 @@ export default function Garage() {
               <CarPlate key={car.id} car={car} />
             ))}
             {data.length > 1 && (
-              <Button label="Reorder cars" kind="secondary" onPress={() => setReordering(true)} />
+              <ListGroup>
+                <ListRow icon="list" label="Reorder cars" onPress={() => setReordering(true)} />
+              </ListGroup>
             )}
           </>
         )}

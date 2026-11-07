@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import type { CommunityOptions, Feed, FeedPost } from "@revlog/api";
-import { router, useFocusEffect } from "expo-router";
+import { router, Stack, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { PostCard } from "@/components/post-card";
-import { Button, EmptyState, LoadFailed, Loading } from "@/components/ui";
+import { Button, EmptyState, FormToolbar, LoadFailed, Loading } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { colors, fonts, MAX_WIDTH, space } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
@@ -73,16 +73,17 @@ export default function Community() {
     async (nextPage: number) => {
       // Only the newest request counts, so slow answers can't overwrite it.
       const request = ++latest.current;
-      const params = new URLSearchParams({ sort: activeSort, page: String(nextPage) });
+      const params = new URLSearchParams({
+        sort: activeSort,
+        page: String(nextPage),
+      });
       if (tag) params.set("tag", tag);
       if (query) params.set("q", query);
       try {
         const feed = await api<Feed>(`/community/posts?${params}`);
         if (request !== latest.current) return;
         page.current = nextPage;
-        setPosts((current) =>
-          nextPage === 1 ? feed.posts : [...(current ?? []), ...feed.posts],
-        );
+        setPosts((current) => (nextPage === 1 ? feed.posts : [...(current ?? []), ...feed.posts]));
         setHasMore(feed.hasMore);
         setError(null);
       } catch (err) {
@@ -126,94 +127,123 @@ export default function Community() {
   };
 
   return (
-    <FlatList
-      style={styles.list}
-      contentContainerStyle={styles.content}
-      contentInsetAdjustmentBehavior="automatic"
-      data={posts}
-      keyExtractor={(post) => post.id}
-      keyboardShouldPersistTaps="handled"
-      renderItem={({ item }) => (
-        <View style={styles.row}>
-          <PostCard
-            post={item}
-            onChange={(next) =>
-              setPosts((current) => current?.map((p) => (p.id === next.id ? next : p)) ?? null)
-            }
-          />
-        </View>
-      )}
-      ListHeaderComponent={
-        <View style={[styles.row, styles.header]}>
-          <View style={styles.search}>
-            <Feather name="search" size={18} color={colors.steel} />
-            <TextInput
-              accessibilityLabel="Search posts"
-              style={styles.searchInput}
-              placeholder="Search posts"
-              placeholderTextColor={colors.placeholder}
-              selectionColor={colors.amber}
-              returnKeyType="search"
-              value={search}
-              onChangeText={setSearch}
+    <>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Share a post"
+              hitSlop={8}
+              style={styles.headerButton}
+              onPress={() => router.push("/post/new")}
+            >
+              <Feather name="plus" size={24} color={colors.amber} />
+            </Pressable>
+          ),
+        }}
+      />
+      <FlatList
+        style={styles.list}
+        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        data={posts}
+        keyExtractor={(post) => post.id}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        renderItem={({ item }) => (
+          <View style={styles.row}>
+            <PostCard
+              post={item}
+              onChange={(next) =>
+                setPosts((current) => current?.map((p) => (p.id === next.id ? next : p)) ?? null)
+              }
             />
           </View>
-          <Chips
-            label="Sort posts"
-            options={options.data.sorts}
-            value={activeSort}
-            onChange={setSort}
-          />
-          <Chips
-            label="Filter by tag"
-            options={options.data.tags}
-            value={tag}
-            onChange={setTag}
-          />
-          <Button label="Share a post" onPress={() => router.push("/post/new")} />
-          {error && <Text style={styles.error}>{error}</Text>}
-        </View>
-      }
-      ListEmptyComponent={
-        <View style={styles.row}>
-          {filtered ? (
-            <EmptyState
-              title="No posts match"
-              body="Try different words or a broader tag."
-              action={<Button label="Clear all filters" kind="secondary" onPress={clear} />}
+        )}
+        ListHeaderComponent={
+          <View style={[styles.row, styles.header]}>
+            <View style={styles.search}>
+              <Feather name="search" size={18} color={colors.steel} />
+              <TextInput
+                accessibilityLabel="Search posts"
+                style={styles.searchInput}
+                placeholder="Search posts"
+                placeholderTextColor={colors.placeholder}
+                selectionColor={colors.amber}
+                returnKeyType="search"
+                value={search}
+                onChangeText={setSearch}
+              />
+            </View>
+            <Chips
+              label="Sort posts"
+              options={options.data.sorts}
+              value={activeSort}
+              onChange={setSort}
             />
-          ) : (
-            <EmptyState
-              title="No posts yet"
-              body="Share what you're working on and start the conversation."
-              action={<Button label="Share a post" onPress={() => router.push("/post/new")} />}
+            <Chips
+              label="Filter by tag"
+              options={options.data.tags}
+              value={tag}
+              onChange={setTag}
             />
-          )}
-        </View>
-      }
-      refreshControl={
-        <RefreshControl
-          tintColor={colors.amber}
-          refreshing={refreshing}
-          onRefresh={async () => {
-            setRefreshing(true);
-            await load(1);
-            setRefreshing(false);
-          }}
-        />
-      }
-      onEndReachedThreshold={0.5}
-      onEndReached={() => {
-        if (hasMore) load(page.current + 1);
-      }}
-    />
+            {error && <Text style={styles.error}>{error}</Text>}
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.row}>
+            {filtered ? (
+              <EmptyState
+                title="No posts match"
+                body="Try different words or a broader tag."
+                action={<Button label="Clear all filters" kind="secondary" onPress={clear} />}
+              />
+            ) : (
+              <EmptyState
+                title="No posts yet"
+                body="Share what you're working on and start the conversation."
+                action={<Button label="Share a post" onPress={() => router.push("/post/new")} />}
+              />
+            )}
+          </View>
+        }
+        refreshControl={
+          <RefreshControl
+            tintColor={colors.amber}
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await load(1);
+              setRefreshing(false);
+            }}
+          />
+        }
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (hasMore) load(page.current + 1);
+        }}
+      />
+      <FormToolbar />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  headerButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   list: { flex: 1, backgroundColor: colors.asphalt },
   // Centered here, because list rows shrink to their content in a centered parent.
-  content: { width: "100%", maxWidth: MAX_WIDTH, alignSelf: "center", paddingBottom: space.xxl },
+  content: {
+    width: "100%",
+    maxWidth: MAX_WIDTH,
+    alignSelf: "center",
+    paddingBottom: space.xxl,
+  },
   row: { paddingHorizontal: space.lg },
   header: { gap: space.md, paddingTop: space.md, paddingBottom: space.sm },
   search: {
@@ -226,7 +256,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: space.md,
   },
-  searchInput: { flex: 1, color: colors.chalk, fontFamily: fonts.regular, fontSize: 16 },
+  searchInput: {
+    flex: 1,
+    color: colors.chalk,
+    fontFamily: fonts.regular,
+    fontSize: 16,
+  },
   chips: { gap: space.sm },
   chip: {
     minHeight: 36,
