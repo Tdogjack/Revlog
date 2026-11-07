@@ -6,19 +6,18 @@ import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
 import { DeletePostButton } from "@/app/community/delete-post-button";
 import { requireUser } from "@/lib/auth";
+import { carTimeline } from "@/lib/car-timeline";
 import { getBuildPostId } from "@/lib/community";
 import { getEmailSettings } from "@/lib/email-settings";
 import { isEmailVerified } from "@/lib/email-verification";
 import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
 import { modCategoryLabel } from "@/lib/mod-categories";
-import { buildMileageTimeline } from "@/lib/mileage-timeline";
 import { listMods } from "@/lib/mods";
 import { listPartsForVehicle } from "@/lib/parts";
 import { signedPhotoUrls } from "@/lib/photos";
 import { listReminders } from "@/lib/reminder-store";
 import {
   describeDue,
-  dueLimits,
   rankReminders,
 } from "@/lib/reminders";
 import { categoryLabel } from "@/lib/service-categories";
@@ -156,47 +155,15 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const installed = carMods.filter((m) => m.status === "installed");
   const installedSpent = sumCost(installed);
   const plannedCost = sumCost(carMods.filter((m) => m.status === "planned"));
-  const timeline = buildMileageTimeline(
-    [
-      ...readings.map((r) => ({
-        key: `reading-${r.readOn}`,
-        kind: "reading" as const,
-        date: r.readOn,
-        mileage: r.mileage,
-        label: "Odometer updated",
-      })),
-      ...records.map((r) => ({
-        key: `service-${r.id}`,
-        kind: "service" as const,
-        date: r.servicedOn,
-        mileage: r.mileage,
-        label: r.title,
-        href: `/garage/${car.id}/service/${r.id}/edit`,
-      })),
-      ...carMods.flatMap((m) =>
-        m.status !== "planned" && m.installedOn
-          ? [
-              {
-                key: `mod-${m.id}`,
-                kind: "mod" as const,
-                date: m.installedOn,
-                mileage: m.installedMileage,
-                label: m.brand ? `${m.brand} ${m.part}` : m.part,
-                href: `/garage/${car.id}/mods/${m.id}/edit`,
-              },
-            ]
-          : [],
-      ),
-    ],
-    car.currentMileage,
-    undefined,
-    carReminders.map(({ reminder: r }) => ({
-      key: `due-${r.id}`,
-      label: r.task,
-      href: `/garage/${car.id}/reminders/${r.id}/edit`,
-      ...dueLimits(r),
-    })),
-  );
+  const timeline = carTimeline({
+    currentMileage: car.currentMileage,
+    readings,
+    records,
+    mods: carMods,
+    reminders: carReminders.map(({ reminder }) => reminder),
+    href: (kind, itemId) =>
+      `/garage/${car.id}/${{ service: "service", mod: "mods", reminder: "reminders" }[kind]}/${itemId}/edit`,
+  });
 
   const renderRecord = (r: (typeof records)[number]) => {
     const recordPhotos = stripPhotos((p) => p.serviceRecordId === r.id);
