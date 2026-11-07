@@ -1,6 +1,7 @@
 import "server-only";
 import type { CarDetail, CarPart, GarageCar, ServiceType } from "@/lib/api-types";
 import { getBuildPostId } from "@/lib/community";
+import { listCostItems, summarizeCosts, type CostSummary } from "@/lib/costs";
 import { getEmailSettings } from "@/lib/email-settings";
 import { isEmailVerified } from "@/lib/email-verification";
 import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
@@ -50,6 +51,20 @@ export async function garageView(userId: string): Promise<GarageCar[]> {
       ),
     ),
   }));
+}
+
+export async function costsView(userId: string): Promise<CostSummary> {
+  const [items, cars, customTypes] = await Promise.all([
+    listCostItems(userId),
+    listVehicles(userId),
+    listServiceTypes(userId),
+  ]);
+  return summarizeCosts(
+    items,
+    cars.map((car) => ({ id: car.id, name: car.nickname ?? vehicleName(car) })),
+    customTypes,
+    new Date(),
+  );
 }
 
 export async function carView(userId: string, vehicleId: string): Promise<CarDetail | null> {

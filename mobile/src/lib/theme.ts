@@ -19,6 +19,9 @@ export const colors = {
   overdueBg: "#3a1a1d",
   done: "#4fc98c",
   doneBg: "#13301f",
+  // Checked for colorblind separation against the panel color.
+  chartService: "#bd8400",
+  chartMods: "#4a92d4",
 } as const;
 
 export const fonts = {

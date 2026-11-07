@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
-import { listCostItems, monthlyTotals } from "@/lib/costs";
-import { modCategoryLabel } from "@/lib/mod-categories";
-import { categoryLabel } from "@/lib/service-categories";
+import { listCostItems, summarizeCosts } from "@/lib/costs";
 import { listServiceTypes } from "@/lib/service-types";
 import { listVehicles, vehicleName } from "@/lib/vehicles";
 import { CostChart } from "./cost-chart";
@@ -46,34 +44,12 @@ async function CostDetails() {
     );
   }
 
-  const today = new Date();
-  const months = monthlyTotals(items, today);
-  const sum = (list: typeof items) => list.reduce((n, i) => n + i.amount, 0);
-  const total = sum(items);
-  const yearAgo = new Date(Date.UTC(today.getUTCFullYear() - 1, today.getUTCMonth() + 1, 1))
-    .toISOString()
-    .slice(0, 10);
-  const lastYear = sum(items.filter((i) => i.on >= yearAgo));
-  const serviceTotal = sum(items.filter((i) => i.kind === "service"));
-  const modsTotal = total - serviceTotal;
-
-  const perCar = cars
-    .map((car) => {
-      const own = items.filter((i) => i.vehicleId === car.id);
-      const service = sum(own.filter((i) => i.kind === "service"));
-      return { car, service, mods: sum(own) - service };
-    })
-    .filter((c) => c.service + c.mods > 0)
-    .sort((a, b) => b.service + b.mods - (a.service + a.mods));
-
-  const byCategory = new Map<string, number>();
-  for (const i of items) {
-    const label =
-      i.kind === "service" ? categoryLabel(i.category, customTypes) : modCategoryLabel(i.category);
-    const key = `${i.kind === "service" ? "Service" : "Mods"}: ${label}`;
-    byCategory.set(key, (byCategory.get(key) ?? 0) + i.amount);
-  }
-  const topCategories = [...byCategory.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const { total, lastYear, serviceTotal, modsTotal, months, perCar, topCategories } = summarizeCosts(
+    items,
+    cars.map((car) => ({ id: car.id, name: car.nickname ?? vehicleName(car) })),
+    customTypes,
+    new Date(),
+  );
 
   return (
     <div className="mt-8 space-y-6">
@@ -107,11 +83,11 @@ async function CostDetails() {
               </tr>
             </thead>
             <tbody>
-              {perCar.map(({ car, service, mods }) => (
-                <tr key={car.id} className="border-t border-rule">
+              {perCar.map(({ id, name, service, mods }) => (
+                <tr key={id} className="border-t border-rule">
                   <td className="py-3">
-                    <Link href={`/garage/${car.id}`} className="hover:text-redline">
-                      {car.nickname ?? vehicleName(car)}
+                    <Link href={`/garage/${id}`} className="hover:text-redline">
+                      {name}
                     </Link>
                   </td>
                   <td className="py-3 text-right">{money.format(service)}</td>
@@ -126,7 +102,7 @@ async function CostDetails() {
         <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
           <h2 className="font-display text-2xl leading-tight font-semibold">Biggest categories</h2>
           <ul className="mt-4">
-            {topCategories.map(([label, amount]) => (
+            {topCategories.map(({ label, amount }) => (
               <li
                 key={label}
                 className="flex items-baseline justify-between gap-3 border-t border-rule py-3 text-sm first:border-t-0"

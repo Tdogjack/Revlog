@@ -4,11 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { removeAccount } from "@/lib/account";
 import { requireUser } from "@/lib/auth";
-import { emailConfigured, sendEmail } from "@/lib/email";
-import { setReminderEmails, setReminderPercent } from "@/lib/email-settings";
+import { saveReminderSettings } from "@/lib/email-settings";
+import { sendTestReminder } from "@/lib/email-test";
 import { isEmailVerified, sendVerificationEmail } from "@/lib/email-verification";
-import { testEmail } from "@/lib/email-templates";
-import { siteUrl } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
 export type SettingsState = { error?: string; message?: string } | undefined;
@@ -18,39 +16,18 @@ export async function saveEmailSettings(
   formData: FormData,
 ): Promise<SettingsState> {
   const user = await requireUser();
-  const rawPercent = String(formData.get("reminderPercent") ?? "").trim();
-  let percent: number | null = null;
-  if (rawPercent) {
-    percent = Number(rawPercent);
-    if (!Number.isInteger(percent) || percent < 50 || percent > 99) {
-      return { error: "Use a whole percent from 50 to 99, or leave it blank." };
-    }
-  }
-  await setReminderEmails(user.id, formData.get("reminderEmails") === "on");
-  await setReminderPercent(user.id, percent);
+  const error = await saveReminderSettings(
+    user.id,
+    formData.get("reminderEmails") === "on",
+    String(formData.get("reminderPercent") ?? ""),
+  );
+  if (error) return { error };
   revalidatePath("/garage", "layout");
   return { message: "Saved." };
 }
 
-// Per-instance throttle; enough to stop accidental repeat clicks.
-const lastTestSent = new Map<string, number>();
-
 export async function sendTestEmail(): Promise<SettingsState> {
-  const user = await requireUser();
-  if (!user.email) return { error: "Your account has no email address." };
-  if (!emailConfigured()) return { error: "Email sending isn't set up on this site yet." };
-
-  const last = lastTestSent.get(user.id) ?? 0;
-  if (Date.now() - last < 60_000) return { error: "Wait a minute before sending another." };
-  lastTestSent.set(user.id, Date.now());
-
-  const base = siteUrl();
-  const result = await sendEmail({
-    to: user.email,
-    ...testEmail({ garageUrl: `${base}/garage`, settingsUrl: `${base}/garage/settings` }),
-  });
-  if (!result.ok) return { error: `Couldn't send: ${result.error}` };
-  return { message: `Sent to ${user.email}. Check your inbox (and spam folder).` };
+  return sendTestReminder(await requireUser());
 }
 
 export async function resendConfirmation(): Promise<SettingsState> {

@@ -2,6 +2,8 @@ import "server-only";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { mods, serviceRecords } from "@/db/schema";
+import { modCategoryLabel } from "@/lib/mod-categories";
+import { categoryLabel, type CustomType } from "@/lib/service-categories";
 
 export type CostItem = {
   vehicleId: string;
@@ -71,4 +73,60 @@ export function monthlyTotals(items: CostItem[], today: Date, count = 12): Month
     else bucket.mods += item.amount;
   }
   return months;
+}
+
+export type CostSummary = {
+  total: number;
+  lastYear: number;
+  serviceTotal: number;
+  modsTotal: number;
+  months: MonthTotal[];
+  perCar: { id: string; name: string; service: number; mods: number }[];
+  topCategories: { label: string; amount: number }[];
+};
+
+// The totals the website's and app's Costs pages show.
+export function summarizeCosts(
+  items: CostItem[],
+  cars: { id: string; name: string }[],
+  customTypes: CustomType[],
+  today: Date,
+): CostSummary {
+  const sum = (list: CostItem[]) => list.reduce((n, i) => n + i.amount, 0);
+  const total = sum(items);
+  const yearAgo = new Date(Date.UTC(today.getUTCFullYear() - 1, today.getUTCMonth() + 1, 1))
+    .toISOString()
+    .slice(0, 10);
+  const serviceTotal = sum(items.filter((i) => i.kind === "service"));
+
+  const perCar = cars
+    .map((car) => {
+      const own = items.filter((i) => i.vehicleId === car.id);
+      const service = sum(own.filter((i) => i.kind === "service"));
+      return { ...car, service, mods: sum(own) - service };
+    })
+    .filter((c) => c.service + c.mods > 0)
+    .sort((a, b) => b.service + b.mods - (a.service + a.mods));
+
+  const byCategory = new Map<string, number>();
+  for (const i of items) {
+    const label =
+      i.kind === "service" ? categoryLabel(i.category, customTypes) : modCategoryLabel(i.category);
+    const key = `${i.kind === "service" ? "Service" : "Mods"}: ${label}`;
+    byCategory.set(key, (byCategory.get(key) ?? 0) + i.amount);
+  }
+  const topCategories = [...byCategory.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, amount]) => ({ label, amount }));
+
+  return {
+    total,
+    lastYear: sum(items.filter((i) => i.on >= yearAgo)),
+    serviceTotal,
+    modsTotal: total - serviceTotal,
+    months: monthlyTotals(items, today),
+    perCar,
+    topCategories,
+  };
 }

@@ -33,6 +33,18 @@ export async function setReminderEmails(userId: string, enabled: boolean) {
     });
 }
 
+// Saves both reminder settings. Returns what to fix, or null once saved.
+export async function saveReminderSettings(userId: string, enabled: boolean, rawPercent: string) {
+  const trimmed = rawPercent.trim();
+  const percent = trimmed ? Number(trimmed) : null;
+  if (percent != null && (!Number.isInteger(percent) || percent < 50 || percent > 99)) {
+    return "Use a whole percent from 50 to 99, or leave it blank.";
+  }
+  await setReminderEmails(userId, enabled);
+  await setReminderPercent(userId, percent);
+  return null;
+}
+
 // Unsubscribe links carry the user id plus an HMAC of it, so they work
 // without logging in but can't be forged for someone else.
 function unsubscribeSignature(userId: string) {
