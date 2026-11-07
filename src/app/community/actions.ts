@@ -136,6 +136,7 @@ export async function reportContent(
 
 // Reports can hide a post, so the feed and the landing page's build refresh.
 export async function finishReport() {
+  await requireUser();
   updateTag(FEATURED_BUILD_TAG);
   revalidatePath("/community");
 }
