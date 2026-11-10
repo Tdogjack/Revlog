@@ -6,6 +6,7 @@ import { sendVerificationEmail } from "@/lib/email-verification";
 import { checkPassword } from "@/lib/password-rules";
 import { deleteAllPhotos } from "@/lib/photos";
 import { createProfile, usernameTaken } from "@/lib/profiles";
+import { supabaseKey, supabaseUrl } from "@/lib/supabase/env";
 import { hasBlockedWords } from "@/lib/text-filter";
 import { checkUsername, normalizeUsername } from "@/lib/username-rules";
 
@@ -90,4 +91,31 @@ export async function removeAccount(userId: string, typed: string) {
   // all of the user's cars, records, mods, reminders, parts, and settings.
   await db.execute(sql`delete from auth.users where id = ${userId}`);
   return null;
+}
+
+// For the phone app, which holds a token rather than a session cookie. Asks the
+// auth service directly, as that token's owner. Returns an error message, or
+// null once the password is changed.
+export async function changePassword(token: string, password: string, confirm: string) {
+  const weak = checkPassword(password);
+  if (weak) return weak;
+  if (password !== confirm) return "The two passwords don't match.";
+
+  const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    method: "PUT",
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ password }),
+  });
+  if (res.ok) return null;
+  const data = (await res.json().catch(() => null)) as { error_code?: string } | null;
+  if (data?.error_code === "same_password") {
+    return "Choose a password different from your current one.";
+  }
+  if (data?.error_code === "weak_password") return "Choose a stronger password.";
+  if (res.status === 401 || res.status === 403) return "Your session ended. Sign in again.";
+  return "Your password wasn't changed. Try again.";
 }

@@ -11,8 +11,10 @@ import { listMods } from "@/lib/mods";
 import { listPartsForVehicle, type PartWithHistory } from "@/lib/parts";
 import { signedPhotoUrls } from "@/lib/photos";
 import { listAllReminders, listReminders } from "@/lib/reminder-store";
+import { REMINDER_PRESETS } from "@/lib/reminder-presets";
 import { carUrgency, describeDue, rankReminders } from "@/lib/reminders";
 import { categoryLabel, SERVICE_CATEGORIES } from "@/lib/service-categories";
+import { suggestedIntervals } from "@/lib/service-plan";
 import { listServiceDates, listServiceRecords } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, listMileageReadings, listVehicles, vehicleName } from "@/lib/vehicles";
@@ -24,7 +26,9 @@ const partView = (p: PartWithHistory): CarPart => ({
   quantity: p.quantity,
   price: p.price,
   trackPrice: p.trackPrice,
+  firstPrice: p.firstPrice,
   lowestPrice: p.lowestPrice,
+  lastCheckedAt: p.lastCheckedAt?.toISOString() ?? null,
   priceError: p.lastCheckError,
 });
 
@@ -121,6 +125,8 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
       intervalMonths: reminder.intervalMonths,
       status: result.status,
       due: describeDue(result),
+      lastDoneOn: reminder.lastDoneOn,
+      lastDoneMileage: reminder.lastDoneMileage,
     })),
     records: records.map((r) => ({
       id: r.id,
@@ -164,6 +170,16 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
     }),
     photoLimit: PHOTO_LIMITS.build,
     canUpload,
+    // The car's own schedule wins over the general presets.
+    reminderIntervals: {
+      ...Object.fromEntries(
+        REMINDER_PRESETS.map(({ type, intervalMiles, intervalMonths }) => [
+          type,
+          { intervalMiles, intervalMonths },
+        ]),
+      ),
+      ...suggestedIntervals(car),
+    },
   };
 }
 

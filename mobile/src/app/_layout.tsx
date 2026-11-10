@@ -12,7 +12,7 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AuthProvider, useAuth } from "@/lib/auth";
-import { colors, fonts } from "@/lib/theme";
+import { colors, fonts, lightTheme } from "@/lib/theme";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -98,6 +98,8 @@ function Routes() {
         />
         <Stack.Screen name="costs" options={{ title: "Costs" }} />
         <Stack.Screen name="email-settings" options={{ title: "Email reminders" }} />
+        <Stack.Screen name="appearance" options={{ title: "Appearance" }} />
+        <Stack.Screen name="change-password" options={{ title: "Change password" }} />
         <Stack.Screen name="blocked" options={{ title: "Blocked accounts" }} />
         <Stack.Screen name="moderation" options={{ title: "Moderation" }} />
       </Stack.Protected>
@@ -114,7 +116,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.asphalt }}>
       <KeyboardProvider>
         <AuthProvider>
-          <StatusBar style="light" />
+          <StatusBar style={lightTheme ? "dark" : "light"} />
           <Routes />
         </AuthProvider>
       </KeyboardProvider>

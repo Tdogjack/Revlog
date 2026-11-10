@@ -37,14 +37,26 @@ import {
   StatusPill,
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
-import { formatDate, formatMiles, formatMoney } from "@/lib/format";
+import { formatDate, formatDollars, formatMiles, formatMoney } from "@/lib/format";
+import { shareServiceHistory } from "@/lib/pdf";
 import { pressFeedback, tapFeedback } from "@/lib/haptics";
 import { choosePhotoForm } from "@/lib/photos";
-import { colors, fonts, MAX_WIDTH, radius, scrim, space, statusStyles } from "@/lib/theme";
+import {
+  alpha,
+  colors,
+  fonts,
+  headerScrim,
+  MAX_WIDTH,
+  photoInk,
+  photoInkMuted,
+  radius,
+  scrim,
+  space,
+  statusStyles,
+} from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
 const MAX_HERO = 460;
-const headerScrim = ["rgba(28, 28, 30, 0.7)", "rgba(28, 28, 30, 0)"] as const;
 
 function Section({
   title,
@@ -112,7 +124,37 @@ function QuickAction({
   );
 }
 
-function ReminderRow({ carId, reminder }: { carId: string; reminder: CarReminder }) {
+const every = (reminder: CarReminder) =>
+  [
+    reminder.intervalMiles != null && formatMiles(reminder.intervalMiles),
+    reminder.intervalMonths != null &&
+      `${reminder.intervalMonths} ${reminder.intervalMonths === 1 ? "month" : "months"}`,
+  ]
+    .filter(Boolean)
+    .join(" or ");
+
+function ReminderRow({
+  carId,
+  reminder,
+  onChange,
+}: {
+  carId: string;
+  reminder: CarReminder;
+  onChange: () => void;
+}) {
+  const unknown = reminder.status === "unknown";
+  const interval = every(reminder);
+  const neverDone = async () => {
+    try {
+      await api(`/vehicles/${carId}/reminders/${reminder.id}/never-done`, {
+        method: "POST",
+        body: {},
+      });
+      onChange();
+    } catch (err) {
+      Alert.alert("Reminder not changed", errorMessage(err));
+    }
+  };
   const log = () =>
     router.push({
       pathname: "/car/[id]/service/new",
@@ -152,11 +194,61 @@ function ReminderRow({ carId, reminder }: { carId: string; reminder: CarReminder
           <Text style={[styles.rowDetail, { color: statusStyles[reminder.status].text }]}>
             {reminder.due}
           </Text>
+          {interval !== "" && (
+            <Text style={styles.rowDetail}>
+              Every {interval}
+              {reminder.lastDoneOn ? `, last done ${formatDate(reminder.lastDoneOn)}` : ""}
+            </Text>
+          )}
         </Pressable>
         {/* "No service logged" already says it; a pill would repeat it. */}
-        {reminder.status !== "unknown" && <StatusPill status={reminder.status} />}
+        {!unknown && (
+          <View style={styles.reminderSide}>
+            <StatusPill status={reminder.status} />
+            <RowButton icon="check" label="Done" hint={`Log ${reminder.task} as done`} onPress={log} />
+          </View>
+        )}
+        {unknown && (
+          <View style={styles.reminderChoices}>
+            <RowButton label="Log service" hint={`Log ${reminder.task}`} onPress={log} />
+            <RowButton
+              label="Never done"
+              hint={`Mark ${reminder.task} as never done`}
+              onPress={neverDone}
+            />
+          </View>
+        )}
       </View>
     </ReanimatedSwipeable>
+  );
+}
+
+// A small outlined button inside a row, big enough to tap.
+function RowButton({
+  icon,
+  label,
+  hint,
+  onPress,
+}: {
+  icon?: React.ComponentProps<typeof Feather>["name"];
+  label: string;
+  hint: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={hint}
+      hitSlop={6}
+      style={({ pressed }) => [styles.rowButton, pressed && styles.rowButtonPressed]}
+      onPress={() => {
+        tapFeedback();
+        onPress();
+      }}
+    >
+      {icon && <Feather name={icon} size={16} color={colors.chalk} />}
+      <Text style={styles.rowButtonLabel}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -246,6 +338,7 @@ export default function Car() {
   const { width } = useWindowDimensions();
   const [refreshing, setRefreshing] = useState(false);
   const [changingPhoto, setChangingPhoto] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [favorite, setFavorite] = useState<boolean | null>(null);
   const [solidHeader, setSolidHeader] = useState(false);
   const scrollY = useSharedValue(0);
@@ -279,6 +372,9 @@ export default function Car() {
   if (!car) return error ? <LoadFailed message={error} onRetry={reload} /> : <Loading />;
 
   const starred = favorite ?? car.favorite;
+  // Over the photo the header and name use the photo's own ink.
+  const onPhoto = !!car.photoUrl;
+  const headerInk = onPhoto && !solidHeader ? photoInk : colors.chalk;
 
   const toggleFavorite = async () => {
     const next = !starred;
@@ -290,6 +386,64 @@ export default function Car() {
       setFavorite(!next);
       Alert.alert("Favorite not saved", errorMessage(err));
     }
+  };
+
+  const removePhoto = async () => {
+    setChangingPhoto(true);
+    try {
+      await api(`/vehicles/${id}/photo`, { method: "DELETE" });
+      await reload();
+    } catch (err) {
+      Alert.alert("Photo not removed", errorMessage(err));
+    } finally {
+      setChangingPhoto(false);
+    }
+  };
+
+  // With a photo there are two things to do with it, so ask which.
+  const photoOptions = () => {
+    if (!car.photoUrl) {
+      changePhoto();
+      return;
+    }
+    Alert.alert("Car photo", undefined, [
+      { text: "Choose a new photo", onPress: changePhoto },
+      { text: "Remove photo", style: "destructive", onPress: removePhoto },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const exportPdf = async () => {
+    setExporting(true);
+    try {
+      await shareServiceHistory(id, car.nickname ?? car.name);
+    } catch (err) {
+      Alert.alert("PDF not ready", errorMessage(err));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const takeDownBuild = () => {
+    Alert.alert(
+      "Take down your public build?",
+      "The post and its shared photos are removed. You can post it again any time.",
+      [
+        { text: "Keep build", style: "cancel" },
+        {
+          text: "Take down",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api(`/community/posts/${car.buildPostId}`, { method: "DELETE" });
+              await reload();
+            } catch (err) {
+              Alert.alert("Build not taken down", errorMessage(err));
+            }
+          },
+        },
+      ],
+    );
   };
 
   const changePhoto = async () => {
@@ -327,6 +481,12 @@ export default function Car() {
   const sumCost = (mods: CarMod[]) => mods.reduce((sum, m) => sum + Number(m.cost ?? 0), 0);
   const installed = car.mods.filter((m) => m.status === "installed");
   const planned = car.mods.filter((m) => m.status === "planned");
+  const spent = car.records.reduce((sum, r) => sum + Number(r.cost ?? 0), 0);
+  const [builtYear, builtMonth] = car.builtOn?.split("-") ?? [];
+  const facts = [
+    car.vin && `VIN ${car.vin}`,
+    builtYear && `Built ${builtMonth}/${builtYear}`,
+  ].filter(Boolean);
 
   return (
     <>
@@ -334,6 +494,7 @@ export default function Car() {
         options={{
           title: solidHeader ? (car.nickname ?? car.name) : "",
           headerStyle: { backgroundColor: solidHeader ? colors.asphalt : "transparent" },
+          headerTintColor: headerInk,
           headerRight: () => (
             <View style={styles.headerActions}>
               <Pressable
@@ -344,7 +505,7 @@ export default function Car() {
                 style={styles.headerButton}
                 onPress={toggleFavorite}
               >
-                <Feather name="star" size={22} color={starred ? colors.amber : colors.chalk} />
+                <Feather name="star" size={22} color={starred ? colors.amber : headerInk} />
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -353,7 +514,7 @@ export default function Car() {
                 style={styles.headerButton}
                 onPress={() => router.push(`/car/${id}/edit`)}
               >
-                <Feather name="settings" size={22} color={colors.chalk} />
+                <Feather name="settings" size={22} color={headerInk} />
               </Pressable>
             </View>
           ),
@@ -392,21 +553,27 @@ export default function Car() {
               </View>
             )}
           </Animated.View>
-          <LinearGradient colors={headerScrim} style={styles.topScrim} />
-          <LinearGradient colors={scrim} style={styles.bottomScrim} />
+          {onPhoto && <LinearGradient colors={headerScrim} style={styles.topScrim} />}
+          {onPhoto && <LinearGradient colors={scrim} style={styles.bottomScrim} />}
           <View style={styles.heroText}>
             <View style={styles.heroName}>
-              <Text style={styles.name} accessibilityRole="header" numberOfLines={2}>
+              <Text
+                style={[styles.name, onPhoto && styles.onPhoto]}
+                accessibilityRole="header"
+                numberOfLines={2}
+              >
                 {car.nickname ?? car.name}
               </Text>
-              {car.nickname && <Text style={styles.fullName}>{car.name}</Text>}
+              {car.nickname && (
+                <Text style={[styles.fullName, onPhoto && styles.onPhotoMuted]}>{car.name}</Text>
+              )}
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={car.photoUrl ? "Change car photo" : "Add car photo"}
+              accessibilityLabel={car.photoUrl ? "Change or remove car photo" : "Add car photo"}
               hitSlop={4}
               style={styles.cameraButton}
-              onPress={changingPhoto ? undefined : changePhoto}
+              onPress={changingPhoto ? undefined : photoOptions}
             >
               {changingPhoto ? (
                 <ActivityIndicator color={colors.chalk} />
@@ -428,6 +595,11 @@ export default function Car() {
               <Feather name="edit-2" size={18} color={colors.steel} />
             </View>
           </Pressable>
+          {facts.length > 0 && (
+            <Text style={styles.facts} selectable>
+              {facts.join("   ")}
+            </Text>
+          )}
 
           <View style={styles.quickActions}>
             <QuickAction icon="tool" label="Log service" onPress={logService} />
@@ -441,7 +613,14 @@ export default function Car() {
             </Section>
           )}
 
-          <Section title="Reminders">
+          <Section
+            title="Reminders"
+            action={
+              car.reminders.length > 0
+                ? { label: "Add", hint: "Add a reminder", onPress: addReminder }
+                : undefined
+            }
+          >
             {car.reminders.length === 0 ? (
               <EmptyState
                 title="No reminders yet"
@@ -451,7 +630,7 @@ export default function Car() {
             ) : (
               <View style={styles.panel}>
                 {car.reminders.map((r) => (
-                  <ReminderRow key={r.id} carId={id} reminder={r} />
+                  <ReminderRow key={r.id} carId={id} reminder={r} onChange={reload} />
                 ))}
               </View>
             )}
@@ -473,8 +652,8 @@ export default function Car() {
               <>
                 <View style={styles.stats}>
                   <BuildStat value={String(installed.length)} label="Installed" />
-                  <BuildStat value={formatMoney(String(sumCost(installed)))} label="Spent" />
-                  <BuildStat value={formatMoney(String(sumCost(planned)))} label="Planned" />
+                  <BuildStat value={formatDollars(sumCost(installed))} label="Spent" />
+                  <BuildStat value={formatDollars(sumCost(planned))} label="Planned" />
                 </View>
                 <View style={styles.panel}>
                   {car.mods.map((m) => (
@@ -496,17 +675,25 @@ export default function Car() {
                 label={car.buildPostId ? "Update public build" : "Post public build"}
                 onPress={() => router.push(`/car/${id}/build`)}
               />
+              {car.buildPostId && (
+                <ListRow
+                  icon="eye-off"
+                  label="Take down public build"
+                  danger
+                  showChevron={false}
+                  onPress={takeDownBuild}
+                />
+              )}
             </ListGroup>
           </Section>
 
           <Section
             title="Service log"
-            action={{
-              label: "Import",
-              icon: "download",
-              hint: "Import service history",
-              onPress: () => router.push(`/car/${id}/history`),
-            }}
+            action={
+              car.records.length > 0
+                ? { label: "Log", hint: "Log a service", onPress: logService }
+                : undefined
+            }
           >
             {car.records.length === 0 ? (
               <EmptyState
@@ -516,6 +703,10 @@ export default function Car() {
               />
             ) : (
               <View>
+                <Text style={styles.summary}>
+                  {car.records.length} {car.records.length === 1 ? "record" : "records"}
+                  {spent > 0 ? `, ${formatMoney(String(spent))} spent` : ""}
+                </Text>
                 {car.records.map((r, i) => (
                   <RecordRow
                     key={r.id}
@@ -527,6 +718,22 @@ export default function Car() {
                 ))}
               </View>
             )}
+            <ListGroup>
+              <ListRow
+                icon="upload"
+                label="Import past services"
+                onPress={() => router.push(`/car/${id}/history`)}
+              />
+              {car.records.length > 0 && (
+                <ListRow
+                  icon="file-text"
+                  label="Share history as a PDF"
+                  showChevron={false}
+                  busy={exporting}
+                  onPress={exportPdf}
+                />
+              )}
+            </ListGroup>
           </Section>
 
           <Section title="Photos">
@@ -565,13 +772,15 @@ const styles = StyleSheet.create({
   heroName: { flex: 1, gap: 2 },
   name: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 30, lineHeight: 36 },
   fullName: { color: colors.label, fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
+  onPhoto: { color: photoInk },
+  onPhotoMuted: { color: photoInkMuted },
   cameraButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(54, 54, 58, 0.8)",
+    backgroundColor: alpha(colors.graphite, 0.8),
   },
   column: {
     width: "100%",
@@ -614,12 +823,35 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.edge,
   },
   reminderMain: { flex: 1, justifyContent: "center", minHeight: 44 },
+  reminderSide: { alignItems: "flex-end", gap: space.sm },
+  reminderChoices: { gap: space.sm },
+  rowButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.xs,
+    minHeight: 36,
+    paddingHorizontal: space.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.edge,
+  },
+  rowButtonPressed: { backgroundColor: colors.graphite },
+  rowButtonLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
+  facts: { color: colors.steel, fontFamily: fonts.mono, fontSize: 13, lineHeight: 18 },
+  summary: {
+    marginBottom: space.md,
+    color: colors.steel,
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   swipeAction: {
     width: 96,
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
-    backgroundColor: colors.amber,
+    backgroundColor: colors.amberFill,
   },
   swipeLabel: { color: colors.onAmber, fontFamily: fonts.bold, fontSize: 14 },
   stats: { flexDirection: "row", gap: space.sm },

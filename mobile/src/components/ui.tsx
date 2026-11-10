@@ -20,7 +20,15 @@ import {
   KeyboardToolbar,
 } from "react-native-keyboard-controller";
 import { pressFeedback, tapFeedback } from "@/lib/haptics";
-import { colors, fonts, MAX_WIDTH, radius, space, statusStyles } from "@/lib/theme";
+import {
+  colors,
+  fonts,
+  MAX_WIDTH,
+  photoInkMuted,
+  radius,
+  space,
+  statusStyles,
+} from "@/lib/theme";
 
 export function Screen({
   children,
@@ -120,7 +128,16 @@ export function Heading({ children }: { children: ReactNode }) {
 }
 
 // The mileage, set on wheels like a real odometer, last digit lit.
-export function Odometer({ miles, large = false }: { miles: number; large?: boolean }) {
+export function Odometer({
+  miles,
+  large = false,
+  onPhoto = false,
+}: {
+  miles: number;
+  large?: boolean;
+  // Set over a car photo, where the unit needs the photo's ink.
+  onPhoto?: boolean;
+}) {
   const digits = String(Math.max(0, Math.round(miles)))
     .padStart(6, "0")
     .split("");
@@ -152,7 +169,15 @@ export function Odometer({ miles, large = false }: { miles: number; large?: bool
           </View>
         );
       })}
-      <Text style={[styles.odometerUnit, large && styles.odometerUnitLarge]}>mi</Text>
+      <Text
+        style={[
+          styles.odometerUnit,
+          large && styles.odometerUnitLarge,
+          onPhoto && { color: photoInkMuted },
+        ]}
+      >
+        mi
+      </Text>
     </View>
   );
 }
@@ -183,23 +208,45 @@ export function ListGroup({ children }: { children: ReactNode }) {
   return <View style={styles.group}>{children}</View>;
 }
 
+// Names a group of rows, like "Settings" above the settings.
+export function GroupLabel({ children }: { children: string }) {
+  return (
+    <Text style={styles.groupLabel} accessibilityRole="header">
+      {children}
+    </Text>
+  );
+}
+
 export function ListRow({
   icon,
   label,
+  detail,
   danger = false,
   showChevron = true,
+  busy = false,
   onPress,
 }: {
   icon: React.ComponentProps<typeof Feather>["name"];
   label: string;
+  // The current value, shown quietly at the end of the row.
+  detail?: string;
   danger?: boolean;
   showChevron?: boolean;
+  busy?: boolean;
   onPress: () => void;
 }) {
+  if (busy) {
+    return (
+      <View style={styles.listRow} accessibilityState={{ busy: true }} accessibilityLabel={label}>
+        <ActivityIndicator color={colors.amber} style={styles.listSpinner} />
+        <Text style={styles.listLabel}>{label}</Text>
+      </View>
+    );
+  }
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={detail ? `${label}, ${detail}` : label}
       style={({ pressed }) => [styles.listRow, pressed && styles.listRowPressed]}
       onPress={() => {
         tapFeedback();
@@ -208,6 +255,7 @@ export function ListRow({
     >
       <Feather name={icon} size={20} color={danger ? colors.overdue : colors.amber} />
       <Text style={[styles.listLabel, danger && styles.buttonLabelDanger]}>{label}</Text>
+      {detail && <Text style={styles.listDetail}>{detail}</Text>}
       {showChevron && <Feather name="chevron-right" size={20} color={colors.placeholder} />}
     </Pressable>
   );
@@ -320,7 +368,7 @@ export const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: space.lg,
     borderRadius: 22,
-    backgroundColor: colors.amber,
+    backgroundColor: colors.amberFill,
   },
   nextButtonPressed: { backgroundColor: colors.amberPressed, transform: [{ scale: 0.96 }] },
   nextLabel: { color: colors.onAmber, fontFamily: fonts.bold, fontSize: 16 },
@@ -346,7 +394,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.graphite,
   },
   wheelLarge: { width: 38, height: 54, borderRadius: radius.sm },
-  wheelLast: { backgroundColor: colors.amber },
+  wheelLast: { backgroundColor: colors.amberFill },
   digit: { color: colors.chalk, fontFamily: fonts.mono, fontSize: 16, lineHeight: 22 },
   digitLarge: { fontSize: 30, lineHeight: 38 },
   digitUnused: { color: colors.placeholder },
@@ -386,6 +434,16 @@ export const styles = StyleSheet.create({
   },
   listRowPressed: { backgroundColor: colors.graphite },
   listLabel: { flex: 1, color: colors.chalk, fontFamily: fonts.regular, fontSize: 16 },
+  listDetail: { color: colors.steel, fontFamily: fonts.regular, fontSize: 15 },
+  listSpinner: { width: 20 },
+  groupLabel: {
+    marginBottom: -space.sm,
+    paddingHorizontal: space.xs,
+    color: colors.steel,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   button: {
     minHeight: 48,
     borderRadius: radius.md,
@@ -394,7 +452,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buttonPressed: { transform: [{ scale: 0.98 }] },
-  buttonPrimary: { backgroundColor: colors.amber },
+  buttonPrimary: { backgroundColor: colors.amberFill },
   buttonPrimaryPressed: { backgroundColor: colors.amberPressed },
   buttonSecondary: { borderWidth: 1, borderColor: colors.edge },
   buttonSecondaryPressed: { backgroundColor: colors.panel },

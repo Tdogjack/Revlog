@@ -1,9 +1,13 @@
 import { Feather } from "@expo/vector-icons";
-import type { CarPart, ScannedPart } from "@revlog/api";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import type { CarDetail, CarPart, PriceCheck, ScannedPart } from "@revlog/api";
+import * as WebBrowser from "expo-web-browser";
+import { useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { Field } from "@/components/fields";
 import { Button } from "@/components/ui";
-import { formatMoney } from "@/lib/format";
+import { api, errorMessage } from "@/lib/api";
+import { formatDay, formatMoney } from "@/lib/format";
+import { tapFeedback } from "@/lib/haptics";
 import { colors, fonts, radius, space } from "@/lib/theme";
 
 // One row of the list the server reads. `id` marks a part that's already saved.
@@ -15,7 +19,9 @@ export type PartValues = {
   quantity: string;
   price: string;
   trackPrice: boolean;
+  firstPrice?: number | null;
   lowestPrice?: number | null;
+  lastCheckedAt?: string | null;
   priceError?: string | null;
 };
 
@@ -44,7 +50,9 @@ export const toPartValues = (part: CarPart): PartValues => ({
   quantity: String(part.quantity),
   price: part.price ?? "",
   trackPrice: part.trackPrice,
+  firstPrice: part.firstPrice,
   lowestPrice: part.lowestPrice,
+  lastCheckedAt: part.lastCheckedAt,
   priceError: part.priceError,
 });
 
@@ -60,17 +68,98 @@ export const partsPayload = (parts: PartValues[]) =>
     })),
   );
 
+const isLink = (url: string) => /^https?:\/\/\S+$/i.test(url.trim());
+
+// How the price has moved since the part was added, like "Down $5.00 since added".
+function trend(part: PartValues) {
+  const price = Number(part.price);
+  if (!part.price || part.firstPrice == null || price === part.firstPrice) return null;
+  const diff = price - part.firstPrice;
+  return {
+    down: diff < 0,
+    text: `${diff < 0 ? "Down" : "Up"} ${formatMoney(String(Math.abs(diff)))} since added`,
+  };
+}
+
+function LinkButton({
+  icon,
+  label,
+  busy = false,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Feather>["name"];
+  label: string;
+  busy?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ busy }}
+      style={({ pressed }) => [styles.linkButton, pressed && styles.linkButtonPressed]}
+      onPress={
+        busy
+          ? undefined
+          : () => {
+              tapFeedback();
+              onPress();
+            }
+      }
+    >
+      {busy ? (
+        <ActivityIndicator color={colors.amber} />
+      ) : (
+        <Feather name={icon} size={16} color={colors.amber} />
+      )}
+      <Text style={styles.linkLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function PartsEditor({
   label,
   parts,
   onChange,
+  carId,
 }: {
   label: string;
   parts: PartValues[];
   onChange: (parts: PartValues[]) => void;
+  // With a car, saved parts can have their price checked right away.
+  carId?: string;
 }) {
+  const [checking, setChecking] = useState<string | null>(null);
   const update = (key: string, change: Partial<PartValues>) =>
     onChange(parts.map((p) => (p.key === key ? { ...p, ...change } : p)));
+
+  // Reads the price from the part's link now, then shows what the server saved.
+  const checkPrice = async (part: PartValues) => {
+    setChecking(part.key);
+    try {
+      const { error } = await api<PriceCheck>(`/vehicles/${carId}/parts/${part.id}/price`, {
+        method: "POST",
+        body: {},
+      });
+      const car = await api<CarDetail>(`/vehicles/${carId}`);
+      const fresh = [...car.records, ...car.mods]
+        .flatMap((owner) => owner.parts)
+        .find((p) => p.id === part.id);
+      update(part.key, {
+        ...(fresh && {
+          price: fresh.price ?? "",
+          firstPrice: fresh.firstPrice,
+          lowestPrice: fresh.lowestPrice,
+          lastCheckedAt: fresh.lastCheckedAt,
+        }),
+        priceError: error,
+      });
+    } catch (err) {
+      update(part.key, { priceError: errorMessage(err) });
+    } finally {
+      setChecking(null);
+    }
+  };
 
   return (
     <View style={styles.editor}>
@@ -131,12 +220,48 @@ export function PartsEditor({
               onValueChange={(trackPrice) => update(part.key, { trackPrice })}
             />
           </View>
-          {part.lowestPrice != null && (
-            <Text style={styles.hint}>
-              Lowest seen {formatMoney(String(part.lowestPrice))}
-            </Text>
+          <Text style={styles.hint}>
+            {part.trackPrice
+              ? "Revlog checks the link each day and keeps the price up to date."
+              : "Turn on to follow the price from the link."}
+          </Text>
+          {(() => {
+            const moved = trend(part);
+            const facts = [
+              part.lowestPrice != null &&
+                Number(part.price) !== part.lowestPrice &&
+                `Lowest seen ${formatMoney(String(part.lowestPrice))}`,
+              part.lastCheckedAt && `Checked ${formatDay(part.lastCheckedAt)}`,
+            ].filter(Boolean);
+            return (
+              <>
+                {moved && (
+                  <Text style={[styles.trend, moved.down ? styles.trendDown : styles.trendUp]}>
+                    {moved.text}
+                  </Text>
+                )}
+                {facts.length > 0 && <Text style={styles.hint}>{facts.join(", ")}</Text>}
+              </>
+            );
+          })()}
+          {part.priceError && <Text style={styles.priceError}>{part.priceError}</Text>}
+          {isLink(part.url) && (
+            <View style={styles.links}>
+              <LinkButton
+                icon="external-link"
+                label="Open link"
+                onPress={() => WebBrowser.openBrowserAsync(part.url.trim())}
+              />
+              {carId && part.id && (
+                <LinkButton
+                  icon="refresh-cw"
+                  label="Check price now"
+                  busy={checking === part.key}
+                  onPress={() => checkPrice(part)}
+                />
+              )}
+            </View>
           )}
-          {part.priceError && <Text style={styles.hint}>{part.priceError}</Text>}
         </View>
       ))}
       <Button label="Add a part" kind="secondary" onPress={() => onChange([...parts, blankPart()])} />
@@ -156,4 +281,21 @@ const styles = StyleSheet.create({
   track: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44 },
   trackLabel: { color: colors.chalk, fontFamily: fonts.regular, fontSize: 16 },
   hint: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  trend: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
+  trendDown: { color: colors.done },
+  trendUp: { color: colors.due },
+  priceError: { color: colors.overdue, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  links: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  linkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    minHeight: 44,
+    paddingHorizontal: space.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.edge,
+  },
+  linkButtonPressed: { backgroundColor: colors.graphite },
+  linkLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 15 },
 });

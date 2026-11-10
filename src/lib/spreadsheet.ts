@@ -137,7 +137,7 @@ export function splitSections(name: string, rows: Cell[][]): Sheet[] {
   return sheets.filter((s) => s.rows.length > 1);
 }
 
-function decodeText(buffer: ArrayBuffer) {
+export function decodeText(buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer);
   if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder("utf-16le").decode(bytes);
   if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder("utf-16be").decode(bytes);

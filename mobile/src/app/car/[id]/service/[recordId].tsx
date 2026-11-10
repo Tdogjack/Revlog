@@ -1,9 +1,9 @@
 import type { CarDetail } from "@revlog/api";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { toPartValues } from "@/components/parts-editor";
 import { PhotoStrip } from "@/components/photo-strip";
 import { ServiceForm } from "@/components/service-form";
-import { Heading, LoadFailed, Loading } from "@/components/ui";
+import { Button, Heading, LoadFailed, Loading } from "@/components/ui";
 import { useApi } from "@/lib/use-api";
 
 const RECEIPT_PHOTO_LIMIT = 5;
@@ -20,6 +20,7 @@ export default function EditService() {
     <ServiceForm
       carId={id}
       recordId={recordId}
+      currentMileage={car.currentMileage}
       initialParts={record.parts.map(toPartValues)}
       initial={{
         category: record.category,
@@ -39,6 +40,16 @@ export default function EditService() {
         limit={RECEIPT_PHOTO_LIMIT}
         canUpload={car.canUpload}
         onChange={reload}
+      />
+      <Button
+        label="Log this service again"
+        kind="secondary"
+        onPress={() =>
+          router.replace({
+            pathname: "/car/[id]/service/new",
+            params: { id, copyId: recordId },
+          })
+        }
       />
     </ServiceForm>
   );

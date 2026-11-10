@@ -61,6 +61,14 @@ function refresh() {
 const expiringSoon = (tokens: Tokens) =>
   tokens.expiresAt != null && tokens.expiresAt - 60 < Date.now() / 1000;
 
+// For requests that can't go through api(), like a file download.
+export async function authHeaders(): Promise<Record<string, string>> {
+  const tokens = currentTokens();
+  if (tokens && expiringSoon(tokens)) await refresh();
+  const token = currentTokens()?.accessToken;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 type Options = { method?: string; body?: unknown; form?: FormData };
 
 export async function api<T = unknown>(path: string, options: Options = {}): Promise<T> {

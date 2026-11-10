@@ -32,6 +32,9 @@ export type CarReminder = {
   intervalMonths: number | null;
   status: ReminderStatus;
   due: string;
+  // From the latest matching service record; both null when there isn't one.
+  lastDoneOn: string | null;
+  lastDoneMileage: number | null;
 };
 
 export type CarRecord = {
@@ -55,7 +58,10 @@ export type CarPart = {
   quantity: number;
   price: string | null;
   trackPrice: boolean;
+  // The price when the part was added, to show how it has moved since.
+  firstPrice: number | null;
   lowestPrice: number | null;
+  lastCheckedAt: string | null;
   priceError: string | null;
 };
 
@@ -167,7 +173,33 @@ export type CarDetail = {
   photos: CarPhoto[];
   photoLimit: number;
   canUpload: boolean;
+  // Usual intervals by service type, to fill in a new reminder.
+  reminderIntervals: Record<string, ReminderInterval>;
 };
+
+export type ReminderInterval = { intervalMiles: number | null; intervalMonths: number | null };
+
+export type Choice = { value: string; label: string; hint?: string };
+
+// What the add-car form picks from.
+export type CarCatalog = {
+  makes: { name: string; models: string[] }[];
+  driving: Choice[];
+  roads: Choice[];
+  conditions: Choice[];
+  caution: Choice[];
+  defaults: { driving: string; roads: string; conditions: string[]; caution: string };
+};
+
+// The reminders a new car would start with.
+export type PlanPreview = {
+  source: "make" | "general";
+  makeName: string | null;
+  adjustedFor: string[];
+  items: { service: string; task: string; interval: string; usual: string | null }[];
+};
+
+export type PriceCheck = { error: string | null };
 
 export type BuildDraft = {
   post: {

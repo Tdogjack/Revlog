@@ -11,7 +11,17 @@ import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { useAiConsent } from "@/components/ai-consent";
 import { DateField, Field, SelectField } from "@/components/fields";
-import { Body, Button, EmptyState, FormError, LoadFailed, Loading, Screen } from "@/components/ui";
+import {
+  Body,
+  Button,
+  EmptyState,
+  FormError,
+  ListGroup,
+  ListRow,
+  LoadFailed,
+  Loading,
+  Screen,
+} from "@/components/ui";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { formatDate, formatMoney, today } from "@/lib/format";
 import { choosePhoto, fileForm, photoForm } from "@/lib/photos";
@@ -20,6 +30,14 @@ import { useApi } from "@/lib/use-api";
 
 // The server's PDF limit, checked here so a large file isn't sent for nothing.
 const MAX_PDF_BYTES = 3.5 * 1024 * 1024;
+const MAX_SHEET_BYTES = 2 * 1024 * 1024;
+const SHEET_TYPES = [
+  "text/csv",
+  "text/comma-separated-values",
+  "text/tab-separated-values",
+  "text/plain",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
 
 type Row = DraftRecord & {
   key: number;
@@ -125,7 +143,7 @@ export default function ImportHistory() {
   const types = useApi<ServiceType[]>("/service-types");
   const consent = useAiConsent();
   const [rows, setRows] = useState<Row[]>([]);
-  const [scanning, setScanning] = useState(false);
+  const [scanning, setScanning] = useState<"photo" | "pdf" | "sheet" | null>(null);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -150,14 +168,23 @@ export default function ImportHistory() {
     });
   };
 
-  const read = async (form: FormData, photoUri?: string) => {
-    setScanning(true);
+  const read = async (
+    kind: "photo" | "pdf" | "sheet",
+    form: FormData,
+    photoUri?: string,
+  ) => {
+    setScanning(kind);
     try {
-      addScan(await api<ScannedHistory>("/scans/history", { method: "POST", form }), photoUri);
+      const path = kind === "sheet" ? "/scans/sheet" : "/scans/history";
+      const scan = await api<ScannedHistory>(path, { method: "POST", form });
+      addScan(scan, photoUri);
+      if (scan.entries.length === 0 && !scan.unreadable) {
+        setNotice("No services were found in that file.");
+      }
     } catch (err) {
       setError(errorMessage(err));
     } finally {
-      setScanning(false);
+      setScanning(null);
     }
   };
 
@@ -180,7 +207,7 @@ export default function ImportHistory() {
     try {
       const photo = await choosePhoto();
       if (!photo) return;
-      await read(photoForm(photo.uri, {}, "file"), photo.uri);
+      await read("photo", photoForm(photo.uri, {}, "file"), photo.uri);
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -198,7 +225,24 @@ export default function ImportHistory() {
       setError("That PDF is over 3.5 MB. Split it into smaller files and add those.");
       return;
     }
-    await read(fileForm(file.uri, "application/pdf", file.name));
+    await read("pdf", fileForm(file.uri, "application/pdf", file.name));
+  };
+
+  // Columns are matched on the server, so a spreadsheet needs no AI scan
+  // unless its layout can't be followed.
+  const addSheet = async () => {
+    setError(null);
+    const result = await DocumentPicker.getDocumentAsync({
+      type: SHEET_TYPES,
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled) return;
+    const [file] = result.assets;
+    if ((file.size ?? 0) > MAX_SHEET_BYTES) {
+      setError("That file is over 2 MB. Split it into smaller files and add those.");
+      return;
+    }
+    await read("sheet", fileForm(file.uri, file.mimeType ?? "text/csv", file.name));
   };
 
   const kept = rows.filter((r) => r.include);
@@ -262,27 +306,35 @@ export default function ImportHistory() {
   return (
     <Screen>
       <Body style={styles.muted}>
-        Scan old receipts or a service history PDF. You check every record before anything is saved.
-        Scans are read by Anthropic&apos;s AI.
+        Add old receipts, a service history PDF, or a spreadsheet. You check every record before
+        anything is saved. Photos and PDFs are read by Anthropic&apos;s AI.
       </Body>
-      <View style={styles.actions}>
-        <View style={styles.action}>
-          <Button
-            label={scanning ? "Reading" : "Scan a photo"}
-            busy={scanning}
-            onPress={scanPhoto}
-          />
-        </View>
-        <View style={styles.action}>
-          <Button label="Scan a PDF" kind="secondary" busy={scanning} onPress={scanPdf} />
-        </View>
-      </View>
+      <ListGroup>
+        <ListRow
+          icon="camera"
+          label={scanning === "photo" ? "Reading the photo" : "Scan a photo"}
+          busy={scanning === "photo"}
+          onPress={scanning ? () => {} : scanPhoto}
+        />
+        <ListRow
+          icon="file-text"
+          label={scanning === "pdf" ? "Reading the PDF" : "Scan a PDF"}
+          busy={scanning === "pdf"}
+          onPress={scanning ? () => {} : scanPdf}
+        />
+        <ListRow
+          icon="grid"
+          label={scanning === "sheet" ? "Reading the spreadsheet" : "Add a spreadsheet (.csv or .xlsx)"}
+          busy={scanning === "sheet"}
+          onPress={scanning ? () => {} : addSheet}
+        />
+      </ListGroup>
       {notice && <Body style={styles.muted}>{notice}</Body>}
 
       {rows.length === 0 ? (
         <EmptyState
-          title="Nothing scanned yet"
-          body="Records you scan show up here to check, one by one."
+          title="Nothing added yet"
+          body="Records from your files show up here to check, one by one."
         />
       ) : (
         <>
@@ -312,8 +364,6 @@ export default function ImportHistory() {
 
 const styles = StyleSheet.create({
   muted: { color: colors.steel },
-  actions: { flexDirection: "row", gap: space.sm },
-  action: { flex: 1 },
   list: { gap: space.sm },
   row: { padding: space.lg, gap: space.md, borderRadius: radius.lg, backgroundColor: colors.panel },
   rowHead: { flexDirection: "row", alignItems: "center", gap: space.md },

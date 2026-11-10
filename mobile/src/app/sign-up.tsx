@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  boxOn: { backgroundColor: colors.amber, borderColor: colors.amber },
+  boxOn: { backgroundColor: colors.amberFill, borderColor: colors.amberFill },
   agree: { flex: 1, color: colors.chalk, fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
   link: { color: colors.amber, textDecorationLine: "underline" },
 });

@@ -10,6 +10,7 @@ import {
   Body,
   Button,
   FormError,
+  GroupLabel,
   Heading,
   ListGroup,
   ListRow,
@@ -20,7 +21,7 @@ import {
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { SITE_URL } from "@/lib/config";
-import { colors, fonts, space } from "@/lib/theme";
+import { colors, fonts, paletteId, palettes, space } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
 export default function Account() {
@@ -91,16 +92,36 @@ export default function Account() {
         </View>
       )}
 
+      <GroupLabel>Garage</GroupLabel>
       <ListGroup>
         <ListRow icon="bar-chart-2" label="Costs" onPress={() => router.push("/costs")} />
-        <ListRow icon="mail" label="Email reminders" onPress={() => router.push("/email-settings")} />
+      </ListGroup>
+
+      <GroupLabel>Community</GroupLabel>
+      <ListGroup>
+        {data.username && (
+          <ListRow
+            icon="user"
+            label="Your posts"
+            onPress={() => router.push(`/user/${data.username}`)}
+          />
+        )}
+        <ListRow icon="slash" label="Blocked accounts" onPress={() => router.push("/blocked")} />
         {data.moderator && (
           <ListRow icon="shield" label="Moderation" onPress={() => router.push("/moderation")} />
         )}
-        <ListRow icon="slash" label="Blocked accounts" onPress={() => router.push("/blocked")} />
       </ListGroup>
 
+      <GroupLabel>Settings</GroupLabel>
       <ListGroup>
+        <ListRow icon="mail" label="Email reminders" onPress={() => router.push("/email-settings")} />
+        <ListRow
+          icon="droplet"
+          label="Appearance"
+          detail={palettes.find((p) => p.id === paletteId)?.name}
+          onPress={() => router.push("/appearance")}
+        />
+        <ListRow icon="key" label="Change password" onPress={() => router.push("/change-password")} />
         <View style={styles.setting}>
           <Feather name="camera" size={20} color={colors.amber} />
           <View style={styles.settingText}>
@@ -115,8 +136,14 @@ export default function Account() {
             onValueChange={setAiScans}
           />
         </View>
+        <ListRow
+          icon="info"
+          label="How scanning works"
+          onPress={() => WebBrowser.openBrowserAsync(`${SITE_URL}/privacy#ai-scanning`)}
+        />
       </ListGroup>
 
+      <GroupLabel>About</GroupLabel>
       <ListGroup>
         <ListRow
           icon="lock"
@@ -174,6 +201,8 @@ const styles = StyleSheet.create({
     minHeight: 64,
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.edge,
   },
   settingText: { flex: 1, gap: 2 },
   settingLabel: { color: colors.chalk, fontFamily: fonts.regular, fontSize: 16 },

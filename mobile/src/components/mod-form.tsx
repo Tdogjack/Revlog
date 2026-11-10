@@ -195,6 +195,7 @@ export function ModForm({
         label={planned ? "Parts wanted" : "Parts used"}
         parts={parts}
         onChange={setParts}
+        carId={carId}
       />
       {children}
       <FormError message={error} />

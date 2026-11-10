@@ -57,6 +57,6 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.amber,
+    backgroundColor: colors.amberFill,
   },
 });
