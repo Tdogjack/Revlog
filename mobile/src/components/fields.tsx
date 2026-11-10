@@ -16,7 +16,8 @@ import { KeyboardController } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, useNumberPadFocus } from "@/components/ui";
 import { formatDate, fromIsoDate, toIsoDate } from "@/lib/format";
-import { colors, fonts, MAX_WIDTH, space } from "@/lib/theme";
+import { tapFeedback } from "@/lib/haptics";
+import { colors, fonts, lightTheme, MAX_WIDTH, space } from "@/lib/theme";
 
 function Label({ text }: { text: string }) {
   return <Text style={styles.label}>{text}</Text>;
@@ -110,7 +111,7 @@ export function DateField({
           mode="date"
           display="compact"
           accentColor={colors.amber}
-          themeVariant="dark"
+          themeVariant={lightTheme ? "light" : "dark"}
           onValueChange={(_event, next) => onChange(toIsoDate(next))}
         />
       </View>
@@ -139,6 +140,97 @@ export function DateField({
           onDismiss={() => setOpen(false)}
         />
       )}
+    </View>
+  );
+}
+
+// A few choices side by side, with the chosen one's hint underneath.
+export function ChoiceField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string; hint?: string }[];
+  onChange: (value: string) => void;
+}) {
+  const hint = options.find((o) => o.value === value)?.hint;
+  return (
+    <View style={styles.field}>
+      <Label text={label} />
+      <View style={styles.choices} accessibilityRole="radiogroup" accessibilityLabel={label}>
+        {options.map((option) => {
+          const selected = option.value === value;
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              accessibilityLabel={option.label}
+              style={[styles.choice, selected && styles.choiceOn]}
+              onPress={() => {
+                tapFeedback();
+                onChange(option.value);
+              }}
+            >
+              <Text
+                style={[styles.choiceLabel, selected && styles.choiceLabelOn]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {hint && <Text style={styles.hint}>{hint}</Text>}
+    </View>
+  );
+}
+
+// A list where any number of rows can be ticked.
+export function CheckList({
+  label,
+  values,
+  options,
+  onChange,
+}: {
+  label: string;
+  values: string[];
+  options: { value: string; label: string }[];
+  onChange: (values: string[]) => void;
+}) {
+  return (
+    <View style={styles.field}>
+      <Label text={label} />
+      <View style={styles.checks}>
+        {options.map((option) => {
+          const checked = values.includes(option.value);
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked }}
+              accessibilityLabel={option.label}
+              style={styles.check}
+              onPress={() => {
+                tapFeedback();
+                onChange(
+                  checked ? values.filter((v) => v !== option.value) : [...values, option.value],
+                );
+              }}
+            >
+              <View style={[styles.box, checked && styles.boxOn]}>
+                {checked && <Feather name="check" size={16} color={colors.onAmber} />}
+              </View>
+              <Text style={styles.checkLabel}>{option.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -235,6 +327,41 @@ const styles = StyleSheet.create({
   inputText: { color: colors.chalk, fontFamily: fonts.regular, fontSize: 16 },
   placeholder: { color: colors.placeholder, fontFamily: fonts.regular, fontSize: 16 },
   error: { color: colors.overdue, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  hint: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  choices: { flexDirection: "row", gap: space.sm },
+  choice: {
+    flex: 1,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: space.sm,
+    borderWidth: 1,
+    borderColor: colors.fieldEdge,
+    borderRadius: 8,
+  },
+  choiceOn: { borderColor: colors.amber, backgroundColor: colors.panel },
+  choiceLabel: { color: colors.label, fontFamily: fonts.regular, fontSize: 16 },
+  choiceLabelOn: { color: colors.amber, fontFamily: fonts.medium },
+  checks: { borderRadius: 8, borderWidth: 1, borderColor: colors.edge },
+  check: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    minHeight: 48,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+  },
+  box: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.fieldEdge,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  boxOn: { backgroundColor: colors.amberFill, borderColor: colors.amberFill },
+  checkLabel: { flex: 1, color: colors.chalk, fontFamily: fonts.regular, fontSize: 16, lineHeight: 22 },
   dateRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   selectRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sheet: { flex: 1, backgroundColor: colors.asphalt },

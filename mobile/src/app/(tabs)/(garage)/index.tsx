@@ -19,7 +19,7 @@ import {
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { pressFeedback, tapFeedback } from "@/lib/haptics";
-import { colors, fonts, radius, scrim, space } from "@/lib/theme";
+import { colors, fonts, photoInk, photoInkMuted, radius, scrim, space } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
 function CarPlate({ car }: { car: GarageCar }) {
@@ -51,21 +51,21 @@ function CarPlate({ car }: { car: GarageCar }) {
           <Feather name="camera" size={28} color={colors.edge} />
         </View>
       )}
-      <LinearGradient colors={scrim} style={styles.scrim} />
+      {car.photoUrl && <LinearGradient colors={scrim} style={styles.scrim} />}
       <View style={styles.badges}>
         {attention ? <StatusPill status={attention.status} count={attention.count} /> : <View />}
         {car.favorite && <Feather name="star" size={20} color={colors.amber} />}
       </View>
       <View style={styles.plateText}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={[styles.name, !!car.photoUrl && styles.onPhoto]} numberOfLines={1}>
           {car.nickname ?? car.name}
         </Text>
         {car.nickname && (
-          <Text style={styles.fullName} numberOfLines={1}>
+          <Text style={[styles.fullName, !!car.photoUrl && styles.onPhotoMuted]} numberOfLines={1}>
             {car.name}
           </Text>
         )}
-        <Odometer miles={car.currentMileage} />
+        <Odometer miles={car.currentMileage} onPhoto={!!car.photoUrl} />
       </View>
     </Pressable>
   );
@@ -271,6 +271,8 @@ const styles = StyleSheet.create({
   plateText: { padding: space.lg, gap: space.xs },
   name: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 24, lineHeight: 30 },
   fullName: { color: colors.label, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  onPhoto: { color: photoInk },
+  onPhotoMuted: { color: photoInkMuted },
   hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },
   reorderList: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.panel },
   reorderRow: {

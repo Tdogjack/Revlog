@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { tapFeedback } from "@/lib/haptics";
-import { colors, fonts, MAX_WIDTH, space } from "@/lib/theme";
+import { alpha, colors, fonts, MAX_WIDTH, space } from "@/lib/theme";
 
 const PILL_HEIGHT = 52;
 const GAP = space.sm;
@@ -151,8 +151,8 @@ const styles = StyleSheet.create({
   },
   blurPill: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(250, 250, 247, 0.25)",
-    backgroundColor: "rgba(37, 37, 39, 0.72)",
+    borderColor: alpha(colors.chalk, 0.25),
+    backgroundColor: alpha(colors.panel, 0.72),
   },
   input: {
     flex: 1,
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.amber,
+    backgroundColor: colors.amberFill,
   },
   sendPressed: { backgroundColor: colors.amberPressed },
   error: {

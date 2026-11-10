@@ -1,16 +1,16 @@
 import type { ExtraService, ScannedReceipt, ServiceType } from "@revlog/api";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Alert, Text } from "react-native";
+import { Alert, StyleSheet, Switch, Text, View } from "react-native";
 import { DateField, Field, SelectField } from "@/components/fields";
 import { partsPayload, PartsEditor, scannedPart, type PartValues } from "@/components/parts-editor";
 import { ScanBox } from "@/components/scan-box";
-import { Button, FormError, Loading, Screen } from "@/components/ui";
+import { Body, Button, FormError, Loading, Screen } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
-import { today } from "@/lib/format";
+import { formatMiles, today } from "@/lib/format";
 import { photoForm } from "@/lib/photos";
 import { useApi } from "@/lib/use-api";
-import { colors, fonts } from "@/lib/theme";
+import { colors, fonts, radius, space } from "@/lib/theme";
 
 // Matches NEW_TYPE on the server: the option that names a new service type.
 const NEW_TYPE = "__new";
@@ -42,6 +42,8 @@ export function ServiceForm({
   reminderId,
   initialParts = [],
   canUpload = true,
+  currentMileage,
+  note,
   children,
 }: {
   carId: string;
@@ -50,12 +52,15 @@ export function ServiceForm({
   reminderId?: string;
   initialParts?: PartValues[];
   canUpload?: boolean;
+  currentMileage?: number;
+  // Says where the starting values came from, like a copied record.
+  note?: string;
   children?: React.ReactNode;
 }) {
   const types = useApi<ServiceType[]>("/service-types");
   const [values, setValues] = useState(initial);
   const [parts, setParts] = useState(initialParts);
-  const [extras, setExtras] = useState<ExtraService[]>([]);
+  const [extras, setExtras] = useState<(ExtraService & { keep: boolean })[]>([]);
   const [scannedPhoto, setScannedPhoto] = useState<string | null>(null);
   const [newType, setNewType] = useState("");
   const [typeError, setTypeError] = useState<string | null>(null);
@@ -72,9 +77,21 @@ export function ServiceForm({
     const found = Object.fromEntries(Object.entries(scan.values).filter(([, v]) => v));
     setValues((v) => ({ ...v, ...found }));
     setParts((current) => [...current, ...scan.parts.map(scannedPart)]);
-    setExtras(scan.extras);
+    setExtras(scan.extras.map((e) => ({ ...e, keep: true })));
     setScannedPhoto(photoUri);
     setTypeError(null);
+  };
+
+  // Dropping an extra service moves its price back onto this record, so the
+  // records still add up to the receipt total.
+  const keepExtra = (index: number, keep: boolean) => {
+    const extra = extras[index];
+    const current = Number(values.cost.replace(/[$,]/g, ""));
+    if (values.cost && Number.isFinite(current)) {
+      const change = (Number(extra.cost) || 0) * (keep ? -1 : 1);
+      set("cost")(Math.max(0, current + change).toFixed(2));
+    }
+    setExtras(extras.map((e, i) => (i === index ? { ...e, keep } : e)));
   };
 
   const save = async () => {
@@ -85,12 +102,15 @@ export function ServiceForm({
     setSaving(true);
     setError(null);
     try {
+      const kept = extras
+        .filter((e) => e.keep)
+        .map(({ category, title, cost }) => ({ category, title, cost }));
       const body = {
         ...values,
         newType,
         reminderId,
         parts: partsPayload(parts),
-        extraServices: extras.length > 0 ? JSON.stringify(extras) : undefined,
+        extraServices: kept.length > 0 ? JSON.stringify(kept) : undefined,
       };
       const saved = await api<{ id?: string }>(
         `/vehicles/${carId}/service${recordId ? `/${recordId}` : ""}`,
@@ -130,6 +150,7 @@ export function ServiceForm({
 
   return (
     <Screen>
+      {note && <Text style={styles.note}>{note}</Text>}
       {!recordId && (
         <ScanBox<ScannedReceipt>
           path="/scans/receipt"
@@ -153,26 +174,30 @@ export function ServiceForm({
         <Field label="New service type" value={newType} onChangeText={setNewType} maxLength={60} />
       )}
       <Field
-        label="Title (optional)"
+        label="Description (optional)"
+        placeholder="Full synthetic 0W-20 and filter"
         value={values.title}
         onChangeText={set("title")}
         maxLength={100}
       />
       <DateField label="Date" value={values.servicedOn} onChange={set("servicedOn")} />
       <Field
-        label="Mileage"
+        label="Mileage (optional)"
+        placeholder={currentMileage != null ? formatMiles(currentMileage) : undefined}
         value={values.mileage}
         onChangeText={set("mileage")}
         keyboardType="number-pad"
       />
       <Field
         label="Cost (optional)"
+        placeholder="Leave blank to use the parts total"
         value={values.cost}
         onChangeText={set("cost")}
         keyboardType="decimal-pad"
       />
       <Field
         label="Shop (optional)"
+        placeholder="Did it myself"
         value={values.shop}
         onChangeText={set("shop")}
         maxLength={100}
@@ -184,12 +209,34 @@ export function ServiceForm({
         multiline
         maxLength={2000}
       />
-      <PartsEditor label="Parts used" parts={parts} onChange={setParts} />
+      <PartsEditor label="Parts used" parts={parts} onChange={setParts} carId={carId} />
       {extras.length > 0 && (
-        <Text style={{ color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 }}>
-          Also on this receipt, saved as separate records:{" "}
-          {extras.map((e) => e.title).join(", ")}.
-        </Text>
+        <View style={styles.extras}>
+          <Text style={styles.extrasHeading}>Other services on this receipt</Text>
+          <Body style={styles.hint}>
+            Each one you keep is saved as its own record with the same date, mileage, and shop.
+          </Body>
+          <View style={styles.extrasList}>
+            {extras.map((extra, i) => (
+              <View key={i} style={styles.extra}>
+                <View style={styles.extraText}>
+                  <Text style={[styles.extraTitle, !extra.keep && styles.extraDropped]}>
+                    {extra.title}
+                  </Text>
+                  <Text style={styles.hint}>
+                    {Number(extra.cost) > 0 ? `$${extra.cost}` : extra.cost ? "No charge" : "No price"}
+                  </Text>
+                </View>
+                <Switch
+                  accessibilityLabel={`Keep ${extra.title}`}
+                  value={extra.keep}
+                  trackColor={{ true: colors.amber, false: colors.graphite }}
+                  onValueChange={(keep) => keepExtra(i, keep)}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
       )}
       {children}
       <FormError message={error} />
@@ -198,3 +245,32 @@ export function ServiceForm({
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  note: {
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.graphite,
+    color: colors.chalk,
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },
+  extras: { gap: space.sm },
+  extrasHeading: { color: colors.label, fontFamily: fonts.medium, fontSize: 15, lineHeight: 22 },
+  extrasList: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.panel },
+  extra: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    minHeight: 60,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.edge,
+  },
+  extraText: { flex: 1, gap: 2 },
+  extraTitle: { color: colors.chalk, fontFamily: fonts.regular, fontSize: 16, lineHeight: 22 },
+  extraDropped: { color: colors.steel, textDecorationLine: "line-through" },
+});

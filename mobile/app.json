@@ -46,7 +46,8 @@
           "cameraPermission": "Revlog uses the camera so you can photograph your car, parts, and receipts.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "reactCompiler": true

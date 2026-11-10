@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { colors, radius, space } from "@/lib/theme";
+import { alpha, colors, radius, space } from "@/lib/theme";
 
 // Swipeable post photos, with a dot for each one so people know to swipe.
 export function PhotoPager({
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.sm,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: "rgba(28, 28, 30, 0.6)",
+    backgroundColor: alpha(colors.asphalt, 0.6),
   },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.steel },
   dotActive: { backgroundColor: colors.amber },
