@@ -134,6 +134,13 @@
       "when": 1794395426070,
       "tag": "0018_query_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794438308426,
+      "tag": "0019_rate_events",
+      "breakpoints": true
     }
   ]
 }

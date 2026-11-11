@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { mods, partPrices, parts, serviceRecords, type Part } from "@/db/schema";
 import { fetchPagePrice, PriceCheckError, validatePartUrl } from "@/lib/price-fetch";
 import type { PartRow } from "@/lib/part-rows";
+import { claimAction } from "@/lib/rate-limit";
 import { isUuid } from "@/lib/vehicles";
 
 const stripNumber = (v: unknown) => (typeof v === "string" ? v.replace(/[$,\s]/g, "") : v);
@@ -173,6 +174,18 @@ export async function updatePart(userId: string, partId: string, input: PartInpu
 
 export async function deletePart(userId: string, partId: string) {
   await db.delete(parts).where(and(eq(parts.id, partId), eq(parts.userId, userId)));
+}
+
+// For the "check price now" button: once a minute per part, and a cap per hour
+// across all of the user's parts. Returns an error message, or null to go ahead.
+export async function priceCheckBlocked(userId: string, part: Part) {
+  if (part.lastCheckedAt && Date.now() - part.lastCheckedAt.getTime() < 60_000) {
+    return "Just checked. Try again in a minute.";
+  }
+  if (!(await claimAction(userId, "price-check"))) {
+    return "You've checked a lot of prices this hour. Try again later.";
+  }
+  return null;
 }
 
 // Reads the current price from the part's link and records it if it changed.

@@ -12,6 +12,7 @@ import {
   uploadVehiclePhoto,
   withThumbs,
 } from "@/lib/photos";
+import { claimAction } from "@/lib/rate-limit";
 import { getServiceRecord } from "@/lib/service-records";
 import { createClient } from "@/lib/supabase/server";
 import { getVehicle, isUuid, setVehiclePhoto } from "@/lib/vehicles";
@@ -26,6 +27,11 @@ export const PHOTO_LIMITS: Record<PhotoTarget["kind"], number> = {
   mod: 10,
   record: 5,
 };
+
+// Across all of an account's cars, so one account can't fill shared storage.
+// Listed in docs/limits.md with the other caps.
+const ACCOUNT_PHOTO_LIMIT = 300;
+const UPLOADS_PER_DAY = "You've added a lot of photos today. Try again tomorrow.";
 
 function targetFilter(target: PhotoTarget) {
   if (target.kind === "mod") return eq(photos.modId, target.id);
@@ -73,6 +79,10 @@ async function checkTarget(userId: string, vehicleId: string, target: PhotoTarge
     .where(and(eq(photos.userId, userId), eq(photos.vehicleId, vehicleId), targetFilter(target)));
   const limit = PHOTO_LIMITS[target.kind];
   if (n >= limit) return `You can add up to ${limit} photos here.`;
+  const [{ total }] = await db.select({ total: count() }).from(photos).where(eq(photos.userId, userId));
+  if (total >= ACCOUNT_PHOTO_LIMIT) {
+    return `Accounts can hold up to ${ACCOUNT_PHOTO_LIMIT} photos. Delete some to add more.`;
+  }
   return null;
 }
 
@@ -80,6 +90,7 @@ async function checkTarget(userId: string, vehicleId: string, target: PhotoTarge
 export async function addPhoto(userId: string, vehicleId: string, target: PhotoTarget, file: File) {
   const problem = await checkTarget(userId, vehicleId, target);
   if (problem) return problem;
+  if (!(await claimAction(userId, "photo-upload"))) return UPLOADS_PER_DAY;
 
   let path: string;
   try {
@@ -127,6 +138,7 @@ export async function replaceVehiclePhoto(userId: string, vehicleId: string, for
   if (!photo) return "Choose a photo first.";
   if ("error" in photo) return photo.error;
   if (!(await getVehicle(userId, vehicleId))) return "That car wasn't found.";
+  if (!(await claimAction(userId, "photo-upload"))) return UPLOADS_PER_DAY;
 
   let path: string;
   try {
@@ -162,6 +174,7 @@ export async function replacePhotoFile(userId: string, photoId: string, formData
     .from(photos)
     .where(and(eq(photos.id, photoId), eq(photos.userId, userId)));
   if (!row) return "That photo wasn't found.";
+  if (!(await claimAction(userId, "photo-upload"))) return UPLOADS_PER_DAY;
 
   let path: string;
   try {

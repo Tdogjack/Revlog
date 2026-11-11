@@ -32,6 +32,7 @@ A car maintenance and modification tracker. Log every service, get reminded befo
 - Pages and forms are server components and server actions. The server connects to Postgres as the owner, so every query filters by the signed-in user's id. Row-level security policies on every table are a second layer.
 - Garage photos live in a private bucket and are shown through short-lived signed URLs. Sharing a post copies the chosen photos to a public bucket.
 - Two daily cron jobs, protected by a bearer secret, send reminder emails and check part prices. Price checks only fetch public http(s) addresses on ports 80 and 443, checked again at connect time, with limits on redirects, size, and time.
+- Per-user caps on photo uploads, AI scans, price checks, emails, and community posts keep one account from using up the free plans. Every limit and where to change it is in [docs/limits.md](docs/limits.md).
 
 ## Run it locally
 
@@ -72,6 +73,7 @@ src/
   components/     shared UI (app shell, photo strip, parts fieldset)
   db/             Drizzle schema and client
   lib/            data access, reminders, email, price checks, helpers
+docs/            usage limits, mobile API plan
 drizzle/          SQL migrations
 supabase/         auth email templates
 ```

@@ -6,7 +6,7 @@ import { removeAccount } from "@/lib/account";
 import { requireUser } from "@/lib/auth";
 import { saveReminderSettings } from "@/lib/email-settings";
 import { sendTestReminder } from "@/lib/email-test";
-import { isEmailVerified, sendVerificationEmail } from "@/lib/email-verification";
+import { isEmailVerified, resendVerificationEmail } from "@/lib/email-verification";
 import { createClient } from "@/lib/supabase/server";
 
 export type SettingsState = { error?: string; message?: string } | undefined;
@@ -35,7 +35,7 @@ export async function resendConfirmation(): Promise<SettingsState> {
   if (!user.email) return { error: "Your account has no email address." };
   if (await isEmailVerified(user.id)) return { message: "Your email is already confirmed." };
 
-  const error = await sendVerificationEmail(user.email);
+  const error = await resendVerificationEmail(user.id, user.email);
   if (error) return { error };
   return { message: `Sent to ${user.email}. Open the link in it to confirm (check spam too).` };
 }

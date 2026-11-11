@@ -2,6 +2,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { emailVerifications } from "@/db/schema";
+import { claimAction } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 export const CONFIRM_EMAIL_FIRST =
@@ -31,4 +32,12 @@ export async function sendVerificationEmail(email: string): Promise<string | nul
   if (!error) return null;
   if (error.status === 429) return "A link was just sent. Wait a minute before sending another.";
   return "Couldn't send the email. Try again in a few minutes.";
+}
+
+// For the "resend link" button: a daily cap on top of Supabase's own limit.
+export async function resendVerificationEmail(userId: string, email: string) {
+  if (!(await claimAction(userId, "confirm-email"))) {
+    return "You've asked for several links today. Check your inbox and spam, or try tomorrow.";
+  }
+  return sendVerificationEmail(email);
 }
