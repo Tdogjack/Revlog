@@ -1,7 +1,8 @@
-import { File } from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { Alert, Linking } from "react-native";
+import { editPhotos, type EditablePhoto } from "@/components/photo-editor";
 import { ApiError } from "@/lib/api";
 
 const MAX_EDGE = 1600;
@@ -17,7 +18,9 @@ async function shrink(uri: string, width: number, height: number) {
   const image = await context.renderAsync();
   for (const compress of QUALITIES) {
     const result = await image.saveAsync({ format: SaveFormat.JPEG, compress });
-    if (new File(result.uri).size <= MAX_BYTES) return result.uri;
+    if (new File(result.uri).size <= MAX_BYTES) {
+      return { uri: result.uri, width: result.width, height: result.height };
+    }
   }
   throw new ApiError("That photo is too large. Try a smaller one.", 400);
 }
@@ -56,7 +59,7 @@ function chooseSource(many = false) {
   });
 }
 
-export type ChosenPhoto = { uri: string; form: FormData };
+export type ChosenPhoto = { uri: string; width: number; height: number; form: FormData };
 
 // Expo's fetch reads any part with bytes() and refuses React Native's { uri }
 // form. The type is set here because the server only accepts known types.
@@ -85,9 +88,47 @@ export async function choosePhoto(fields: Record<string, string> = {}): Promise<
   if (!source) return null;
   const result = await launch(source);
   if (!result || result.canceled) return null;
-  const asset = result.assets[0];
-  const uri = await shrink(asset.uri, asset.width, asset.height);
-  return { uri, form: photoForm(uri, fields) };
+  // Crop and rotate before it's used; cancelling picks nothing.
+  const [photo] = (await editPhotos([sizeOf(result.assets[0])])) ?? [];
+  if (!photo) return null;
+  return ready(photo, fields);
+}
+
+const sizeOf = (asset: ImagePicker.ImagePickerAsset): EditablePhoto => ({
+  uri: asset.uri,
+  width: asset.width,
+  height: asset.height,
+});
+
+// Shrinks a photo under the upload limit and wraps it in a form.
+async function ready(photo: EditablePhoto, fields: Record<string, string>): Promise<ChosenPhoto> {
+  const small = await shrink(photo.uri, photo.width, photo.height);
+  return { ...small, form: photoForm(small.uri, fields) };
+}
+
+// Opens a photo that's already chosen or saved in the crop and rotate editor.
+// Resolves with the edited copy, ready to upload, or null if nothing changed.
+export async function editPhoto(
+  source: { uri: string; width?: number; height?: number } | { url: string },
+  fields: Record<string, string> = {},
+): Promise<ChosenPhoto | null> {
+  let uri: string;
+  if ("url" in source) {
+    // Saved photos live online; edit a local copy.
+    const file = new File(Paths.cache, `edit-${Date.now()}.jpg`);
+    uri = (await File.downloadFileAsync(source.url, file)).uri;
+  } else {
+    uri = source.uri;
+  }
+  let { width, height } = "url" in source ? { width: 0, height: 0 } : source;
+  if (!width || !height) {
+    const size = await ImageManipulator.manipulate(uri).renderAsync();
+    width = size.width;
+    height = size.height;
+  }
+  const [photo] = (await editPhotos([{ uri, width, height }], { done: "Save" })) ?? [];
+  if (!photo || photo.uri === uri) return null;
+  return ready(photo, fields);
 }
 
 // Lets the owner pick up to `limit` photos at once and returns them, ready to
@@ -103,14 +144,15 @@ export async function choosePhotos(
   if (!source) return [];
   const result = await launch(source, limit);
   if (!result || result.canceled) return [];
-  const assets = result.assets.slice(0, limit);
-  onPicked?.(assets.length);
+  // Crop and rotate before they're used; cancelling picks nothing.
+  const edited = await editPhotos(result.assets.slice(0, limit).map(sizeOf));
+  if (!edited || edited.length === 0) return [];
+  onPicked?.(edited.length);
   const chosen: ChosenPhoto[] = [];
   let tooLarge = 0;
-  for (const asset of assets) {
+  for (const photo of edited) {
     try {
-      const uri = await shrink(asset.uri, asset.width, asset.height);
-      chosen.push({ uri, form: photoForm(uri, fields) });
+      chosen.push(await ready(photo, fields));
     } catch {
       tooLarge++;
     }

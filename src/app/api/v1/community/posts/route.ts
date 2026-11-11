@@ -33,5 +33,5 @@ export const POST = authed(async ({ user, request }) => {
   });
   if (!("id" in result)) return postingFailure(result);
   refreshCommunity();
-  return ok({ id: result.id }, 201);
+  return ok({ id: result.id, added: result.added }, 201);
 });

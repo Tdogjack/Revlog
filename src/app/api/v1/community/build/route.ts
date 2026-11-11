@@ -58,5 +58,5 @@ export const PUT = authed(async ({ user, request }) => {
   });
   if (!("id" in result)) return postingFailure(result);
   refreshCommunity();
-  return ok({ id: result.id });
+  return ok({ id: result.id, added: result.added });
 });

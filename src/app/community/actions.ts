@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { getUser, requireUser } from "@/lib/auth";
 import { deleteComment, deletePost, FEATURED_BUILD_TAG } from "@/lib/community";
 import {
+  editPost,
   fileReport,
   likePost,
+  orderPostPhotos,
   publishBuild,
   publishComment,
   publishPost,
@@ -16,7 +18,14 @@ import { blockUser, unblockUser } from "@/lib/moderation";
 import type { ReportKind } from "@/lib/report-reasons";
 
 export type PostFormState =
-  { error?: string; values?: Record<string, string>; postId?: string } | undefined;
+  | {
+      error?: string;
+      values?: Record<string, string>;
+      postId?: string;
+      // Which post photo each chosen garage photo became.
+      added?: Record<string, string>;
+    }
+  | undefined;
 
 export async function sharePost(_prev: PostFormState, formData: FormData): Promise<PostFormState> {
   const user = await requireUser();
@@ -39,7 +48,47 @@ export async function sharePost(_prev: PostFormState, formData: FormData): Promi
 
   // The form uploads any new photos to the post, then opens it.
   revalidatePath("/community");
-  return { postId: result.id };
+  return { postId: result.id, added: result.added };
+}
+
+// Saves changes to one of the person's posts.
+export async function savePostEdits(
+  postId: string,
+  _prev: PostFormState,
+  formData: FormData,
+): Promise<PostFormState> {
+  const user = await requireUser();
+  const title = String(formData.get("title") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  const tag = String(formData.get("tag") ?? "");
+  const values = { title, body, tag };
+
+  const result = await editPost(user.id, postId, {
+    title,
+    body,
+    tag,
+    showParts: formData.get("showParts") === "on",
+    photoIds: formData.getAll("photoIds").map(String),
+    keepPhotoIds: formData.getAll("keepPhotoIds").map(String),
+  });
+  if ("needsUsername" in result) redirect("/username?next=/community");
+  if ("error" in result) return { error: result.error, values };
+
+  updateTag(FEATURED_BUILD_TAG);
+  revalidatePath("/community");
+  revalidatePath(`/community/${postId}`);
+  return { postId, added: result.added };
+}
+
+// Puts a post's photos in the order the form shows them.
+export async function orderPhotos(postId: string, order: string[]) {
+  const user = await requireUser();
+  const error = await orderPostPhotos(user.id, postId, order);
+  if (error) return { error };
+  updateTag(FEATURED_BUILD_TAG);
+  revalidatePath(`/community/${postId}`);
+  revalidatePath("/community");
+  return {};
 }
 
 // Posts the car's public build, or updates it if the car already has one.
@@ -65,17 +114,17 @@ export async function saveBuild(_prev: PostFormState, formData: FormData): Promi
   revalidatePath("/community");
   revalidatePath(`/community/${result.id}`);
   revalidatePath(`/garage/${vehicleId}`);
-  return { postId: result.id };
+  return { postId: result.id, added: result.added };
 }
 
 // One new photo per call, so each request stays under the upload size limit.
 export async function uploadPostPhoto(postId: string, formData: FormData) {
   const user = await requireUser();
-  const error = await savePostPhoto(user.id, postId, formData);
-  if (error) return { error };
+  const result = await savePostPhoto(user.id, postId, formData);
+  if ("error" in result) return { error: result.error };
   updateTag(FEATURED_BUILD_TAG);
   revalidatePath(`/community/${postId}`);
-  return {};
+  return { id: result.id };
 }
 
 // `next` is where to land afterwards: the feed, or the car's page when a build

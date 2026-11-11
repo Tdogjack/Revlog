@@ -13,6 +13,8 @@ export type MenuTarget = {
   userId: string;
   username: string;
   mine: boolean;
+  // Opens the editor, for the person's own posts.
+  edit?: () => void;
 };
 
 type Action = { label: string; danger?: boolean; run: () => void };
@@ -82,6 +84,8 @@ export function useContentMenu({
   const actionsFor = (t: MenuTarget): Action[] => {
     const name = noun[t.kind];
     const actions: Action[] = [];
+
+    if (t.mine && t.edit) actions.push({ label: `Edit ${name}`, run: t.edit });
 
     if (t.mine && t.kind !== "user") {
       actions.push({

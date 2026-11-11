@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { LoaderCircle, ScanText } from "lucide-react";
 import { useAiConsent } from "@/components/ai-consent";
+import { editPhotos } from "@/components/photo-editor";
 import { PHOTO_ACCEPT, resizeImage } from "@/lib/resize-image";
 
 // "Scan" box at the top of the service and mod forms. Sends the photo to
@@ -25,10 +26,13 @@ export function ReceiptScanner<T>({
   const inputRef = useRef<HTMLInputElement>(null);
   const consent = useAiConsent();
 
-  async function read(file: File) {
+  async function read(chosen: File) {
     setError(null);
     setDone(false);
     try {
+      // Cropping to just the receipt helps the scan read it.
+      const [file] = (await editPhotos([chosen], { done: "Scan photo" })) ?? [];
+      if (!file) return;
       if (!(await consent.ensure())) return;
       setScanning(true);
       const photo = await resizeImage(file, 1600);

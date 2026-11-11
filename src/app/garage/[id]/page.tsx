@@ -233,7 +233,12 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       <header className="mt-6 flex flex-col gap-6 border-b border-graphite pb-8 sm:flex-row sm:items-end">
         <div className="flex flex-col items-start gap-2">
           <ProfilePhoto src={photoUrl ?? null} alt={vehicleName(car)} />
-          <PhotoControls vehicleId={car.id} hasPhoto={!!car.photoPath} canUpload={canUpload} />
+          <PhotoControls
+            vehicleId={car.id}
+            hasPhoto={!!car.photoPath}
+            photoUrl={photoUrl}
+            canUpload={canUpload}
+          />
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-5 sm:pb-8">
           <div>

@@ -144,6 +144,31 @@ export async function clearVehiclePhoto(userId: string, vehicleId: string) {
   if (oldPath) await deleteVehiclePhoto(oldPath);
 }
 
+// Swaps a garage photo's picture for an edited one (cropped or rotated),
+// keeping its place. Returns an error message, or null once saved.
+export async function replacePhotoFile(userId: string, photoId: string, formData: FormData) {
+  if (!(await isEmailVerified(userId))) return CONFIRM_EMAIL_FIRST;
+  if (!isUuid(photoId)) return "That photo wasn't found.";
+  const photo = readPhoto(formData);
+  if (!photo) return "Choose a photo first.";
+  if ("error" in photo) return photo.error;
+  const [row] = await db
+    .select({ vehicleId: photos.vehicleId, path: photos.storagePath })
+    .from(photos)
+    .where(and(eq(photos.id, photoId), eq(photos.userId, userId)));
+  if (!row) return "That photo wasn't found.";
+
+  let path: string;
+  try {
+    path = await uploadVehiclePhoto(userId, row.vehicleId, photo);
+  } catch {
+    return "The photo didn't upload. Try again.";
+  }
+  await db.update(photos).set({ storagePath: path }).where(eq(photos.id, photoId));
+  await deleteVehiclePhoto(row.path);
+  return null;
+}
+
 export async function deletePhoto(userId: string, photoId: string) {
   if (!isUuid(photoId)) return;
   const [row] = await db

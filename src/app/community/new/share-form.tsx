@@ -2,17 +2,27 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, ImagePlus, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Crop, ImagePlus, X } from "lucide-react";
 import { ConfirmEmailNote } from "@/components/confirm-email-note";
+import { editPhotos, photoFromUrl } from "@/components/photo-editor";
 import { POST_TAGS } from "@/lib/post-tags";
 import { PHOTO_ACCEPT, resizeImage, toBrowserImage } from "@/lib/resize-image";
-import { uploadPostPhoto, type PostFormState } from "../actions";
+import { orderPhotos, uploadPostPhoto, type PostFormState } from "../actions";
 
 const inputClass = "field mt-1";
 
 type SharePhoto = { id: string; url: string; fromMod: boolean };
 type PostPhoto = { id: string; url: string };
-type NewPhoto = { key: string; file: File; preview: string };
+
+// One photo in the post, in the order it'll show: already on the post, picked
+// from the garage, or uploaded just for this post.
+type Entry =
+  | { key: string; kind: "post"; id: string; url: string }
+  | { key: string; kind: "garage"; id: string; url: string }
+  | { key: string; kind: "upload"; file: File; url: string };
+
+let nextKey = 0;
+const newKey = () => `photo-${nextKey++}`;
 
 export function ShareForm({
   action,
@@ -42,7 +52,7 @@ export function ShareForm({
   defaultTag: string;
   // Off for builds, which are always tagged Build.
   showTags?: boolean;
-  // Photos already on the post, when updating a build.
+  // Photos already on the post, when updating a build or editing a post.
   currentPhotos?: PostPhoto[];
   defaultBody?: string;
   defaultShowParts?: boolean;
@@ -54,95 +64,146 @@ export function ShareForm({
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<PostFormState>(undefined);
   const [progress, setProgress] = useState<string | null>(null);
-  // Updates keep the post's photos; mod posts start with the mod's photos
-  // picked, other new posts with the first few.
-  const [kept, setKept] = useState<string[]>(() => currentPhotos?.map((p) => p.id) ?? []);
-  const [picked, setPicked] = useState<string[]>(() => {
-    if (currentPhotos) return [];
-    const fromMod = photos.filter((p) => p.fromMod).map((p) => p.id);
-    return (fromMod.length ? fromMod : photos.map((p) => p.id)).slice(0, Math.min(6, maxPhotos));
+  const [dragging, setDragging] = useState<number | null>(null);
+  // Edits start with the post's photos; mod posts start with the mod's photos,
+  // other new posts with the first few garage photos.
+  const [entries, setEntries] = useState<Entry[]>(() => {
+    if (currentPhotos) {
+      return currentPhotos.map((p) => ({ key: newKey(), kind: "post", id: p.id, url: p.url }));
+    }
+    const fromMod = photos.filter((p) => p.fromMod);
+    return (fromMod.length ? fromMod : photos)
+      .slice(0, Math.min(6, maxPhotos))
+      .map((p) => ({ key: newKey(), kind: "garage", id: p.id, url: p.url }));
   });
-  const [added, setAdded] = useState<NewPhoto[]>([]);
-  const room = maxPhotos - kept.length - picked.length - added.length;
+  const room = maxPhotos - entries.length;
+  const editing = !!currentPhotos;
 
-  // Free preview images when they're removed, and the rest when the page closes.
-  const addedRef = useRef(added);
+  // Free upload previews when they're removed, and the rest when the page closes.
+  const latest = useRef(entries);
   useEffect(() => {
-    addedRef.current = added;
-  }, [added]);
-  useEffect(() => () => addedRef.current.forEach((p) => URL.revokeObjectURL(p.preview)), []);
-  function removeAdded(key: string) {
-    const photo = added.find((p) => p.key === key);
-    if (photo) URL.revokeObjectURL(photo.preview);
-    setAdded((current) => current.filter((p) => p.key !== key));
+    latest.current = entries;
+  }, [entries]);
+  useEffect(
+    () => () =>
+      latest.current.forEach((e) => e.kind === "upload" && URL.revokeObjectURL(e.url)),
+    [],
+  );
+
+  function remove(key: string) {
+    const entry = entries.find((e) => e.key === key);
+    if (entry?.kind === "upload") URL.revokeObjectURL(entry.url);
+    setEntries((current) => current.filter((e) => e.key !== key));
   }
 
-  function toggle(id: string) {
-    setPicked((current) =>
-      current.includes(id)
-        ? current.filter((p) => p !== id)
-        : room > 0
-          ? [...current, id]
-          : current,
-    );
+  function move(from: number, to: number) {
+    if (to < 0 || to >= entries.length || from === to) return;
+    setEntries((current) => {
+      const next = [...current];
+      const [entry] = next.splice(from, 1);
+      next.splice(to, 0, entry);
+      return next;
+    });
   }
 
-  function toggleKept(id: string) {
-    setKept((current) =>
-      current.includes(id)
-        ? current.filter((p) => p !== id)
-        : room > 0
-          ? [...current, id]
-          : current,
-    );
+  function toggleGarage(photo: SharePhoto) {
+    const inPost = entries.find((e) => e.kind === "garage" && e.id === photo.id);
+    if (inPost) remove(inPost.key);
+    else if (room > 0) {
+      setEntries((current) => [
+        ...current,
+        { key: newKey(), kind: "garage", id: photo.id, url: photo.url },
+      ]);
+    }
   }
 
   async function addFiles(files: File[]) {
+    setState(undefined);
+    // Crop and rotate first; cancelling adds nothing.
+    const chosen = await editPhotos(files.slice(0, room));
+    if (!chosen || chosen.length === 0) return;
     // HEIC photos are converted up front so their previews show in every browser.
-    const fit = (
-      await Promise.all(files.slice(0, room).map((f) => toBrowserImage(f).catch(() => null)))
+    const readable = (
+      await Promise.all(chosen.map((f) => toBrowserImage(f).catch(() => null)))
     ).filter((f): f is File => f !== null);
-    if (fit.length < Math.min(files.length, room)) {
-      setState({
-        error: "Some photos couldn't be read. Try a JPG, PNG, or HEIC.",
-      });
-    }
-    setAdded((current) => [
-      ...current,
-      ...fit.map((file) => ({
-        key: `${file.name}-${file.lastModified}-${Math.random()}`,
-        file,
-        preview: URL.createObjectURL(file),
-      })),
-    ]);
-    if (files.length > room) {
+    if (readable.length < chosen.length) {
+      setState({ error: "Some photos couldn't be read. Try a JPG, PNG, or HEIC." });
+    } else if (files.length > room) {
       setState({ error: `Posts can have up to ${maxPhotos} photos.` });
     }
+    setEntries((current) => [
+      ...current,
+      ...readable.map((file) => ({
+        key: newKey(),
+        kind: "upload" as const,
+        file,
+        url: URL.createObjectURL(file),
+      })),
+    ]);
+  }
+
+  // Cropping any photo makes an edited copy for this post, in the same spot.
+  // Garage originals are left as they are.
+  async function crop(entry: Entry) {
+    setState(undefined);
+    let file: File;
+    try {
+      file = entry.kind === "upload" ? entry.file : await photoFromUrl(entry.url);
+    } catch (err) {
+      setState({ error: (err as Error).message });
+      return;
+    }
+    const [result] = (await editPhotos([file], { done: "Save photo" })) ?? [];
+    if (!result || result === file) return;
+    if (entry.kind === "upload") URL.revokeObjectURL(entry.url);
+    setEntries((current) =>
+      current.map((e) =>
+        e.key === entry.key
+          ? { key: newKey(), kind: "upload", file: result, url: URL.createObjectURL(result) }
+          : e,
+      ),
+    );
   }
 
   function submit(formData: FormData) {
     setState(undefined);
     startTransition(async () => {
-      setProgress(currentPhotos ? "Saving…" : "Posting…");
+      setProgress(editing ? "Saving…" : "Posting…");
       const result = await action(undefined, formData);
       if (!result?.postId) {
         setState(result);
         setProgress(null);
         return;
       }
+      const postId = result.postId;
       // The post exists now; add the new photos one at a time.
+      const uploads = entries.filter((e) => e.kind === "upload");
+      const uploaded: Record<string, string> = {};
       let failed = 0;
-      for (const [i, photo] of added.entries()) {
-        setProgress(`Uploading photo ${i + 1} of ${added.length}…`);
+      for (const [i, entry] of uploads.entries()) {
+        setProgress(`Uploading photo ${i + 1} of ${uploads.length}…`);
         try {
           const fd = new FormData();
-          fd.set("photo", await resizeImage(photo.file, 1600));
-          if ((await uploadPostPhoto(result.postId, fd)).error) failed++;
+          fd.set("photo", await resizeImage(entry.file, 1600));
+          const saved = await uploadPostPhoto(postId, fd);
+          if ("id" in saved && saved.id) uploaded[entry.key] = saved.id;
+          else failed++;
         } catch {
           failed++;
         }
       }
-      router.push(`/community/${result.postId}${failed ? `?failed=${failed}` : ""}`);
+      // Then put everything in the order shown here.
+      const order = entries.flatMap((e) => {
+        const id =
+          e.kind === "post"
+            ? e.id
+            : e.kind === "garage"
+              ? result.added?.[e.id]
+              : uploaded[e.key];
+        return id ? [id] : [];
+      });
+      if (order.length > 1) await orderPhotos(postId, order);
+      router.push(`/community/${postId}${failed ? `?failed=${failed}` : ""}`);
     });
   }
 
@@ -150,14 +211,13 @@ export function ShareForm({
     <form action={submit} className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6">
       <input type="hidden" name="vehicleId" value={vehicleId} />
       {modId && <input type="hidden" name="modId" value={modId} />}
-      {picked.map((id) => (
-        <input key={id} type="hidden" name="photoIds" value={id} />
-      ))}
-      {currentPhotos
-        ?.filter((p) => kept.includes(p.id))
-        .map((p) => (
-          <input key={p.id} type="hidden" name="keepPhotoIds" value={p.id} />
-        ))}
+      {entries.map((e) =>
+        e.kind === "garage" ? (
+          <input key={e.key} type="hidden" name="photoIds" value={e.id} />
+        ) : e.kind === "post" ? (
+          <input key={e.key} type="hidden" name="keepPhotoIds" value={e.id} />
+        ) : null,
+      )}
 
       {showTags && (
         <div className="text-sm">
@@ -204,57 +264,127 @@ export function ShareForm({
       </label>
 
       <div className="text-sm">
-        <p className="text-steel">
-          Photos ({kept.length + picked.length + added.length} of up to {maxPhotos})
+        <p className="field-label">
+          Photos in this post ({entries.length} of up to {maxPhotos})
         </p>
-
-        {currentPhotos && currentPhotos.length > 0 && (
-          <>
-            <p className="mt-3 text-xs font-medium text-chalk">On your build now</p>
-            <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {currentPhotos.map((p) => {
-                const on = kept.includes(p.id);
-                return (
+        <p className="field-hint mt-1">
+          The first photo leads the post. Drag photos, or use the arrows, to change the order.
+        </p>
+        <ol className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {entries.map((e, i) => (
+            <li
+              key={e.key}
+              draggable
+              onDragStart={(ev) => {
+                setDragging(i);
+                ev.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(ev) => {
+                if (dragging === null) return;
+                ev.preventDefault();
+                ev.dataTransfer.dropEffect = "move";
+              }}
+              onDrop={(ev) => {
+                ev.preventDefault();
+                if (dragging !== null) move(dragging, i);
+                setDragging(null);
+              }}
+              onDragEnd={() => setDragging(null)}
+              className={`relative overflow-hidden rounded-md border-2 bg-carbon ${dragging === i ? "border-steel opacity-50" : "border-graphite"}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={e.url} alt="" className="aspect-square w-full cursor-grab object-cover" />
+              <span className="readout absolute top-1 left-1 rounded bg-carbon/85 px-1.5 text-xs text-chalk">
+                {i + 1}
+              </span>
+              <button
+                type="button"
+                onClick={() => remove(e.key)}
+                aria-label={`Remove photo ${i + 1}`}
+                title="Remove photo"
+                className="absolute top-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-carbon/85 text-chalk hover:text-overdue"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+              <div className="flex items-center justify-between border-t border-graphite bg-panel">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => move(i, i - 1)}
+                  disabled={i === 0}
+                  aria-label={`Move photo ${i + 1} earlier`}
+                  title="Move earlier"
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden />
+                </button>
+                {/* An edited copy is uploaded, which needs a confirmed email. */}
+                {(canUpload || e.kind === "upload") && (
                   <button
-                    key={p.id}
                     type="button"
-                    onClick={() => toggleKept(p.id)}
-                    aria-pressed={on}
-                    aria-label={on ? "Remove from build" : "Keep on build"}
-                    className={`relative aspect-square overflow-hidden rounded-md border-2 ${on ? "border-redline" : "border-graphite opacity-40"}`}
+                    className="icon-btn"
+                    onClick={() => crop(e)}
+                    aria-label={`Crop or rotate photo ${i + 1}`}
+                    title="Crop or rotate"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.url} alt="" className="h-full w-full object-cover" />
-                    {on && (
-                      <span className="absolute top-1 right-1 rounded-full bg-redline-fill p-0.5 text-on-accent">
-                        <Check className="h-3 w-3" aria-hidden />
-                      </span>
-                    )}
+                    <Crop className="h-4 w-4" aria-hidden />
                   </button>
-                );
-              })}
-            </div>
-            <p className="mt-1 text-xs text-steel">Tap a photo to take it off the build.</p>
-          </>
+                )}
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => move(i, i + 1)}
+                  disabled={i === entries.length - 1}
+                  aria-label={`Move photo ${i + 1} later`}
+                  title="Move later"
+                >
+                  <ChevronRight className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+            </li>
+          ))}
+          {room > 0 && canUpload && (
+            <li>
+              <label className="flex aspect-square h-full w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-graphite text-xs text-steel hover:border-steel hover:text-chalk has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-redline">
+                <ImagePlus className="h-5 w-5" aria-hidden />
+                Upload photos
+                <input
+                  type="file"
+                  accept={PHOTO_ACCEPT}
+                  multiple
+                  className="sr-only"
+                  disabled={pending}
+                  onChange={(ev) => {
+                    addFiles([...(ev.target.files ?? [])]);
+                    ev.target.value = "";
+                  }}
+                />
+              </label>
+            </li>
+          )}
+        </ol>
+        {!canUpload && (
+          <div className="mt-2">
+            <ConfirmEmailNote action="upload photos" />
+          </div>
         )}
 
-        <p className="mt-3 text-xs font-medium text-chalk">
-          {currentPhotos ? "Add from your garage" : "From your garage"}
-        </p>
+        <p className="mt-5 text-xs font-medium text-chalk">Add from your garage</p>
         {photos.length === 0 ? (
           <p className="mt-1 text-xs text-steel">
-            No garage photos for this car yet. Upload some below instead.
+            No garage photos for this car yet. Upload some above instead.
           </p>
         ) : (
-          <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+          <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
             {photos.map((p) => {
-              const on = picked.includes(p.id);
+              const on = entries.some((e) => e.kind === "garage" && e.id === p.id);
               return (
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => toggle(p.id)}
+                  onClick={() => toggleGarage(p)}
                   aria-pressed={on}
+                  aria-label={on ? "Take this garage photo out of the post" : "Add this garage photo to the post"}
+                  disabled={!on && room === 0}
                   className={`relative aspect-square overflow-hidden rounded-md border-2 ${on ? "border-redline" : "border-graphite opacity-60"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -269,52 +399,10 @@ export function ShareForm({
             })}
           </div>
         )}
-
-        <p className="mt-4 text-xs font-medium text-chalk">New for this post</p>
-        <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {added.map((p) => (
-            <div
-              key={p.key}
-              className="relative aspect-square overflow-hidden rounded-md border-2 border-redline"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.preview} alt="" className="h-full w-full object-cover" />
-              <button
-                type="button"
-                onClick={() => removeAdded(p.key)}
-                aria-label="Remove photo"
-                className="absolute top-1 right-1 rounded-full bg-carbon/80 p-0.5 text-chalk hover:text-overdue"
-              >
-                <X className="h-3 w-3" aria-hidden />
-              </button>
-            </div>
-          ))}
-          {room > 0 && canUpload && (
-            <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-graphite text-xs text-steel hover:border-steel hover:text-chalk">
-              <ImagePlus className="h-5 w-5" aria-hidden />
-              Upload
-              <input
-                type="file"
-                accept={PHOTO_ACCEPT}
-                multiple
-                className="sr-only"
-                disabled={pending}
-                onChange={(e) => {
-                  addFiles([...(e.target.files ?? [])]);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-          )}
-        </div>
-        {!canUpload && (
-          <div className="mt-2">
-            <ConfirmEmailNote action="upload photos" />
-          </div>
-        )}
         <p className="mt-2 text-xs text-steel">
           Garage photos are copied to the public post; uploads here go only to the post, not your
-          garage. Receipts are never shared.
+          garage. Cropping a garage photo here changes only the post&apos;s copy. Receipts are never
+          shared.
         </p>
       </div>
 
@@ -341,11 +429,7 @@ export function ShareForm({
           {state.error}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn btn-primary btn-lg w-full"
-      >
+      <button type="submit" disabled={pending} className="btn btn-primary btn-lg w-full">
         {pending ? (progress ?? "Posting…") : submitLabel}
       </button>
     </form>

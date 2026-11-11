@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Camera } from "lucide-react";
+import { editPhotos } from "@/components/photo-editor";
 import { PHOTO_ACCEPT, toBrowserImage } from "@/lib/resize-image";
 
 type Props = { label?: string; onChoose?: () => void };
@@ -38,10 +39,20 @@ export function PhotoPicker({ label = "Photo (optional)", onChoose }: Props) {
             name="photo"
             accept={PHOTO_ACCEPT}
             className="sr-only"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
+            onChange={async (e) => {
+              const input = e.currentTarget;
+              const picked = input.files?.[0];
               setPreview(null);
-              if (!file) return;
+              if (!picked) return;
+              // Crop and rotate first; cancelling clears the choice.
+              const [file] = (await editPhotos([picked])) ?? [];
+              if (!file) {
+                input.value = "";
+                return;
+              }
+              const files = new DataTransfer();
+              files.items.add(file);
+              input.files = files.files;
               onChoose?.();
               // HEIC needs converting before Chrome and Firefox can show it.
               toBrowserImage(file)

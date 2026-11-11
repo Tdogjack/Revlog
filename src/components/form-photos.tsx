@@ -5,6 +5,7 @@ import { ImagePlus, X } from "lucide-react";
 import { uploadPhoto } from "@/app/garage/[id]/photos/actions";
 import { ConfirmEmailNote } from "@/components/confirm-email-note";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
+import { editPhotos } from "@/components/photo-editor";
 import { PHOTO_ACCEPT, resizeImage } from "@/lib/resize-image";
 
 // Photos on the service and mod forms. Editing uploads straight to the saved
@@ -107,7 +108,10 @@ function QueuedPhotos({
 
   async function add(files: File[]) {
     setError(null);
-    const chosen = files.slice(0, room);
+    if (inputRef.current) inputRef.current.value = "";
+    // Crop and rotate first; cancelling adds nothing.
+    const chosen = await editPhotos(files.slice(0, room));
+    if (!chosen || chosen.length === 0) return;
     if (files.length > room) setError(`Only ${room} more photo${room === 1 ? "" : "s"} fit here.`);
     setPreparing(true);
     const added: QueuedPhoto[] = [];

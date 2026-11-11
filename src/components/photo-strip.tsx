@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ChevronLeft, ChevronRight, ImagePlus, Trash2, X } from "lucide-react";
-import { removePhoto, uploadPhoto } from "@/app/garage/[id]/photos/actions";
+import { ChevronLeft, ChevronRight, Crop, ImagePlus, Trash2, X } from "lucide-react";
+import { removePhoto, replacePhoto, uploadPhoto } from "@/app/garage/[id]/photos/actions";
+import { editPhotos, photoFromUrl } from "@/components/photo-editor";
 import { PHOTO_ACCEPT, resizeImage } from "@/lib/resize-image";
 
 export type StripPhoto = { id: string; url: string };
@@ -37,9 +38,13 @@ export function PhotoStrip({
   const inputRef = useRef<HTMLInputElement>(null);
   const room = canAdd ? max - photos.length : 0;
 
-  function upload(files: File[]) {
+  async function upload(files: File[]) {
     setError(null);
-    const chosen = files.slice(0, room);
+    const picked = files.slice(0, room);
+    if (inputRef.current) inputRef.current.value = "";
+    // Crop and rotate first; cancelling adds nothing.
+    const chosen = await editPhotos(picked);
+    if (!chosen || chosen.length === 0) return;
     if (files.length > room) setError(`Only ${room} more photo${room === 1 ? "" : "s"} fit here.`);
     startTransition(async () => {
       for (const [i, file] of chosen.entries()) {
@@ -60,7 +65,32 @@ export function PhotoStrip({
         }
       }
       setProgress(null);
-      if (inputRef.current) inputRef.current.value = "";
+    });
+  }
+
+  // Crops or rotates a saved photo and saves it over the original.
+  async function editSaved(photo: StripPhoto) {
+    setError(null);
+    let file: File;
+    try {
+      file = await photoFromUrl(photo.url);
+    } catch (err) {
+      setError((err as Error).message);
+      return;
+    }
+    const result = await editPhotos([file], { done: "Save photo" });
+    if (!result || result[0] === file) return;
+    startTransition(async () => {
+      setProgress("Saving photo…");
+      try {
+        const fd = new FormData();
+        fd.set("photo", await resizeImage(result[0], 1600));
+        const saved = await replacePhoto(vehicleId, photo.id, fd);
+        if (saved.error) setError(saved.error);
+      } catch (err) {
+        setError((err as Error).message);
+      }
+      setProgress(null);
     });
   }
 
@@ -121,6 +151,10 @@ export function PhotoStrip({
             setOpen(null);
             startTransition(() => removePhoto(vehicleId, id));
           }}
+          onEdit={(photo) => {
+            setOpen(null);
+            editSaved(photo);
+          }}
         />
       )}
     </div>
@@ -133,12 +167,14 @@ export function PhotoViewer({
   onIndex,
   onClose,
   onDelete,
+  onEdit,
 }: {
   photos: StripPhoto[];
   index: number;
   onIndex: (i: number) => void;
   onClose: () => void;
   onDelete?: (id: string) => void;
+  onEdit?: (photo: StripPhoto) => void;
 }) {
   const photo = photos[index];
 
@@ -169,6 +205,16 @@ export function PhotoViewer({
           className="h-[80vh] rounded-lg"
         />
         <div className="mt-3 flex items-center justify-end gap-4 text-sm text-chalk">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(photo)}
+              className="flex min-h-9 items-center gap-1 text-steel hover:text-chalk"
+            >
+              <Crop className="h-4 w-4" aria-hidden />
+              Crop or rotate
+            </button>
+          )}
           {onDelete && (
             <button
               type="button"

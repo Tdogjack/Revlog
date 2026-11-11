@@ -90,6 +90,16 @@ function Routes() {
         />
         <Stack.Screen name="post/[id]" options={{ title: "" }} />
         <Stack.Screen name="post/new" options={{ title: "Share a post", presentation: "modal" }} />
+        <Stack.Screen name="post/edit/[id]" options={{ title: "Edit post", presentation: "modal" }} />
+        <Stack.Screen
+          name="photo-editor"
+          options={{
+            headerShown: false,
+            presentation: "fullScreenModal",
+            animation: "slide_from_bottom",
+            gestureEnabled: false,
+          }}
+        />
         <Stack.Screen name="user/[username]" options={{ title: "" }} />
         <Stack.Screen name="report" options={{ title: "Report", presentation: "modal" }} />
         <Stack.Screen
