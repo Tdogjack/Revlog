@@ -58,7 +58,10 @@ export const vehicles = pgTable(
     favorite: boolean("favorite").notNull().default(false),
     position: integer("position"),
   },
-  () => [ownerPolicy("vehicles")],
+  (t) => [
+    index("vehicles_user_idx").on(t.userId),
+    ownerPolicy("vehicles"),
+  ],
 ).enableRLS();
 
 export const serviceRecords = pgTable(
@@ -76,7 +79,11 @@ export const serviceRecords = pgTable(
     shop: text("shop"),
     notes: text("notes"),
   },
-  () => [ownerPolicy("service_records")],
+  (t) => [
+    index("service_records_vehicle_idx").on(t.vehicleId, t.servicedOn),
+    index("service_records_user_idx").on(t.userId),
+    ownerPolicy("service_records"),
+  ],
 ).enableRLS();
 
 // Odometer readings over time, one per car per day, for the mileage graph.
@@ -93,6 +100,7 @@ export const mileageReadings = pgTable(
   },
   (t) => [
     uniqueIndex("mileage_readings_vehicle_day_idx").on(t.vehicleId, t.readOn),
+    index("mileage_readings_user_idx").on(t.userId),
     ownerPolicy("mileage_readings"),
   ],
 ).enableRLS();
@@ -129,7 +137,11 @@ export const mods = pgTable(
     installedMileage: integer("installed_mileage"),
     notes: text("notes"),
   },
-  () => [ownerPolicy("mods")],
+  (t) => [
+    index("mods_vehicle_idx").on(t.vehicleId),
+    index("mods_user_idx").on(t.userId),
+    ownerPolicy("mods"),
+  ],
 ).enableRLS();
 
 export const reminders = pgTable(
@@ -151,7 +163,11 @@ export const reminders = pgTable(
     startedOn: date("started_on"),
     lastNotifiedAt: timestamp("last_notified_at", { withTimezone: true }),
   },
-  () => [ownerPolicy("reminders")],
+  (t) => [
+    index("reminders_vehicle_idx").on(t.vehicleId),
+    index("reminders_user_idx").on(t.userId),
+    ownerPolicy("reminders"),
+  ],
 ).enableRLS();
 
 // Parts used for a service or wanted/used for a mod. Each part belongs to
@@ -183,6 +199,9 @@ export const parts = pgTable(
       "parts_one_parent",
       sql`(${t.modId} is not null)::int + (${t.serviceRecordId} is not null)::int = 1`,
     ),
+    index("parts_vehicle_idx").on(t.vehicleId),
+    index("parts_mod_idx").on(t.modId),
+    index("parts_service_record_idx").on(t.serviceRecordId),
     ownerPolicy("parts"),
   ],
 ).enableRLS();
@@ -197,7 +216,10 @@ export const partPrices = pgTable(
     price: numeric("price", { precision: 10, scale: 2 }).notNull(),
     currency: text("currency"),
   },
-  () => [ownerPolicy("part_prices")],
+  (t) => [
+    index("part_prices_part_idx").on(t.partId),
+    ownerPolicy("part_prices"),
+  ],
 ).enableRLS();
 
 // One row per user who has changed their email preferences; no row means
@@ -234,7 +256,11 @@ export const attachments = pgTable(
     fileName: text("file_name").notNull(),
     contentType: text("content_type"),
   },
-  () => [ownerPolicy("attachments")],
+  (t) => [
+    index("attachments_service_record_idx").on(t.serviceRecordId),
+    index("attachments_mod_idx").on(t.modId),
+    ownerPolicy("attachments"),
+  ],
 ).enableRLS();
 
 // One row per receipt scan, so each user gets a daily cap on AI calls.
@@ -298,6 +324,9 @@ export const photos = pgTable(
   },
   (t) => [
     check("photos_one_parent", sql`num_nonnulls(${t.modId}, ${t.serviceRecordId}) <= 1`),
+    index("photos_vehicle_idx").on(t.vehicleId),
+    index("photos_mod_idx").on(t.modId),
+    index("photos_service_record_idx").on(t.serviceRecordId),
     ownerPolicy("photos"),
   ],
 ).enableRLS();
@@ -328,6 +357,10 @@ export const posts = pgTable(
     uniqueIndex("posts_one_build_per_car_idx")
       .on(t.vehicleId)
       .where(sql`${t.tag} = 'build'`),
+    index("posts_created_idx").on(t.createdAt),
+    index("posts_user_idx").on(t.userId),
+    index("posts_vehicle_idx").on(t.vehicleId),
+    index("posts_mod_idx").on(t.modId),
     ownerPolicy("posts"),
   ],
 ).enableRLS();
@@ -343,7 +376,10 @@ export const postPhotos = pgTable(
     storagePath: text("storage_path").notNull(),
     position: integer("position").notNull().default(0),
   },
-  () => [ownerPolicy("post_photos")],
+  (t) => [
+    index("post_photos_post_idx").on(t.postId, t.position),
+    ownerPolicy("post_photos"),
+  ],
 ).enableRLS();
 
 // One like per person per post.

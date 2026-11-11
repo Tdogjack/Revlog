@@ -136,7 +136,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
     ]);
   const [photos, thumbs] = await Promise.all([
     signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]),
-    signedThumbUrls(gallery.map((p) => p.storagePath)),
+    signedThumbUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]),
   ]);
   // Grids load the small copy; the full photo only opens in the viewer.
   const stripPhotos = (match: (p: (typeof gallery)[number]) => boolean): StripPhoto[] =>
@@ -236,7 +236,11 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       <title>{`${car.nickname ?? vehicleName(car)} · Revlog`}</title>
       <header className="mt-6 flex flex-col gap-6 border-b border-graphite pb-8 sm:flex-row sm:items-end">
         <div className="flex flex-col items-start gap-2">
-          <ProfilePhoto src={photoUrl ?? null} alt={vehicleName(car)} />
+          <ProfilePhoto
+            src={photoUrl ?? null}
+            thumb={car.photoPath ? thumbs.get(car.photoPath) : undefined}
+            alt={vehicleName(car)}
+          />
           <PhotoControls
             vehicleId={car.id}
             hasPhoto={!!car.photoPath}

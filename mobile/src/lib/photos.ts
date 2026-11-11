@@ -17,7 +17,8 @@ async function shrink(uri: string, width: number, height: number) {
   }
   const image = await context.renderAsync();
   for (const compress of QUALITIES) {
-    const result = await image.saveAsync({ format: SaveFormat.JPEG, compress });
+    // WebP is about a third smaller than JPEG at the same quality.
+    const result = await image.saveAsync({ format: SaveFormat.WEBP, compress });
     if (new File(result.uri).size <= MAX_BYTES) {
       return { uri: result.uri, width: result.width, height: result.height };
     }
@@ -79,8 +80,11 @@ export function fileForm(
 }
 
 // A form holding an already-chosen photo, which can be sent again.
+// The type follows the file: shrunk photos are WebP, and the rest are JPEG.
 export const photoForm = (uri: string, fields: Record<string, string> = {}, field = "photo") =>
-  fileForm(uri, "image/jpeg", "photo.jpg", fields, field);
+  /\.webp$/i.test(uri)
+    ? fileForm(uri, "image/webp", "photo.webp", fields, field)
+    : fileForm(uri, "image/jpeg", "photo.jpg", fields, field);
 
 // Lets the owner pick a photo and returns it, ready to upload, or null.
 export async function choosePhoto(fields: Record<string, string> = {}): Promise<ChosenPhoto | null> {
