@@ -1,12 +1,12 @@
 import type { CarDetail, CommunityOptions, GarageCar, Me } from "@revlog/api";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { Field, SelectField } from "@/components/fields";
 import { PhotoChoice, PHOTO_CHOICE_SIZE } from "@/components/photo-choice";
 import { Body, Button, EmptyState, FormError, LoadFailed, Loading, Screen } from "@/components/ui";
 import { api, ApiError, errorMessage } from "@/lib/api";
-import { choosePhoto, type ChosenPhoto } from "@/lib/photos";
+import { choosePhotos, type ChosenPhoto } from "@/lib/photos";
 import { colors, fonts, space } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
@@ -72,6 +72,8 @@ function PostForm({ shared, initialPicked }: { shared: Shared; initialPicked: st
   const [title, setTitle] = useState(shared.title ?? "");
   const [body, setBody] = useState("");
   const [photos, setPhotos] = useState<ChosenPhoto[]>([]);
+  // Shrinking a batch of photos takes a moment once the picker closes.
+  const [preparing, setPreparing] = useState(false);
   const [picked, setPicked] = useState(initialPicked.slice(0, MAX_PHOTOS));
   const [carError, setCarError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -113,10 +115,12 @@ function PostForm({ shared, initialPicked }: { shared: Shared; initialPicked: st
       return;
     }
     try {
-      const photo = await choosePhoto();
-      if (photo) setPhotos((current) => [...current, photo]);
+      const chosen = await choosePhotos(MAX_PHOTOS - photos.length - picked.length, {}, () => setPreparing(true));
+      if (chosen.length > 0) setPhotos((current) => [...current, ...chosen]);
     } catch (err) {
-      Alert.alert("Photo not added", errorMessage(err));
+      Alert.alert("Photos not added", errorMessage(err));
+    } finally {
+      setPreparing(false);
     }
   };
 
@@ -188,11 +192,15 @@ function PostForm({ shared, initialPicked }: { shared: Shared; initialPicked: st
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photos}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Add a photo"
+          accessibilityLabel={preparing ? "Adding photos" : "Add photos"}
           style={styles.add}
-          onPress={addPhoto}
+          onPress={preparing ? undefined : addPhoto}
         >
-          <Text style={styles.addLabel}>New photo</Text>
+          {preparing ? (
+            <ActivityIndicator color={colors.amber} />
+          ) : (
+            <Text style={styles.addLabel}>New photos</Text>
+          )}
         </Pressable>
         {photos.map((photo, i) => (
           <PhotoChoice

@@ -2,12 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import type { BuildDraft, CarDetail } from "@revlog/api";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { Field } from "@/components/fields";
 import { PhotoChoice, PHOTO_CHOICE_SIZE } from "@/components/photo-choice";
 import { Body, Button, FormError, Heading, LoadFailed, Loading, Screen } from "@/components/ui";
 import { api, ApiError, errorMessage } from "@/lib/api";
-import { choosePhoto, type ChosenPhoto } from "@/lib/photos";
+import { choosePhotos, type ChosenPhoto } from "@/lib/photos";
 import { colors, fonts, radius, space } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
@@ -29,6 +29,9 @@ function BuildForm({ carId, draft, canUpload }: { carId: string; draft: BuildDra
   const toggle = (list: string[], id: string) =>
     list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 
+  // Shrinking a batch of photos takes a moment once the picker closes.
+  const [preparing, setPreparing] = useState(false);
+
   const addPhoto = async () => {
     if (!canUpload) {
       Alert.alert("Confirm your email", "Confirm your email to add photos. Resend the link from Account.");
@@ -39,10 +42,12 @@ function BuildForm({ carId, draft, canUpload }: { carId: string; draft: BuildDra
       return;
     }
     try {
-      const photo = await choosePhoto();
-      if (photo) setAdded((current) => [...current, photo]);
+      const chosen = await choosePhotos(draft.maxPhotos - count, {}, () => setPreparing(true));
+      if (chosen.length > 0) setAdded((current) => [...current, ...chosen]);
     } catch (err) {
-      Alert.alert("Photo not added", errorMessage(err));
+      Alert.alert("Photos not added", errorMessage(err));
+    } finally {
+      setPreparing(false);
     }
   };
 
@@ -104,12 +109,18 @@ function BuildForm({ carId, draft, canUpload }: { carId: string; draft: BuildDra
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photos}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Add a new photo"
+          accessibilityLabel={preparing ? "Adding photos" : "Add new photos"}
           style={styles.add}
-          onPress={addPhoto}
+          onPress={preparing ? undefined : addPhoto}
         >
-          <Feather name="camera" size={22} color={colors.amber} />
-          <Text style={styles.addLabel}>New photo</Text>
+          {preparing ? (
+            <ActivityIndicator color={colors.amber} />
+          ) : (
+            <>
+              <Feather name="camera" size={22} color={colors.amber} />
+              <Text style={styles.addLabel}>New photos</Text>
+            </>
+          )}
         </Pressable>
         {draft.post?.photos.map((photo, i) => (
           <PhotoChoice

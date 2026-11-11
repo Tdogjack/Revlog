@@ -29,8 +29,14 @@ function askForCamera() {
   ]);
 }
 
-async function launch(source: "camera" | "library") {
-  const options: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 1 };
+// `many` lets the library pick up to that many photos in one go; the camera
+// always takes one.
+async function launch(source: "camera" | "library", many = 1) {
+  const options: ImagePicker.ImagePickerOptions = {
+    mediaTypes: ["images"],
+    quality: 1,
+    ...(many > 1 && { allowsMultipleSelection: true, selectionLimit: many, orderedSelection: true }),
+  };
   if (source === "library") return ImagePicker.launchImageLibraryAsync(options);
   const { granted } = await ImagePicker.requestCameraPermissionsAsync();
   if (!granted) {
@@ -40,9 +46,9 @@ async function launch(source: "camera" | "library") {
   return ImagePicker.launchCameraAsync(options);
 }
 
-function chooseSource() {
+function chooseSource(many = false) {
   return new Promise<"camera" | "library" | null>((resolve) => {
-    Alert.alert("Add a photo", undefined, [
+    Alert.alert(many ? "Add photos" : "Add a photo", undefined, [
       { text: "Take photo", onPress: () => resolve("camera") },
       { text: "Choose from library", onPress: () => resolve("library") },
       { text: "Cancel", style: "cancel", onPress: () => resolve(null) },
@@ -82,6 +88,40 @@ export async function choosePhoto(fields: Record<string, string> = {}): Promise<
   const asset = result.assets[0];
   const uri = await shrink(asset.uri, asset.width, asset.height);
   return { uri, form: photoForm(uri, fields) };
+}
+
+// Lets the owner pick up to `limit` photos at once and returns them, ready to
+// upload, in the order they were tapped. `onPicked` runs once the picker
+// closes, so a screen can show it's working while the photos are shrunk.
+export async function choosePhotos(
+  limit: number,
+  fields: Record<string, string> = {},
+  onPicked?: (count: number) => void,
+): Promise<ChosenPhoto[]> {
+  if (limit < 1) return [];
+  const source = await chooseSource(limit > 1);
+  if (!source) return [];
+  const result = await launch(source, limit);
+  if (!result || result.canceled) return [];
+  const assets = result.assets.slice(0, limit);
+  onPicked?.(assets.length);
+  const chosen: ChosenPhoto[] = [];
+  let tooLarge = 0;
+  for (const asset of assets) {
+    try {
+      const uri = await shrink(asset.uri, asset.width, asset.height);
+      chosen.push({ uri, form: photoForm(uri, fields) });
+    } catch {
+      tooLarge++;
+    }
+  }
+  if (tooLarge > 0) {
+    Alert.alert(
+      tooLarge === 1 ? "1 photo not added" : `${tooLarge} photos not added`,
+      "They were too large. Try smaller ones.",
+    );
+  }
+  return chosen;
 }
 
 export async function choosePhotoForm(fields: Record<string, string> = {}) {

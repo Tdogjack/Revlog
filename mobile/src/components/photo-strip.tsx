@@ -13,7 +13,7 @@ import {
 import { PhotoViewer } from "@/components/photo-viewer";
 import { Body, Button } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
-import { choosePhotoForm } from "@/lib/photos";
+import { choosePhotos } from "@/lib/photos";
 import { colors, fonts, space } from "@/lib/theme";
 
 const THUMB = 104;
@@ -47,6 +47,8 @@ export function PhotoStrip({
 }) {
   const [viewing, setViewing] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  // "2 of 5" while a batch goes up.
+  const [progress, setProgress] = useState<string | null>(null);
 
   const add = async () => {
     if (!canUpload) {
@@ -58,17 +60,32 @@ export function PhotoStrip({
       return;
     }
     try {
-      const form = await choosePhotoForm(
+      const chosen = await choosePhotos(
+        limit - photos.length,
         targetId ? { kind, targetId } : { kind: "build" },
+        () => setUploading(true),
       );
-      if (!form) return;
+      if (chosen.length === 0) return;
       setUploading(true);
-      await api(`/vehicles/${carId}/photos`, { method: "POST", form });
+      let failed = 0;
+      for (const [i, photo] of chosen.entries()) {
+        if (chosen.length > 1) setProgress(`${i + 1} of ${chosen.length}`);
+        await api(`/vehicles/${carId}/photos`, { method: "POST", form: photo.form }).catch(
+          () => failed++,
+        );
+      }
       onChange();
+      if (failed > 0) {
+        Alert.alert(
+          failed === 1 ? "1 photo not added" : `${failed} photos not added`,
+          "Check your connection and try those again.",
+        );
+      }
     } catch (err) {
-      Alert.alert("Photo not added", err instanceof Error ? errorMessage(err) : undefined);
+      Alert.alert("Photos not added", err instanceof Error ? errorMessage(err) : undefined);
     } finally {
       setUploading(false);
+      setProgress(null);
     }
   };
 
@@ -97,16 +114,19 @@ export function PhotoStrip({
         {canAdd && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add a photo"
+            accessibilityLabel={uploading ? "Adding photos" : "Add photos"}
             style={styles.add}
             onPress={uploading ? undefined : add}
           >
             {uploading ? (
-              <ActivityIndicator color={colors.amber} />
+              <>
+                <ActivityIndicator color={colors.amber} />
+                {progress && <Text style={styles.progress}>{progress}</Text>}
+              </>
             ) : (
               <>
                 <Feather name="camera" size={22} color={colors.amber} />
-                <Text style={styles.addLabel}>Add photo</Text>
+                <Text style={styles.addLabel}>Add photos</Text>
               </>
             )}
           </Pressable>
@@ -162,6 +182,13 @@ const styles = StyleSheet.create({
     gap: space.xs,
   },
   addLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
+  progress: {
+    color: colors.steel,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    fontVariant: ["tabular-nums"],
+  },
   thumb: { width: THUMB, height: THUMB, borderRadius: 8, backgroundColor: colors.panel },
   viewerButton: { flex: 1 },
   hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },
