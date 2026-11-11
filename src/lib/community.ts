@@ -23,6 +23,8 @@ import { isBlockedBy } from "@/lib/moderation";
 import type { PostSort } from "@/lib/post-sorts";
 import { supabaseUrl } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { thumbPathOf } from "@/lib/thumbnails";
+import { uploadThumb, withThumbs } from "@/lib/photos";
 import { getVehicle, isUuid } from "@/lib/vehicles";
 
 const BUCKET = "community-photos";
@@ -40,6 +42,10 @@ export const FEATURED_BUILD_TAG = "featured-build";
 export function communityPhotoUrl(path: string) {
   return `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/${BUCKET}/${path}`;
 }
+
+// The small copy, for feed cards. Photos saved before small copies existed
+// don't have one; the page falls back to the full photo if it fails to load.
+export const communityThumbUrl = (path: string) => communityPhotoUrl(thumbPathOf(path));
 
 const postFields = {
   id: posts.id,
@@ -100,7 +106,7 @@ function visibleTo(
 
 type PostRow = Awaited<ReturnType<typeof selectPosts>>[number];
 export type FeedPost = PostRow & {
-  photos: { id: string; url: string }[];
+  photos: { id: string; url: string; thumbUrl: string }[];
   likeCount: number;
   commentCount: number;
   // Whether the person viewing has liked it (false when signed out).
@@ -152,7 +158,11 @@ async function withExtras(rows: PostRow[], viewerId?: string): Promise<FeedPost[
     ...r,
     photos: photoRows
       .filter((p) => p.postId === r.id)
-      .map((p) => ({ id: p.id, url: communityPhotoUrl(p.storagePath) })),
+      .map((p) => ({
+        id: p.id,
+        url: communityPhotoUrl(p.storagePath),
+        thumbUrl: communityThumbUrl(p.storagePath),
+      })),
     likeCount: likeRows.find((l) => l.postId === r.id)?.n ?? 0,
     commentCount: commentRows.find((c) => c.postId === r.id)?.n ?? 0,
     liked: mine.some((m) => m.postId === r.id),
@@ -401,7 +411,12 @@ async function copyToPost(
     const { error } = await supabase.storage
       .from("vehicle-photos")
       .copy(photo.storagePath, target, { destinationBucket: BUCKET });
-    if (!error) copies.push({ sourceId: photo.id, storagePath: target, position: startAt + i });
+    if (error) continue;
+    copies.push({ sourceId: photo.id, storagePath: target, position: startAt + i });
+    // The small copy goes along when the garage photo has one.
+    await supabase.storage
+      .from("vehicle-photos")
+      .copy(thumbPathOf(photo.storagePath), thumbPathOf(target), { destinationBucket: BUCKET });
   }
   const added: AddedPhotos = {};
   if (copies.length === 0) return added;
@@ -534,7 +549,7 @@ export async function updatePost(
       ),
     );
     const supabase = await createClient();
-    await supabase.storage.from(BUCKET).remove(dropped.map((p) => p.storagePath));
+    await supabase.storage.from(BUCKET).remove(withThumbs(dropped.map((p) => p.storagePath)));
   }
   for (const [position, photo] of kept.entries()) {
     await db.update(postPhotos).set({ position }).where(eq(postPhotos.id, photo.id));
@@ -596,6 +611,7 @@ export async function addPostPhoto(
     .from(BUCKET)
     .upload(path, file, { contentType: file.type, cacheControl: "31536000" });
   if (error) return { error: "A photo didn't upload. Try again." };
+  await uploadThumb(BUCKET, path, file);
 
   const position = Math.max(-1, ...existing.map((p) => p.position)) + 1;
   const [row] = await db
@@ -617,7 +633,7 @@ export async function deletePost(userId: string, postId: string) {
     .returning({ id: posts.id });
   if (deleted && files.length) {
     const supabase = await createClient();
-    await supabase.storage.from(BUCKET).remove(files.map((f) => f.path));
+    await supabase.storage.from(BUCKET).remove(withThumbs(files.map((f) => f.path)));
   }
 }
 

@@ -7,7 +7,7 @@ import { getUser } from "@/lib/auth";
 import { countShareableParts, getBuildPostId, getPost, MAX_POST_PHOTOS } from "@/lib/community";
 import { listPhotosForVehicle } from "@/lib/gallery";
 import { getMod } from "@/lib/mods";
-import { signedPhotoUrls } from "@/lib/photos";
+import { signedPhotoUrls, signedThumbUrls } from "@/lib/photos";
 import { isEmailVerified } from "@/lib/email-verification";
 import { getProfile } from "@/lib/profiles";
 import { getVehicle, listVehicles, vehicleName } from "@/lib/vehicles";
@@ -19,7 +19,10 @@ export const metadata: Metadata = { title: "Share to the community · Revlog" };
 export default function NewPostPage({ searchParams }: PageProps<"/community/new">) {
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/community" className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
+      <Link
+        href="/community"
+        className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk"
+      >
         ← Back to community
       </Link>
       <Suspense fallback={<p className="mt-6 text-sm text-steel">Loading…</p>}>
@@ -58,13 +61,23 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
   const ordered = mod
     ? [...gallery.filter((p) => p.modId === mod.id), ...gallery.filter((p) => p.modId !== mod.id)]
     : gallery;
-  const [urls, partCount] = await Promise.all([
+  const [urls, thumbs, partCount] = await Promise.all([
     signedPhotoUrls(ordered.map((p) => p.storagePath)),
+    signedThumbUrls(ordered.map((p) => p.storagePath)),
     countShareableParts(user.id, car.id, mod?.id ?? null),
   ]);
   const photos = ordered.flatMap((p) => {
     const url = urls.get(p.storagePath);
-    return url ? [{ id: p.id, url, fromMod: p.modId === mod?.id && !!mod }] : [];
+    return url
+      ? [
+          {
+            id: p.id,
+            url,
+            thumb: thumbs.get(p.storagePath) ?? url,
+            fromMod: p.modId === mod?.id && !!mod,
+          },
+        ]
+      : [];
   });
 
   const name = car.nickname ?? vehicleName(car);
@@ -141,10 +154,16 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
 
 async function ChooseCar({ userId }: { userId: string }) {
   const cars = await listVehicles(userId);
-  const photoUrls = await signedPhotoUrls(cars.map((c) => c.photoPath));
+  const [full, thumbs] = await Promise.all([
+    signedPhotoUrls(cars.map((c) => c.photoPath)),
+    signedThumbUrls(cars.map((c) => c.photoPath)),
+  ]);
+  const photoUrls = new Map([...full].map(([path, url]) => [path, thumbs.get(path) ?? url]));
   return (
     <>
-      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Share to the community</h1>
+      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">
+        Share to the community
+      </h1>
       <p className="mt-2 text-steel">
         Pick a car. Public builds and single mods are shared from the car&apos;s page.
       </p>

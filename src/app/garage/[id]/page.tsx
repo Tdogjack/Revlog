@@ -14,7 +14,7 @@ import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { listMods } from "@/lib/mods";
 import { listPartsForVehicle } from "@/lib/parts";
-import { signedPhotoUrls } from "@/lib/photos";
+import { signedPhotoUrls, signedThumbUrls } from "@/lib/photos";
 import { listReminders } from "@/lib/reminder-store";
 import {
   describeDue,
@@ -134,11 +134,15 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       listMileageReadings(user.id, car.id),
       isEmailVerified(user.id),
     ]);
-  const photos = await signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]);
+  const [photos, thumbs] = await Promise.all([
+    signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]),
+    signedThumbUrls(gallery.map((p) => p.storagePath)),
+  ]);
+  // Grids load the small copy; the full photo only opens in the viewer.
   const stripPhotos = (match: (p: (typeof gallery)[number]) => boolean): StripPhoto[] =>
     gallery.filter(match).flatMap((p) => {
       const url = photos.get(p.storagePath);
-      return url ? [{ id: p.id, url }] : [];
+      return url ? [{ id: p.id, url, thumb: thumbs.get(p.storagePath) ?? url }] : [];
     });
   const buildPhotos = stripPhotos((p) => !p.modId && !p.serviceRecordId);
   const partsFor = (key: "modId" | "serviceRecordId", id: string) =>

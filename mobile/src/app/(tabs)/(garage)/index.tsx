@@ -45,7 +45,11 @@ function CarPlate({ car, onOpen }: { car: GarageCar; onOpen: () => void }) {
     >
       {car.photoUrl ? (
         <Image
-          source={{ uri: car.photoUrl, cacheKey: `car-${car.id}` }}
+          // The small copy; the full photo loads on the car's page.
+          source={{
+            uri: car.photoThumbUrl ?? car.photoUrl,
+            cacheKey: car.photoThumbUrl ? `car-${car.id}-thumb` : `car-${car.id}`,
+          }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
           transition={150}

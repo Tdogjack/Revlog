@@ -113,7 +113,14 @@ export function PostCard({
       )}
       {post.photos.length > 0 && (
         <div className="mt-4">
-          <PhotoGallery photos={post.photos} />
+          <PhotoGallery
+            // Feed cards load the small copies; an opened post shows full photos.
+            photos={post.photos.map((p) => ({
+              id: p.id,
+              url: p.url,
+              thumb: link ? p.thumbUrl : undefined,
+            }))}
+          />
         </div>
       )}
       <div className="mt-3 -ml-2 flex items-center gap-1">

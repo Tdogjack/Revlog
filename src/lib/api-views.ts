@@ -9,7 +9,7 @@ import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { listMods } from "@/lib/mods";
 import { listPartsForVehicle, type PartWithHistory } from "@/lib/parts";
-import { signedPhotoUrls } from "@/lib/photos";
+import { signedPhotoUrls, signedThumbUrls } from "@/lib/photos";
 import { listAllReminders, listReminders } from "@/lib/reminder-store";
 import { REMINDER_PRESETS } from "@/lib/reminder-presets";
 import { carUrgency, describeDue, rankReminders } from "@/lib/reminders";
@@ -34,8 +34,9 @@ const partView = (p: PartWithHistory): CarPart => ({
 
 export async function garageView(userId: string): Promise<GarageCar[]> {
   const cars = await listVehicles(userId);
-  const [photos, reminders, services, settings] = await Promise.all([
+  const [photos, thumbs, reminders, services, settings] = await Promise.all([
     signedPhotoUrls(cars.map((c) => c.photoPath)),
+    signedThumbUrls(cars.map((c) => c.photoPath)),
     listAllReminders(userId),
     listServiceDates(userId),
     getEmailSettings(userId),
@@ -47,6 +48,8 @@ export async function garageView(userId: string): Promise<GarageCar[]> {
     currentMileage: car.currentMileage,
     favorite: car.favorite,
     photoUrl: (car.photoPath && photos.get(car.photoPath)) || null,
+    photoThumbUrl:
+      (car.photoPath && (thumbs.get(car.photoPath) ?? photos.get(car.photoPath))) || null,
     urgency: carUrgency(
       rankReminders(
         reminders.filter((r) => r.vehicleId === car.id),
@@ -99,7 +102,10 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
     getEmailSettings(userId),
     isEmailVerified(userId),
   ]);
-  const urls = await signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]);
+  const [urls, thumbs] = await Promise.all([
+    signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]),
+    signedThumbUrls(gallery.map((p) => p.storagePath)),
+  ]);
   const ranked = rankReminders(reminders, car, records, {
     dueSoonPercent: settings.reminderPercent,
   });
@@ -166,7 +172,17 @@ export async function carView(userId: string, vehicleId: string): Promise<CarDet
     }),
     photos: gallery.flatMap((p) => {
       const url = urls.get(p.storagePath);
-      return url ? [{ id: p.id, url, recordId: p.serviceRecordId, modId: p.modId }] : [];
+      return url
+        ? [
+            {
+              id: p.id,
+              url,
+              thumbUrl: thumbs.get(p.storagePath) ?? url,
+              recordId: p.serviceRecordId,
+              modId: p.modId,
+            },
+          ]
+        : [];
     }),
     photoLimit: PHOTO_LIMITS.build,
     canUpload,

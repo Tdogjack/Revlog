@@ -155,7 +155,11 @@ export function PhotoStrip({
             onPress={() => setViewing(i)}
           >
             <Image
-              source={{ uri: photo.url, cacheKey: photo.id }}
+              // The small copy, cached apart from the full photo the viewer opens.
+              source={{
+                uri: photo.thumbUrl ?? photo.url,
+                cacheKey: photo.thumbUrl ? `${photo.id}-thumb` : photo.id,
+              }}
               style={styles.thumb}
               contentFit="cover"
             />
