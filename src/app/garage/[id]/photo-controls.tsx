@@ -2,17 +2,21 @@
 
 import { startTransition, useActionState, useRef, useState } from "react";
 import { ConfirmEmailNote } from "@/components/confirm-email-note";
-import { PHOTO_ACCEPT, withResizedPhoto } from "@/lib/resize-image";
+import { editPhotos, photoFromUrl } from "@/components/photo-editor";
+import { PHOTO_ACCEPT, resizeImage, withResizedPhoto } from "@/lib/resize-image";
 import { changeVehiclePhoto, removeVehiclePhoto } from "../actions";
 
-// "Change photo" uploads as soon as a picture is chosen.
+// "Change photo" opens the crop and rotate editor, then uploads.
 export function PhotoControls({
   vehicleId,
   hasPhoto,
+  photoUrl,
   canUpload,
 }: {
   vehicleId: string;
   hasPhoto: boolean;
+  // The current photo, so it can be cropped or rotated in place.
+  photoUrl?: string | null;
   canUpload: boolean;
 }) {
   const [state, formAction, pending] = useActionState(
@@ -34,6 +38,36 @@ export function PhotoControls({
     startTransition(() => formAction(formData));
   }
 
+  // Crop and rotate the chosen photo, then send it. Cancelling sends nothing.
+  async function chosen(input: HTMLInputElement) {
+    const file = input.files?.[0];
+    if (!file) return;
+    const [result] = (await editPhotos([file])) ?? [];
+    if (!result) {
+      input.value = "";
+      return;
+    }
+    const files = new DataTransfer();
+    files.items.add(result);
+    input.files = files.files;
+    formRef.current?.requestSubmit();
+  }
+
+  async function editCurrent() {
+    if (!photoUrl) return;
+    setPhotoError(null);
+    try {
+      const file = await photoFromUrl(photoUrl);
+      const [result] = (await editPhotos([file], { done: "Save photo" })) ?? [];
+      if (!result || result === file) return;
+      const formData = new FormData();
+      formData.set("photo", await resizeImage(result));
+      startTransition(() => formAction(formData));
+    } catch (err) {
+      setPhotoError((err as Error).message);
+    }
+  }
+
   return (
     <div className="text-sm">
       <div className="flex flex-wrap items-center gap-4">
@@ -47,12 +81,21 @@ export function PhotoControls({
                 accept={PHOTO_ACCEPT}
                 className="sr-only"
                 disabled={pending}
-                onChange={() => formRef.current?.requestSubmit()}
+                onChange={(e) => chosen(e.currentTarget)}
               />
             </label>
           </form>
         ) : (
           <ConfirmEmailNote action="add a photo" />
+        )}
+        {hasPhoto && photoUrl && canUpload && !pending && (
+          <button
+            type="button"
+            onClick={editCurrent}
+            className="min-h-9 text-steel hover:text-chalk"
+          >
+            Crop or rotate
+          </button>
         )}
         {hasPhoto && !pending && (
           <form action={removeVehiclePhoto.bind(null, vehicleId)}>

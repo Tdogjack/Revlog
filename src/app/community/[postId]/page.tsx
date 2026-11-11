@@ -106,7 +106,12 @@ async function PostDetails({
             />
           </div>
         ) : (
-          <DeletePostButton postId={post.id} />
+          <div className="flex items-center gap-4">
+            <Link href={`/community/${post.id}/edit`} className="btn">
+              Edit post
+            </Link>
+            <DeletePostButton postId={post.id} />
+          </div>
         ))}
 
       <Comments

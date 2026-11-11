@@ -2,18 +2,11 @@ import { Feather } from "@expo/vector-icons";
 import type { CarPhoto } from "@revlog/api";
 import { Image } from "expo-image";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-} from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { PhotoViewer } from "@/components/photo-viewer";
 import { Body, Button } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
-import { choosePhotos } from "@/lib/photos";
+import { choosePhotos, editPhoto } from "@/lib/photos";
 import { colors, fonts, space } from "@/lib/theme";
 
 const THUMB = 104;
@@ -52,7 +45,10 @@ export function PhotoStrip({
 
   const add = async () => {
     if (!canUpload) {
-      Alert.alert("Confirm your email", "Confirm your email to add photos. Resend the link from Account.");
+      Alert.alert(
+        "Confirm your email",
+        "Confirm your email to add photos. Resend the link from Account.",
+      );
       return;
     }
     if (photos.length >= limit) {
@@ -89,6 +85,22 @@ export function PhotoStrip({
     }
   };
 
+  // Crops or rotates a saved photo and saves it over the original.
+  const recrop = async (photo: { id: string; url: string }) => {
+    setViewing(null);
+    try {
+      const edited = await editPhoto({ url: photo.url });
+      if (!edited) return;
+      setUploading(true);
+      await api(`/vehicles/${carId}/photos/${photo.id}`, { method: "PUT", form: edited.form });
+      onChange();
+    } catch (err) {
+      Alert.alert("Photo not saved", errorMessage(err));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const remove = (photo: { id: string }) => {
     Alert.alert("Delete this photo?", "This can't be undone.", [
       { text: "Keep photo", style: "cancel" },
@@ -110,7 +122,11 @@ export function PhotoStrip({
 
   return (
     <>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.strip}
+      >
         {canAdd && (
           <Pressable
             accessibilityRole="button"
@@ -152,18 +168,24 @@ export function PhotoStrip({
         index={viewing}
         onClose={() => setViewing(null)}
         actions={(photo) => (
-          <Button
-            label="Delete photo"
-            kind="danger"
-            style={styles.viewerButton}
-            onPress={() => remove(photo)}
-          />
+          <>
+            <Button
+              label="Crop"
+              kind="secondary"
+              style={styles.viewerButton}
+              onPress={() => recrop(photo)}
+            />
+            <Button
+              label="Delete photo"
+              kind="danger"
+              style={styles.viewerButton}
+              onPress={() => remove(photo)}
+            />
+          </>
         )}
       />
       {canAdd && photos.length === 0 && (
-        <Body style={styles.hint}>
-          {hints[targetId ? kind : "build"]}
-        </Body>
+        <Body style={styles.hint}>{hints[targetId ? kind : "build"]}</Body>
       )}
     </>
   );

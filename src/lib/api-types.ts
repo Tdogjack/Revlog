@@ -240,6 +240,10 @@ export type FeedPost = {
   createdAt: string;
   carName: string;
   modName: string | null;
+  // For the owner's edit screen.
+  vehicleId: string;
+  modId: string | null;
+  showParts: boolean;
   photos: { id: string; url: string }[];
   likeCount: number;
   commentCount: number;
@@ -253,6 +257,10 @@ export type PostComment = {
   body: string;
   createdAt: string;
 };
+
+// What saving a post answers: its id, and which post photo each chosen
+// garage photo became.
+export type SavedPost = { id: string; added: Record<string, string> };
 
 export type PostDetail = {
   post: FeedPost;

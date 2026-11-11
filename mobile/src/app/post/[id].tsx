@@ -79,7 +79,12 @@ export default function Post() {
   });
 
   if (!data) return error ? <LoadFailed message={error} onRetry={reload} /> : <Loading />;
-  const post = liked?.id === data.post.id ? liked : data.post;
+  // A like is shown right away; everything else comes fresh from the server,
+  // so edits show when coming back from the editor.
+  const post =
+    liked?.id === data.post.id
+      ? { ...data.post, liked: liked.liked, likeCount: liked.likeCount }
+      : data.post;
   const myId = me.data?.id;
 
   const send = async () => {
@@ -114,6 +119,13 @@ export default function Post() {
                   userId: post.userId,
                   username: post.username,
                   mine: post.userId === myId,
+                  // A build is edited from its car, where it's kept in step.
+                  edit: () =>
+                    router.push(
+                      post.tag === "build"
+                        ? `/car/${post.vehicleId}/build`
+                        : { pathname: "/post/edit/[id]", params: { id: post.id } },
+                    ),
                 })
               }
             />

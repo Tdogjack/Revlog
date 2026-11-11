@@ -8,8 +8,11 @@ import {
   countRecentComments,
   createPost,
   getBuildPostId,
+  reorderPostPhotos,
   setLike,
   updateBuildPost,
+  updatePost,
+  type AddedPhotos,
 } from "@/lib/community";
 import { CONFIRM_EMAIL_FIRST, isEmailVerified } from "@/lib/email-verification";
 import { createReport, isSuspended, SUSPENDED_MESSAGE } from "@/lib/moderation";
@@ -46,6 +49,7 @@ export async function atPostLimit(userId: string) {
 export const POST_LIMIT_REACHED = "That's the limit for today. Try again tomorrow.";
 
 type Blocked = { error: string } | { needsUsername: true };
+type Saved = { id: string; added: AddedPhotos };
 
 // Whether this account may post at all. Null means it can.
 export async function postingProblem(userId: string): Promise<Blocked | null> {
@@ -65,7 +69,7 @@ export async function publishPost(
     photoIds: string[];
     showParts: boolean;
   },
-): Promise<Blocked | { id: string }> {
+): Promise<Blocked | Saved> {
   const problem = await postingProblem(userId);
   if (problem) return problem;
 
@@ -92,7 +96,7 @@ export async function publishBuild(
     photoIds: string[];
     keepPhotoIds: string[];
   },
-): Promise<Blocked | { id: string }> {
+): Promise<Blocked | Saved> {
   const problem = await postingProblem(userId);
   if (problem) return problem;
 
@@ -103,14 +107,14 @@ export async function publishBuild(
 
   const existing = await getBuildPostId(userId, vehicleId);
   if (existing) {
-    const error = await updateBuildPost(userId, existing, {
+    const result = await updateBuildPost(userId, existing, {
       title,
       body: body || null,
       showParts,
       keepPhotoIds,
       photoIds,
     });
-    return error ? { error } : { id: existing };
+    return "error" in result ? result : { id: existing, added: result.added };
   }
 
   if (await atPostLimit(userId)) return { error: POST_LIMIT_REACHED };
@@ -123,6 +127,40 @@ export async function publishBuild(
     showParts,
     tag: "build",
   });
+}
+
+// Edits one of the person's posts: words, tag, part links, and photos.
+export async function editPost(
+  userId: string,
+  postId: string,
+  input: {
+    title: string;
+    body: string;
+    tag: string;
+    showParts: boolean;
+    photoIds: string[];
+    keepPhotoIds: string[];
+  },
+): Promise<Blocked | Saved> {
+  const problem = await postingProblem(userId);
+  if (problem) return problem;
+  const invalid = checkPostText(input.title, input.body);
+  if (invalid) return { error: invalid };
+  const result = await updatePost(userId, postId, {
+    title: input.title,
+    body: input.body || null,
+    tag: isPostTag(input.tag) ? input.tag : null,
+    showParts: input.showParts,
+    photoIds: input.photoIds,
+    keepPhotoIds: input.keepPhotoIds,
+  });
+  return "error" in result ? result : { id: postId, added: result.added };
+}
+
+// Puts a post's photos in order. Returns an error message, or null.
+export async function orderPostPhotos(userId: string, postId: string, order: string[]) {
+  if (await isSuspended(userId)) return SUSPENDED_MESSAGE;
+  return reorderPostPhotos(userId, postId, order.filter(isUuid));
 }
 
 export async function publishComment(
@@ -143,13 +181,17 @@ export async function publishComment(
 }
 
 // One new photo per call, so each request stays under the upload size limit.
-// Returns an error message, or null once saved.
-export async function savePostPhoto(userId: string, postId: string, formData: FormData) {
-  if (!(await isEmailVerified(userId))) return CONFIRM_EMAIL_FIRST;
-  if (await isSuspended(userId)) return SUSPENDED_MESSAGE;
+// Returns the new photo's id, or an error message.
+export async function savePostPhoto(
+  userId: string,
+  postId: string,
+  formData: FormData,
+): Promise<{ id: string } | { error: string }> {
+  if (!(await isEmailVerified(userId))) return { error: CONFIRM_EMAIL_FIRST };
+  if (await isSuspended(userId)) return { error: SUSPENDED_MESSAGE };
   const photo = readPhoto(formData);
-  if (!photo) return "Choose a photo first.";
-  if ("error" in photo) return photo.error;
+  if (!photo) return { error: "Choose a photo first." };
+  if ("error" in photo) return photo;
   return addPostPhoto(userId, postId, photo);
 }
 

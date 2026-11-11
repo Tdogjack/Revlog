@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { deletePhoto, saveUploadedPhoto } from "@/lib/gallery";
+import { deletePhoto, replacePhotoFile, saveUploadedPhoto } from "@/lib/gallery";
 
 // One photo per call, so each request stays under the upload size limit.
 export async function uploadPhoto(
@@ -13,6 +13,19 @@ export async function uploadPhoto(
 ): Promise<{ error?: string }> {
   const user = await requireUser();
   const error = await saveUploadedPhoto(user.id, vehicleId, kind, targetId, formData);
+  if (error) return { error };
+  revalidatePath(`/garage/${vehicleId}`);
+  return {};
+}
+
+// Swaps a photo for an edited (cropped or rotated) copy.
+export async function replacePhoto(
+  vehicleId: string,
+  photoId: string,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const user = await requireUser();
+  const error = await replacePhotoFile(user.id, photoId, formData);
   if (error) return { error };
   revalidatePath(`/garage/${vehicleId}`);
   return {};

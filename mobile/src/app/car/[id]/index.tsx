@@ -51,7 +51,7 @@ import { api, errorMessage } from "@/lib/api";
 import { formatDate, formatDollars, formatMiles, formatMoney } from "@/lib/format";
 import { shareServiceHistory } from "@/lib/pdf";
 import { pressFeedback, tapFeedback } from "@/lib/haptics";
-import { choosePhotoForm } from "@/lib/photos";
+import { choosePhotoForm, editPhoto } from "@/lib/photos";
 import {
   alpha,
   colors,
@@ -662,6 +662,26 @@ export default function Car() {
     );
   };
 
+  // Crops or rotates the car's photo, or a build photo, and saves it in place.
+  const recropPhoto = async (photo: { id: string; url: string }) => {
+    setViewing(null);
+    try {
+      const edited = await editPhoto({ url: photo.url });
+      if (!edited) return;
+      setChangingPhoto(true);
+      if (photo.id === `car-${car.id}`) {
+        await api(`/vehicles/${id}/photo`, { method: "POST", form: edited.form });
+      } else {
+        await api(`/vehicles/${id}/photos/${photo.id}`, { method: "PUT", form: edited.form });
+      }
+      await reload();
+    } catch (err) {
+      Alert.alert("Photo not saved", errorMessage(err));
+    } finally {
+      setChangingPhoto(false);
+    }
+  };
+
   const changePhoto = async () => {
     if (!car.canUpload) {
       Alert.alert(
@@ -998,7 +1018,19 @@ export default function Car() {
           </Section>
         </View>
       </Animated.ScrollView>
-      <PhotoViewer photos={heroPhotos} index={viewing} onClose={() => setViewing(null)} />
+      <PhotoViewer
+        photos={heroPhotos}
+        index={viewing}
+        onClose={() => setViewing(null)}
+        actions={(photo) => (
+          <Button
+            label="Crop or rotate"
+            kind="secondary"
+            style={styles.viewerAction}
+            onPress={() => recropPhoto(photo)}
+          />
+        )}
+      />
     </>
   );
 }
@@ -1264,6 +1296,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   pressed: { opacity: 0.7 },
+  viewerAction: { flex: 1 },
   rowTitle: {
     flexShrink: 1,
     color: colors.chalk,

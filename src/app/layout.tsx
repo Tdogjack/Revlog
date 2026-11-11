@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { DEFAULT_PALETTE, paletteScript } from "@/lib/palettes";
 import "./globals.css";
+import { PhotoEditorHost } from "@/components/photo-editor";
 
 // One sturdy, technical family for everything: text, headings, and the
 // tabular numbers in mileage and money.
@@ -36,7 +37,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Runs before first paint so a saved palette doesn't flash the default. */}
         <script dangerouslySetInnerHTML={{ __html: paletteScript }} />
       </head>
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        {children}
+        <PhotoEditorHost />
+      </body>
     </html>
   );
 }
