@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import {
   checkPartPrice,
+  priceCheckBlocked,
   deletePart,
   getPart,
   partInput,
@@ -54,10 +55,8 @@ export async function refreshPartPrice(
   const part = await getPart(user.id, partId);
   if (!part) return { error: "That part wasn't found." };
 
-  // Stores don't like being hammered; once a minute per part is plenty.
-  if (part.lastCheckedAt && Date.now() - part.lastCheckedAt.getTime() < 60_000) {
-    return { error: "Just checked. Try again in a minute." };
-  }
+  const blocked = await priceCheckBlocked(user.id, part);
+  if (blocked) return { error: blocked };
   const error = await checkPartPrice(part);
   revalidatePath(`/garage/${vehicleId}`);
   return error ? { error } : undefined;

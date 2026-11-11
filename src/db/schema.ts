@@ -40,6 +40,15 @@ const ownerPolicy = (table: string) =>
     withCheck: sql`${authUid} = user_id`,
   });
 
+// For rows that enforce a cap: users can read their own, but only the server
+// writes them, so nobody can delete rows to reset their limit.
+const ownerReadPolicy = (table: string, name = `${table}_owner_select`) =>
+  pgPolicy(name, {
+    for: "select",
+    to: authenticatedRole,
+    using: sql`${authUid} = user_id`,
+  });
+
 export const vehicles = pgTable(
   "vehicles",
   {
@@ -269,7 +278,25 @@ export const receiptScans = pgTable(
   {
     ...ownerColumns,
   },
-  (t) => [index("receipt_scans_user_created_idx").on(t.userId, t.createdAt), ownerPolicy("receipt_scans")],
+  (t) => [
+    index("receipt_scans_user_created_idx").on(t.userId, t.createdAt),
+    // Keeps its old name from when users could also write it.
+    ownerReadPolicy("receipt_scans", "receipt_scans_owner_all"),
+  ],
+).enableRLS();
+
+// One row per capped action (photo upload, price check, email), so each user
+// gets a limit per time window. Old rows are pruned as new ones are added.
+export const rateEvents = pgTable(
+  "rate_events",
+  {
+    ...ownerColumns,
+    action: text("action").notNull(),
+  },
+  (t) => [
+    index("rate_events_user_action_created_idx").on(t.userId, t.action, t.createdAt),
+    ownerReadPolicy("rate_events"),
+  ],
 ).enableRLS();
 
 // A row means the user proved they own their email by opening a link sent to

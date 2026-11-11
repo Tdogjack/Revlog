@@ -1,10 +1,8 @@
 import "server-only";
 import { emailConfigured, sendEmail } from "@/lib/email";
 import { testEmail } from "@/lib/email-templates";
+import { claimAction } from "@/lib/rate-limit";
 import { siteUrl } from "@/lib/site";
-
-// Per-instance throttle; enough to stop accidental repeat clicks.
-const lastTestSent = new Map<string, number>();
 
 // Sends a sample reminder email to the account's own address.
 export async function sendTestReminder(user: {
@@ -14,9 +12,9 @@ export async function sendTestReminder(user: {
   if (!user.email) return { error: "Your account has no email address." };
   if (!emailConfigured()) return { error: "Email sending isn't set up on this site yet." };
 
-  const last = lastTestSent.get(user.id) ?? 0;
-  if (Date.now() - last < 60_000) return { error: "Wait a minute before sending another." };
-  lastTestSent.set(user.id, Date.now());
+  if (!(await claimAction(user.id, "test-email"))) {
+    return { error: "You've sent several test emails today. Try again tomorrow." };
+  }
 
   const base = siteUrl();
   const result = await sendEmail({

@@ -21,6 +21,7 @@ import {
   updateVehicle,
   vehicleInput,
 } from "@/lib/vehicles";
+import { claimAction } from "@/lib/rate-limit";
 
 export type FormState = { error?: string; values?: Record<string, string> } | undefined;
 
@@ -43,7 +44,7 @@ export async function addVehicle(_prev: FormState, formData: FormData): Promise<
   const plan = buildServicePlan(parsed.data, readAnswers(formData));
   const vehicle = await createVehicle(user.id, parsed.data, plan.items);
 
-  if (photo) {
+  if (photo && (await claimAction(user.id, "photo-upload"))) {
     try {
       const path = await uploadVehiclePhoto(user.id, vehicle.id, photo);
       await setVehiclePhoto(user.id, vehicle.id, path);
