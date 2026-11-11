@@ -1,28 +1,41 @@
-import { Image } from "expo-image";
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useState, type ReactNode } from "react";
+import { StyleSheet, View } from "react-native";
+import Animated, { useAnimatedProps, useSharedValue } from "react-native-reanimated";
+import { PhotoViewer } from "@/components/photo-viewer";
+import { ZoomableImage } from "@/components/zoomable-image";
 import { alpha, colors, radius, space } from "@/lib/theme";
 
 // Swipeable post photos, with a dot for each one so people know to swipe.
+// Pinch to zoom in place; tap to open them full screen with `footer` (the
+// post's title and likes) over the bottom.
 export function PhotoPager({
   photos,
   rounded = false,
-  onPress,
+  footer,
 }: {
   photos: { id: string; url: string }[];
   rounded?: boolean;
-  onPress?: () => void;
+  footer?: (close: () => void) => ReactNode;
 }) {
   const [width, setWidth] = useState(0);
+  const [height, setHeight] = useState(0);
   const [page, setPage] = useState(0);
+  const [viewing, setViewing] = useState<number | null>(null);
+  const zoomLock = useSharedValue(false);
+  // A pinch stops the pages at once, on the UI thread.
+  const scrollProps = useAnimatedProps(() => ({ scrollEnabled: !zoomLock.get() }));
 
   return (
     <View
       style={[styles.frame, rounded && styles.rounded]}
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      onLayout={(event) => {
+        setWidth(event.nativeEvent.layout.width);
+        setHeight(event.nativeEvent.layout.height);
+      }}
     >
       {width > 0 && (
-        <ScrollView
+        <Animated.ScrollView
+          animatedProps={scrollProps}
           horizontal
           pagingEnabled
           nestedScrollEnabled
@@ -31,23 +44,19 @@ export function PhotoPager({
           onScroll={(event) => setPage(Math.round(event.nativeEvent.contentOffset.x / width))}
         >
           {photos.map((photo, i) => (
-            <Pressable
+            <ZoomableImage
               key={photo.id}
-              disabled={!onPress}
-              accessibilityRole={onPress ? "button" : "image"}
-              accessibilityLabel={`Post photo ${i + 1} of ${photos.length}`}
-              onPress={onPress}
-            >
-              <Image
-                source={{ uri: photo.url }}
-                style={{ width, height: "100%" }}
-                contentFit="cover"
-                transition={150}
-                accessibilityIgnoresInvertColors
-              />
-            </Pressable>
+              uri={photo.url}
+              width={width}
+              height={height}
+              contentFit="cover"
+              snapBack
+              label={`Post photo ${i + 1} of ${photos.length}, opens full screen`}
+              onTap={() => setViewing(i)}
+              zoomLock={zoomLock}
+            />
           ))}
-        </ScrollView>
+        </Animated.ScrollView>
       )}
       {photos.length > 1 && (
         <View style={styles.dots} pointerEvents="none" accessibilityElementsHidden>
@@ -56,6 +65,12 @@ export function PhotoPager({
           ))}
         </View>
       )}
+      <PhotoViewer
+        photos={photos}
+        index={viewing}
+        onClose={() => setViewing(null)}
+        footer={footer}
+      />
     </View>
   );
 }

@@ -5,17 +5,15 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { PhotoViewer } from "@/components/photo-viewer";
 import { Body, Button } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
-import { choosePhotoForm } from "@/lib/photos";
+import { choosePhotos } from "@/lib/photos";
 import { colors, fonts, space } from "@/lib/theme";
 
 const THUMB = 104;
@@ -34,6 +32,7 @@ export function PhotoStrip({
   canUpload,
   kind = "record",
   targetId,
+  canAdd = true,
   onChange,
 }: {
   carId: string;
@@ -42,10 +41,14 @@ export function PhotoStrip({
   canUpload: boolean;
   kind?: "record" | "mod";
   targetId?: string;
+  // Off where photos are only shown, like an opened row on the car page.
+  canAdd?: boolean;
   onChange: () => void;
 }) {
-  const [viewing, setViewing] = useState<CarPhoto | null>(null);
+  const [viewing, setViewing] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  // "2 of 5" while a batch goes up.
+  const [progress, setProgress] = useState<string | null>(null);
 
   const add = async () => {
     if (!canUpload) {
@@ -57,21 +60,36 @@ export function PhotoStrip({
       return;
     }
     try {
-      const form = await choosePhotoForm(
+      const chosen = await choosePhotos(
+        limit - photos.length,
         targetId ? { kind, targetId } : { kind: "build" },
+        () => setUploading(true),
       );
-      if (!form) return;
+      if (chosen.length === 0) return;
       setUploading(true);
-      await api(`/vehicles/${carId}/photos`, { method: "POST", form });
+      let failed = 0;
+      for (const [i, photo] of chosen.entries()) {
+        if (chosen.length > 1) setProgress(`${i + 1} of ${chosen.length}`);
+        await api(`/vehicles/${carId}/photos`, { method: "POST", form: photo.form }).catch(
+          () => failed++,
+        );
+      }
       onChange();
+      if (failed > 0) {
+        Alert.alert(
+          failed === 1 ? "1 photo not added" : `${failed} photos not added`,
+          "Check your connection and try those again.",
+        );
+      }
     } catch (err) {
-      Alert.alert("Photo not added", err instanceof Error ? errorMessage(err) : undefined);
+      Alert.alert("Photos not added", err instanceof Error ? errorMessage(err) : undefined);
     } finally {
       setUploading(false);
+      setProgress(null);
     }
   };
 
-  const remove = (photo: CarPhoto) => {
+  const remove = (photo: { id: string }) => {
     Alert.alert("Delete this photo?", "This can't be undone.", [
       { text: "Keep photo", style: "cancel" },
       {
@@ -93,27 +111,32 @@ export function PhotoStrip({
   return (
     <>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Add a photo"
-          style={styles.add}
-          onPress={uploading ? undefined : add}
-        >
-          {uploading ? (
-            <ActivityIndicator color={colors.amber} />
-          ) : (
-            <>
-              <Feather name="camera" size={22} color={colors.amber} />
-              <Text style={styles.addLabel}>Add photo</Text>
-            </>
-          )}
-        </Pressable>
-        {photos.map((photo) => (
+        {canAdd && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={uploading ? "Adding photos" : "Add photos"}
+            style={styles.add}
+            onPress={uploading ? undefined : add}
+          >
+            {uploading ? (
+              <>
+                <ActivityIndicator color={colors.amber} />
+                {progress && <Text style={styles.progress}>{progress}</Text>}
+              </>
+            ) : (
+              <>
+                <Feather name="camera" size={22} color={colors.amber} />
+                <Text style={styles.addLabel}>Add photos</Text>
+              </>
+            )}
+          </Pressable>
+        )}
+        {photos.map((photo, i) => (
           <Pressable
             key={photo.id}
             accessibilityRole="imagebutton"
-            accessibilityLabel="Open photo"
-            onPress={() => setViewing(photo)}
+            accessibilityLabel={`Open photo ${i + 1} of ${photos.length}`}
+            onPress={() => setViewing(i)}
           >
             <Image
               source={{ uri: photo.url, cacheKey: photo.id }}
@@ -124,33 +147,20 @@ export function PhotoStrip({
         ))}
       </ScrollView>
 
-      <Modal visible={!!viewing} animationType="fade" onRequestClose={() => setViewing(null)}>
-        <SafeAreaView style={styles.viewer}>
-          {viewing && (
-            <Image
-              source={{ uri: viewing.url, cacheKey: viewing.id }}
-              style={styles.full}
-              contentFit="contain"
-              accessibilityLabel="Car photo"
-            />
-          )}
-          <View style={styles.viewerActions}>
-            <Button
-              label="Close"
-              kind="secondary"
-              style={styles.viewerButton}
-              onPress={() => setViewing(null)}
-            />
-            <Button
-              label="Delete photo"
-              kind="danger"
-              style={styles.viewerButton}
-              onPress={() => viewing && remove(viewing)}
-            />
-          </View>
-        </SafeAreaView>
-      </Modal>
-      {photos.length === 0 && (
+      <PhotoViewer
+        photos={photos}
+        index={viewing}
+        onClose={() => setViewing(null)}
+        actions={(photo) => (
+          <Button
+            label="Delete photo"
+            kind="danger"
+            style={styles.viewerButton}
+            onPress={() => remove(photo)}
+          />
+        )}
+      />
+      {canAdd && photos.length === 0 && (
         <Body style={styles.hint}>
           {hints[targetId ? kind : "build"]}
         </Body>
@@ -172,10 +182,14 @@ const styles = StyleSheet.create({
     gap: space.xs,
   },
   addLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
+  progress: {
+    color: colors.steel,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    fontVariant: ["tabular-nums"],
+  },
   thumb: { width: THUMB, height: THUMB, borderRadius: 8, backgroundColor: colors.panel },
-  viewer: { flex: 1, backgroundColor: "#000" },
-  full: { flex: 1 },
-  viewerActions: { flexDirection: "row", gap: space.md, padding: space.lg },
   viewerButton: { flex: 1 },
   hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },
 });

@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { formatDay } from "@/lib/format";
 import { tapFeedback } from "@/lib/haptics";
-import { colors, fonts, space } from "@/lib/theme";
+import { colors, fonts, photoInk, photoInkMuted, space } from "@/lib/theme";
 
 export function LikeButton({
   post,
@@ -52,6 +52,56 @@ export function LikeButton({
   );
 }
 
+// The post's title, author, likes, and comments over full-screen photos.
+export function PostPhotoFooter({
+  post,
+  onChange,
+  onOpen,
+  onComments,
+}: {
+  post: FeedPost;
+  onChange: (post: FeedPost) => void;
+  onOpen: () => void;
+  onComments: () => void;
+}) {
+  return (
+    <View style={styles.footer}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${post.title}, by ${post.username}`}
+        style={({ pressed }) => [styles.main, pressed && styles.pressed]}
+        onPress={onOpen}
+      >
+        <Text style={[styles.title, styles.onPhoto]} numberOfLines={2}>
+          {post.title}
+        </Text>
+        <Text style={[styles.meta, styles.onPhotoMuted]} numberOfLines={1}>
+          @{post.username}, {post.carName}
+        </Text>
+      </Pressable>
+      <View style={styles.stats}>
+        <LikeButton post={post} onChange={onChange} />
+        <CommentButton count={post.commentCount} onPress={onComments} />
+      </View>
+    </View>
+  );
+}
+
+function CommentButton({ count, onPress }: { count: number; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open comments, ${count}`}
+      hitSlop={8}
+      style={styles.stat}
+      onPress={onPress}
+    >
+      <Ionicons name="chatbubble-outline" size={19} color={colors.steel} />
+      <Text style={styles.statText}>{count}</Text>
+    </Pressable>
+  );
+}
+
 export function PostCard({
   post,
   onChange,
@@ -60,6 +110,8 @@ export function PostCard({
   onChange: (post: FeedPost) => void;
 }) {
   const open = () => router.push(`/post/${post.id}`);
+  const openComments = () =>
+    router.push({ pathname: "/post/[id]", params: { id: post.id, comments: "1" } });
   return (
     <View style={styles.card}>
       <View style={styles.byline}>
@@ -74,7 +126,26 @@ export function PostCard({
         </Pressable>
         <Text style={styles.meta}>{formatDay(post.createdAt)}</Text>
       </View>
-      {post.photos.length > 0 && <PhotoPager photos={post.photos} rounded onPress={open} />}
+      {post.photos.length > 0 && (
+        <PhotoPager
+          photos={post.photos}
+          rounded
+          footer={(close) => (
+            <PostPhotoFooter
+              post={post}
+              onChange={onChange}
+              onOpen={() => {
+                close();
+                open();
+              }}
+              onComments={() => {
+                close();
+                openComments();
+              }}
+            />
+          )}
+        />
+      )}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={post.title}
@@ -88,18 +159,7 @@ export function PostCard({
       </Pressable>
       <View style={styles.stats}>
         <LikeButton post={post} onChange={onChange} />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Open comments, ${post.commentCount}`}
-          hitSlop={8}
-          style={styles.stat}
-          onPress={() =>
-            router.push({ pathname: "/post/[id]", params: { id: post.id, comments: "1" } })
-          }
-        >
-          <Ionicons name="chatbubble-outline" size={19} color={colors.steel} />
-          <Text style={styles.statText}>{post.commentCount}</Text>
-        </Pressable>
+        <CommentButton count={post.commentCount} onPress={openComments} />
       </View>
     </View>
   );
@@ -128,4 +188,7 @@ const styles = StyleSheet.create({
   stat: { flexDirection: "row", alignItems: "center", gap: space.xs, minHeight: 32 },
   statText: { color: colors.steel, fontFamily: fonts.medium, fontSize: 14 },
   statOn: { color: colors.amber },
+  footer: { gap: space.md },
+  onPhoto: { color: photoInk },
+  onPhotoMuted: { color: photoInkMuted },
 });

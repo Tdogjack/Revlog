@@ -7,7 +7,7 @@ import type { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { CommentBox, useCommentBoxSpace } from "@/components/comment-box";
 import { useContentMenu, type MenuTarget } from "@/components/content-menu";
 import { PhotoPager } from "@/components/photo-pager";
-import { LikeButton } from "@/components/post-card";
+import { LikeButton, PostPhotoFooter } from "@/components/post-card";
 import {
   Body,
   Heading,
@@ -123,7 +123,20 @@ export default function Post() {
       <Screen scrollRef={scroller} avoidKeyboard={false} bottomSpace={commentBoxSpace}>
         {post.photos.length > 0 && (
           <View style={styles.photos}>
-            <PhotoPager photos={post.photos} />
+            <PhotoPager
+              photos={post.photos}
+              footer={(close) => (
+                <PostPhotoFooter
+                  post={post}
+                  onChange={setLiked}
+                  onOpen={close}
+                  onComments={() => {
+                    close();
+                    scroller.current?.scrollToEnd();
+                  }}
+                />
+              )}
+            />
           </View>
         )}
         <View style={styles.head}>
