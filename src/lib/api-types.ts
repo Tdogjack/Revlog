@@ -262,10 +262,28 @@ export type PostComment = {
 // garage photo became.
 export type SavedPost = { id: string; added: Record<string, string> };
 
+// A part a post shares, with its link and price when it has them.
+export type SharedPart = {
+  id: string;
+  modId: string | null;
+  name: string;
+  url: string | null;
+  quantity: number;
+  price: string | null;
+  currency: string | null;
+};
+
+// An installed mod on a build post's list.
+export type BuildListMod = { id: string; name: string; categoryLabel: string };
+
 export type PostDetail = {
   post: FeedPost;
   comments: PostComment[];
+  // Part names only, kept for older app versions.
   parts: string[];
+  sharedParts: SharedPart[];
+  // A build post's installed mods, each with its shared parts by modId.
+  buildList: BuildListMod[];
 };
 
 export type Feed = { posts: FeedPost[]; hasMore: boolean };

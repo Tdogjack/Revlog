@@ -129,6 +129,27 @@ export async function moveVehicle(userId: string, id: string, direction: "up" | 
   });
 }
 
+// Puts the cars in the given order, as dragged. Favorites stay above the rest
+// whatever order arrives, and cars left out keep their place after the others.
+export async function setVehicleOrder(userId: string, ids: string[]) {
+  const cars = await listVehicles(userId);
+  const rank = (id: string) => {
+    const i = ids.indexOf(id);
+    return i === -1 ? ids.length + cars.findIndex((c) => c.id === id) : i;
+  };
+  const order = [...cars]
+    .sort((a, b) => Number(b.favorite) - Number(a.favorite) || rank(a.id) - rank(b.id))
+    .map((c) => c.id);
+  await db.transaction(async (tx) => {
+    for (const [position, carId] of order.entries()) {
+      await tx
+        .update(vehicles)
+        .set({ position })
+        .where(and(eq(vehicles.id, carId), eq(vehicles.userId, userId)));
+    }
+  });
+}
+
 export async function getVehicle(userId: string, id: string) {
   if (!uuidPattern.test(id)) return null;
   const [vehicle] = await db

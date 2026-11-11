@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowDown, ArrowUp, Car, Pencil, Plus, Star } from "lucide-react";
+import { Car, Pencil, Plus, Star } from "lucide-react";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 import { requireUser } from "@/lib/auth";
 import { getEmailSettings } from "@/lib/email-settings";
@@ -14,7 +14,8 @@ import { listAllReminders } from "@/lib/reminder-store";
 import { carUrgency, rankReminders } from "@/lib/reminders";
 import { listServiceDates } from "@/lib/service-records";
 import { listMileageReadings, listVehicles, vehicleName } from "@/lib/vehicles";
-import { reorderVehicle, toggleFavorite } from "./actions";
+import { toggleFavorite } from "./actions";
+import { SortableCars } from "./sortable-cars";
 
 export const metadata: Metadata = { title: "Your garage · Revlog" };
 
@@ -118,9 +119,13 @@ async function VehicleList() {
   }
 
   return (
-    <ul className="mt-8 space-y-3">
-      {cars.map((car, i) => (
-        <li key={car.id} className="relative">
+    <SortableCars
+      cars={cars.map((car) => ({
+        id: car.id,
+        name: car.nickname ?? vehicleName(car),
+        favorite: car.favorite,
+        controls: <CardControls vehicleId={car.id} favorite={car.favorite} />,
+        card: (
           <Link
             href={`/garage/${car.id}`}
             className="group flex gap-4 rounded-lg border border-graphite bg-panel p-3 pr-14 transition-colors hover:border-steel sm:gap-6 sm:pr-16"
@@ -170,33 +175,18 @@ async function VehicleList() {
               );
             })()}
           </Link>
-          <CardControls
-            vehicleId={car.id}
-            favorite={car.favorite}
-            canMoveUp={i > 0 && cars[i - 1].favorite === car.favorite}
-            canMoveDown={i < cars.length - 1 && cars[i + 1].favorite === car.favorite}
-          />
-        </li>
-      ))}
-    </ul>
+        ),
+      }))}
+    />
   );
 }
 
-// Favorite, edit, and reorder buttons, kept outside the card link so they don't open the car.
-function CardControls({
-  vehicleId,
-  favorite,
-  canMoveUp,
-  canMoveDown,
-}: {
-  vehicleId: string;
-  favorite: boolean;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-}) {
+// Favorite and edit buttons, kept outside the card link so they don't open the
+// car. The drag grip for reordering sits under them.
+function CardControls({ vehicleId, favorite }: { vehicleId: string; favorite: boolean }) {
   const button = "icon-btn";
   return (
-    <div className="absolute top-2 right-2 flex flex-col items-center">
+    <>
       <form action={toggleFavorite.bind(null, vehicleId, !favorite)}>
         <button
           type="submit"
@@ -216,21 +206,7 @@ function CardControls({
       >
         <Pencil className="h-4 w-4" aria-hidden />
       </Link>
-      {canMoveUp && (
-        <form action={reorderVehicle.bind(null, vehicleId, "up")}>
-          <button type="submit" aria-label="Move up" title="Move up" className={button}>
-            <ArrowUp className="h-4 w-4" aria-hidden />
-          </button>
-        </form>
-      )}
-      {canMoveDown && (
-        <form action={reorderVehicle.bind(null, vehicleId, "down")}>
-          <button type="submit" aria-label="Move down" title="Move down" className={button}>
-            <ArrowDown className="h-4 w-4" aria-hidden />
-          </button>
-        </form>
-      )}
-    </div>
+    </>
   );
 }
 
