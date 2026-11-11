@@ -1,5 +1,13 @@
 import { Feather } from "@expo/vector-icons";
-import type { CarDetail, CarMod, CarRecord, CarReminder, ModStatus } from "@revlog/api";
+import type {
+  CarDetail,
+  CarMod,
+  CarPart,
+  CarPhoto,
+  CarRecord,
+  CarReminder,
+  ModStatus,
+} from "@revlog/api";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -7,6 +15,7 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -16,6 +25,7 @@ import {
 } from "react-native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, {
+  FadeIn,
   interpolate,
   useAnimatedReaction,
   useAnimatedScrollHandler,
@@ -25,6 +35,7 @@ import Animated, {
 import { scheduleOnRN } from "react-native-worklets";
 import { MileageGraph } from "@/components/mileage-graph";
 import { PhotoStrip } from "@/components/photo-strip";
+import { PhotoViewer } from "@/components/photo-viewer";
 import {
   Button,
   EmptyState,
@@ -205,7 +216,12 @@ function ReminderRow({
         {!unknown && (
           <View style={styles.reminderSide}>
             <StatusPill status={reminder.status} />
-            <RowButton icon="check" label="Done" hint={`Log ${reminder.task} as done`} onPress={log} />
+            <RowButton
+              icon="check"
+              label="Done"
+              hint={`Log ${reminder.task} as done`}
+              onPress={log}
+            />
           </View>
         )}
         {unknown && (
@@ -258,30 +274,175 @@ const modStatus: Record<ModStatus, { label: string; color: string }> = {
   removed: { label: "Removed", color: colors.steel },
 };
 
-function ModRow({ carId, mod }: { carId: string; mod: CarMod }) {
+// What an opened row holds, so the closed row can say it before you tap.
+function detailsHint(notes: string | null, parts: number, photos: number) {
+  const bits = [
+    notes && "notes",
+    parts > 0 && `${parts} ${parts === 1 ? "part" : "parts"}`,
+    photos > 0 && `${photos} ${photos === 1 ? "photo" : "photos"}`,
+  ].filter(Boolean);
+  return bits.length > 0 ? bits.join(", ") : "Options";
+}
+
+function DetailsHint({ open, label }: { open: boolean; label: string }) {
+  return (
+    <View style={styles.hint}>
+      <Feather name={open ? "chevron-up" : "chevron-down"} size={16} color={colors.steel} />
+      <Text style={styles.hintLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function PartLine({ part }: { part: CarPart }) {
+  const facts = [
+    part.quantity > 1 ? `x${part.quantity}` : null,
+    part.price ? formatMoney(part.price) : null,
+    part.trackPrice && part.lowestPrice != null
+      ? `lowest ${formatMoney(String(part.lowestPrice))}`
+      : null,
+  ].filter(Boolean);
+  const body = (
+    <>
+      <View style={styles.partText}>
+        <Text style={styles.partName}>{part.name}</Text>
+        {facts.length > 0 && <Text style={styles.rowDetail}>{facts.join(", ")}</Text>}
+      </View>
+      {part.url && <Feather name="external-link" size={16} color={colors.steel} />}
+    </>
+  );
+  if (!part.url) return <View style={styles.part}>{body}</View>;
+  const url = part.url;
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`Open the link for ${part.name}`}
+      style={({ pressed }) => [styles.part, pressed && styles.pressed]}
+      onPress={() => Linking.openURL(url).catch(() => Alert.alert("Link not opened", url))}
+    >
+      {body}
+    </Pressable>
+  );
+}
+
+// Notes, parts, and photos for an opened row, with its buttons underneath.
+function Details({
+  carId,
+  notes,
+  parts,
+  partsLabel,
+  photos,
+  photoLimit,
+  kind,
+  targetId,
+  onChange,
+  children,
+}: {
+  carId: string;
+  notes: string | null;
+  parts: CarPart[];
+  partsLabel: string;
+  photos: CarPhoto[];
+  photoLimit: number;
+  kind: "record" | "mod";
+  targetId: string;
+  onChange: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Animated.View entering={FadeIn.duration(150)} style={styles.details}>
+      {notes && (
+        <Text style={styles.notes} selectable>
+          {notes}
+        </Text>
+      )}
+      {parts.length > 0 && (
+        <View style={styles.parts}>
+          <Text style={styles.partsLabel}>{partsLabel}</Text>
+          {parts.map((p) => (
+            <PartLine key={p.id} part={p} />
+          ))}
+        </View>
+      )}
+      {photos.length > 0 && (
+        <PhotoStrip
+          carId={carId}
+          photos={photos}
+          limit={photoLimit}
+          canUpload={false}
+          canAdd={false}
+          kind={kind}
+          targetId={targetId}
+          onChange={onChange}
+        />
+      )}
+      <View style={styles.detailActions}>{children}</View>
+    </Animated.View>
+  );
+}
+
+function ModRow({
+  carId,
+  mod,
+  photos,
+  photoLimit,
+  onChange,
+}: {
+  carId: string;
+  mod: CarMod;
+  photos: CarPhoto[];
+  photoLimit: number;
+  onChange: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const name = mod.brand ? `${mod.brand} ${mod.part}` : mod.part;
   const facts = [
     mod.categoryLabel,
     mod.cost ? formatMoney(mod.cost) : null,
     mod.installedOn ? formatDate(mod.installedOn) : null,
-    mod.parts.length > 0
-      ? `${mod.parts.length} ${mod.parts.length === 1 ? "part" : "parts"}`
-      : null,
   ].filter(Boolean);
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Edit ${mod.part}`}
-      style={({ pressed }) => [styles.mod, pressed && styles.modPressed]}
-      onPress={() => router.push(`/car/${carId}/mods/${mod.id}`)}
-    >
-      <View style={styles.modHead}>
-        <Text style={styles.rowTitle}>{mod.brand ? `${mod.brand} ${mod.part}` : mod.part}</Text>
-        <Text style={[styles.modStatus, { color: modStatus[mod.status].color }]}>
-          {modStatus[mod.status].label}
-        </Text>
-      </View>
-      <Text style={styles.rowDetail}>{facts.join(", ")}</Text>
-    </Pressable>
+    <View style={styles.mod}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={name}
+        accessibilityHint={open ? "Hides details" : "Shows details"}
+        accessibilityState={{ expanded: open }}
+        style={({ pressed }) => [styles.modMain, pressed && styles.pressed]}
+        onPress={() => {
+          tapFeedback();
+          setOpen(!open);
+        }}
+      >
+        <View style={styles.modHead}>
+          <Text style={[styles.rowTitle, mod.status === "removed" && styles.removed]}>{name}</Text>
+          <Text style={[styles.modStatus, { color: modStatus[mod.status].color }]}>
+            {modStatus[mod.status].label}
+          </Text>
+        </View>
+        {facts.length > 0 && <Text style={styles.rowDetail}>{facts.join(", ")}</Text>}
+        <DetailsHint open={open} label={detailsHint(mod.notes, mod.parts.length, photos.length)} />
+      </Pressable>
+      {open && (
+        <Details
+          carId={carId}
+          notes={mod.notes}
+          parts={mod.parts}
+          partsLabel={mod.status === "planned" ? "Parts wanted" : "Parts used"}
+          photos={photos}
+          photoLimit={photoLimit}
+          kind="mod"
+          targetId={mod.id}
+          onChange={onChange}
+        >
+          <RowButton
+            icon="edit-2"
+            label="Edit"
+            hint={`Edit ${name}`}
+            onPress={() => router.push(`/car/${carId}/mods/${mod.id}`)}
+          />
+        </Details>
+      )}
+    </View>
   );
 }
 
@@ -299,36 +460,85 @@ function BuildStat({ value, label }: { value: string; label: string }) {
 function RecordRow({
   carId,
   record,
+  photos,
+  photoLimit,
   newest,
   last,
+  onChange,
 }: {
   carId: string;
   record: CarRecord;
+  photos: CarPhoto[];
+  photoLimit: number;
   newest: boolean;
   last: boolean;
+  onChange: () => void;
 }) {
+  const [open, setOpen] = useState(false);
   const facts = [
     record.mileage != null ? formatMiles(record.mileage) : null,
     record.cost ? formatMoney(record.cost) : null,
     record.shop,
   ].filter(Boolean);
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Edit ${record.title}`}
-      style={({ pressed }) => [styles.record, pressed && styles.pressed]}
-      onPress={() => router.push(`/car/${carId}/service/${record.id}`)}
-    >
+    <View style={styles.record}>
       <View style={styles.rail}>
         <View style={[styles.dot, newest && styles.dotNewest]} />
         {!last && <View style={styles.railLine} />}
       </View>
       <View style={styles.recordBody}>
-        <Text style={styles.recordDate}>{formatDate(record.servicedOn)}</Text>
-        <Text style={styles.rowTitle}>{record.title}</Text>
-        {facts.length > 0 && <Text style={styles.rowDetail}>{facts.join(", ")}</Text>}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${record.title}, ${formatDate(record.servicedOn)}`}
+          accessibilityHint={open ? "Hides details" : "Shows details"}
+          accessibilityState={{ expanded: open }}
+          style={({ pressed }) => [styles.recordMain, pressed && styles.pressed]}
+          onPress={() => {
+            tapFeedback();
+            setOpen(!open);
+          }}
+        >
+          <Text style={styles.recordDate}>{formatDate(record.servicedOn)}</Text>
+          <Text style={styles.rowTitle}>{record.title}</Text>
+          {facts.length > 0 && <Text style={styles.rowDetail}>{facts.join(", ")}</Text>}
+          <DetailsHint
+            open={open}
+            label={detailsHint(record.notes, record.parts.length, photos.length)}
+          />
+        </Pressable>
+        {open && (
+          <Details
+            carId={carId}
+            notes={record.notes}
+            parts={record.parts}
+            partsLabel="Parts used"
+            photos={photos}
+            photoLimit={photoLimit}
+            kind="record"
+            targetId={record.id}
+            onChange={onChange}
+          >
+            <RowButton
+              icon="edit-2"
+              label="Edit"
+              hint={`Edit ${record.title}`}
+              onPress={() => router.push(`/car/${carId}/service/${record.id}`)}
+            />
+            <RowButton
+              icon="copy"
+              label="Log again"
+              hint={`Log ${record.title} again, with its parts`}
+              onPress={() =>
+                router.push({
+                  pathname: "/car/[id]/service/new",
+                  params: { id: carId, copyId: record.id },
+                })
+              }
+            />
+          </Details>
+        )}
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -341,6 +551,7 @@ export default function Car() {
   const [exporting, setExporting] = useState(false);
   const [favorite, setFavorite] = useState<boolean | null>(null);
   const [solidHeader, setSolidHeader] = useState(false);
+  const [viewing, setViewing] = useState<number | null>(null);
   const scrollY = useSharedValue(0);
   const heroHeight = Math.min(width * 0.95, MAX_HERO);
 
@@ -381,7 +592,10 @@ export default function Car() {
     tapFeedback();
     setFavorite(next);
     try {
-      await api(`/vehicles/${id}/favorite`, { method: "POST", body: { favorite: next } });
+      await api(`/vehicles/${id}/favorite`, {
+        method: "POST",
+        body: { favorite: next },
+      });
     } catch (err) {
       setFavorite(!next);
       Alert.alert("Favorite not saved", errorMessage(err));
@@ -435,7 +649,9 @@ export default function Car() {
           style: "destructive",
           onPress: async () => {
             try {
-              await api(`/community/posts/${car.buildPostId}`, { method: "DELETE" });
+              await api(`/community/posts/${car.buildPostId}`, {
+                method: "DELETE",
+              });
               await reload();
             } catch (err) {
               Alert.alert("Build not taken down", errorMessage(err));
@@ -448,7 +664,10 @@ export default function Car() {
 
   const changePhoto = async () => {
     if (!car.canUpload) {
-      Alert.alert("Confirm your email", "Confirm your email to add photos. Resend the link from Account.");
+      Alert.alert(
+        "Confirm your email",
+        "Confirm your email to add photos. Resend the link from Account.",
+      );
       return;
     }
     try {
@@ -478,6 +697,11 @@ export default function Car() {
     });
 
   const buildPhotos = car.photos.filter((p) => !p.recordId && !p.modId);
+  // The car's own photo first, then the build photos, to swipe through.
+  const heroPhotos = [
+    ...(car.photoUrl ? [{ id: `car-${car.id}`, url: car.photoUrl }] : []),
+    ...buildPhotos,
+  ];
   const sumCost = (mods: CarMod[]) => mods.reduce((sum, m) => sum + Number(m.cost ?? 0), 0);
   const installed = car.mods.filter((m) => m.status === "installed");
   const planned = car.mods.filter((m) => m.status === "planned");
@@ -493,7 +717,9 @@ export default function Car() {
       <Stack.Screen
         options={{
           title: solidHeader ? (car.nickname ?? car.name) : "",
-          headerStyle: { backgroundColor: solidHeader ? colors.asphalt : "transparent" },
+          headerStyle: {
+            backgroundColor: solidHeader ? colors.asphalt : "transparent",
+          },
           headerTintColor: headerInk,
           headerRight: () => (
             <View style={styles.headerActions}>
@@ -538,24 +764,39 @@ export default function Car() {
         }
       >
         <View style={[styles.heroFrame, { height: heroHeight }]}>
-          <Animated.View style={[StyleSheet.absoluteFill, heroMotion]}>
-            {car.photoUrl ? (
-              <Image
-                source={{ uri: car.photoUrl, cacheKey: `car-${car.id}-${car.photoUrl.split("?")[0]}` }}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                transition={150}
-                accessibilityIgnoresInvertColors
-              />
-            ) : (
-              <View style={styles.noHero}>
-                <Feather name="camera" size={32} color={colors.edge} />
-              </View>
-            )}
-          </Animated.View>
-          {onPhoto && <LinearGradient colors={headerScrim} style={styles.topScrim} />}
-          {onPhoto && <LinearGradient colors={scrim} style={styles.bottomScrim} />}
-          <View style={styles.heroText}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            disabled={!car.photoUrl}
+            accessibilityRole="imagebutton"
+            accessibilityLabel="Open car photos"
+            onPress={() => setViewing(0)}
+          >
+            <Animated.View style={[StyleSheet.absoluteFill, heroMotion]}>
+              {car.photoUrl ? (
+                <Image
+                  source={{
+                    uri: car.photoUrl,
+                    cacheKey: `car-${car.id}-${car.photoUrl.split("?")[0]}`,
+                  }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  transition={150}
+                  accessibilityIgnoresInvertColors
+                />
+              ) : (
+                <View style={styles.noHero}>
+                  <Feather name="camera" size={32} color={colors.edge} />
+                </View>
+              )}
+            </Animated.View>
+          </Pressable>
+          {onPhoto && (
+            <LinearGradient colors={headerScrim} style={styles.topScrim} pointerEvents="none" />
+          )}
+          {onPhoto && (
+            <LinearGradient colors={scrim} style={styles.bottomScrim} pointerEvents="none" />
+          )}
+          <View style={styles.heroText} pointerEvents="box-none">
             <View style={styles.heroName}>
               <Text
                 style={[styles.name, onPhoto && styles.onPhoto]}
@@ -657,7 +898,14 @@ export default function Car() {
                 </View>
                 <View style={styles.panel}>
                   {car.mods.map((m) => (
-                    <ModRow key={m.id} carId={id} mod={m} />
+                    <ModRow
+                      key={m.id}
+                      carId={id}
+                      mod={m}
+                      photos={car.photos.filter((p) => p.modId === m.id)}
+                      photoLimit={car.photoLimit}
+                      onChange={reload}
+                    />
                   ))}
                 </View>
               </>
@@ -712,8 +960,11 @@ export default function Car() {
                     key={r.id}
                     carId={id}
                     record={r}
+                    photos={car.photos.filter((p) => p.recordId === r.id)}
+                    photoLimit={car.photoLimit}
                     newest={i === 0}
                     last={i === car.records.length - 1}
+                    onChange={reload}
                   />
                 ))}
               </View>
@@ -747,6 +998,7 @@ export default function Car() {
           </Section>
         </View>
       </Animated.ScrollView>
+      <PhotoViewer photos={heroPhotos} index={viewing} onClose={() => setViewing(null)} />
     </>
   );
 }
@@ -754,11 +1006,26 @@ export default function Car() {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.asphalt },
   headerActions: { flexDirection: "row", alignItems: "center" },
-  headerButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
-  heroFrame: { overflow: "hidden", backgroundColor: colors.panel, justifyContent: "flex-end" },
+  headerButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroFrame: {
+    overflow: "hidden",
+    backgroundColor: colors.panel,
+    justifyContent: "flex-end",
+  },
   noHero: { flex: 1, alignItems: "center", justifyContent: "center" },
   topScrim: { position: "absolute", top: 0, left: 0, right: 0, height: 120 },
-  bottomScrim: { position: "absolute", bottom: 0, left: 0, right: 0, height: "60%" },
+  bottomScrim: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "60%",
+  },
   heroText: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -770,8 +1037,18 @@ const styles = StyleSheet.create({
     paddingBottom: space.lg,
   },
   heroName: { flex: 1, gap: 2 },
-  name: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 30, lineHeight: 36 },
-  fullName: { color: colors.label, fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
+  name: {
+    color: colors.chalk,
+    fontFamily: fonts.bold,
+    fontSize: 30,
+    lineHeight: 36,
+  },
+  fullName: {
+    color: colors.label,
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    lineHeight: 22,
+  },
   onPhoto: { color: photoInk },
   onPhotoMuted: { color: photoInkMuted },
   cameraButton: {
@@ -804,13 +1081,38 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.panel,
   },
-  quickActionPressed: { backgroundColor: colors.graphite, transform: [{ scale: 0.97 }] },
-  quickLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
+  quickActionPressed: {
+    backgroundColor: colors.graphite,
+    transform: [{ scale: 0.97 }],
+  },
+  quickLabel: {
+    color: colors.chalk,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   section: { gap: space.md, marginTop: space.sm },
-  sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  sectionAction: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44 },
-  sectionActionLabel: { color: colors.amber, fontFamily: fonts.medium, fontSize: 15 },
-  panel: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.panel },
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sectionAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    minHeight: 44,
+  },
+  sectionActionLabel: {
+    color: colors.amber,
+    fontFamily: fonts.medium,
+    fontSize: 15,
+  },
+  panel: {
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    backgroundColor: colors.panel,
+  },
   reminder: {
     flexDirection: "row",
     alignItems: "center",
@@ -837,8 +1139,18 @@ const styles = StyleSheet.create({
     borderColor: colors.edge,
   },
   rowButtonPressed: { backgroundColor: colors.graphite },
-  rowButtonLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
-  facts: { color: colors.steel, fontFamily: fonts.mono, fontSize: 13, lineHeight: 18 },
+  rowButtonLabel: {
+    color: colors.chalk,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  facts: {
+    color: colors.steel,
+    fontFamily: fonts.mono,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   summary: {
     marginBottom: space.md,
     color: colors.steel,
@@ -864,25 +1176,93 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.rule,
   },
-  statValue: { color: colors.chalk, fontFamily: fonts.mono, fontSize: 16, lineHeight: 22 },
-  statLabel: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  statValue: {
+    color: colors.chalk,
+    fontFamily: fonts.mono,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  statLabel: {
+    color: colors.steel,
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   mod: {
-    gap: 2,
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.edge,
   },
-  modPressed: { backgroundColor: colors.graphite },
-  modHead: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
+  modMain: { gap: 2 },
+  removed: { color: colors.steel, textDecorationLine: "line-through" },
+  modHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: space.md,
+  },
   modStatus: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 22 },
   record: { flexDirection: "row", gap: space.md },
   rail: { width: 12, alignItems: "center", paddingTop: 6 },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.edge },
   dotNewest: { backgroundColor: colors.amber },
-  railLine: { flex: 1, width: 2, marginTop: space.xs, backgroundColor: colors.rule },
-  recordBody: { flex: 1, gap: 2, paddingBottom: space.xl },
-  recordDate: { color: colors.steel, fontFamily: fonts.mono, fontSize: 14, lineHeight: 20 },
+  railLine: {
+    flex: 1,
+    width: 2,
+    marginTop: space.xs,
+    backgroundColor: colors.rule,
+  },
+  recordBody: { flex: 1, paddingBottom: space.xl },
+  recordMain: { gap: 2 },
+  hint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    minHeight: 28,
+  },
+  hintLabel: {
+    color: colors.steel,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  details: { gap: space.md, paddingTop: space.sm },
+  notes: {
+    color: colors.chalk,
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  parts: { gap: space.xs },
+  partsLabel: {
+    color: colors.label,
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  part: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    minHeight: 44,
+    paddingVertical: space.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.rule,
+  },
+  partText: { flex: 1, gap: 2 },
+  partName: {
+    color: colors.chalk,
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  detailActions: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  recordDate: {
+    color: colors.steel,
+    fontFamily: fonts.mono,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   pressed: { opacity: 0.7 },
   rowTitle: {
     flexShrink: 1,
@@ -891,5 +1271,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
   },
-  rowDetail: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  rowDetail: {
+    color: colors.steel,
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+  },
 });
