@@ -2,7 +2,15 @@ import { Feather } from "@expo/vector-icons";
 import type { CarDetail, SavedPost } from "@revlog/api";
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Easing,
@@ -23,18 +31,22 @@ import { colors, fonts, radius, space } from "@/lib/theme";
 // One photo in a post, in the order it'll show: already on the post, picked
 // from the garage, or new for this post.
 export type PostEntry =
-  | { key: string; kind: "post"; id: string; url: string }
-  | { key: string; kind: "garage"; id: string; url: string }
+  | { key: string; kind: "post"; id: string; url: string; thumb?: string }
+  | { key: string; kind: "garage"; id: string; url: string; thumb?: string }
   | { key: string; kind: "upload"; photo: ChosenPhoto };
 
 let nextKey = 0;
 const newKey = () => `photo-${nextKey++}`;
 
-export const postEntry = (kind: "post" | "garage", photo: { id: string; url: string }): PostEntry => ({
+export const postEntry = (
+  kind: "post" | "garage",
+  photo: { id: string; url: string; thumbUrl?: string },
+): PostEntry => ({
   key: newKey(),
   kind,
   id: photo.id,
   url: photo.url,
+  thumb: photo.thumbUrl,
 });
 
 // A mod post offers that mod's photos first, then the rest of the build's.
@@ -46,7 +58,9 @@ export const shareablePhotos = (car: CarDetail, modId?: string | null) => {
     : usable;
 };
 
-const urlOf = (entry: PostEntry) => (entry.kind === "upload" ? entry.photo.uri : entry.url);
+// Grids show the small copy when there is one; cropping always starts from the full photo.
+const urlOf = (entry: PostEntry) =>
+  entry.kind === "upload" ? entry.photo.uri : (entry.thumb ?? entry.url);
 
 // What a saved post needs to send: garage photos to copy, and photos it keeps.
 export const entryIds = (entries: PostEntry[]) => ({
@@ -96,7 +110,7 @@ export function PostPhotos({
   entries: PostEntry[];
   onChange: (entries: PostEntry[]) => void;
   max: number;
-  garage: { id: string; url: string }[];
+  garage: { id: string; url: string; thumbUrl?: string }[];
   canUpload: boolean;
 }) {
   const [busy, setBusy] = useState(false);
@@ -125,7 +139,10 @@ export function PostPhotos({
   };
 
   const confirmEmail = () =>
-    Alert.alert("Confirm your email", "Confirm your email to add photos. Resend the link from Account.");
+    Alert.alert(
+      "Confirm your email",
+      "Confirm your email to add photos. Resend the link from Account.",
+    );
 
   const add = async () => {
     if (!canUpload) return confirmEmail();
@@ -174,8 +191,8 @@ export function PostPhotos({
     <View style={styles.section}>
       <Heading>Photos</Heading>
       <Body style={styles.hint}>
-        {entries.length} of {max}. The first photo leads the post. Press and hold a photo, then
-        drag it to change the order.
+        {entries.length} of {max}. The first photo leads the post. Press and hold a photo, then drag
+        it to change the order.
       </Body>
       <View
         style={{ height: size ? rows * size + (rows - 1) * GAP : 0 }}
@@ -228,7 +245,7 @@ export function PostPhotos({
             {garage.map((photo, i) => (
               <PhotoChoice
                 key={photo.id}
-                url={photo.url}
+                url={photo.thumbUrl ?? photo.url}
                 chosen={entries.some((e) => e.kind === "garage" && e.id === photo.id)}
                 label={`Garage photo ${i + 1}`}
                 onPress={() => toggleGarage(photo)}
@@ -349,10 +366,7 @@ function SortableTile({
       x.set(originX.get() + event.translationX);
       y.set(originY.get() + event.translationY);
       // The spot under the middle of the photo.
-      const col = Math.min(
-        Math.max(Math.round(x.get() / (size + GAP)), 0),
-        COLUMNS - 1,
-      );
+      const col = Math.min(Math.max(Math.round(x.get() / (size + GAP)), 0), COLUMNS - 1);
       const row = Math.max(Math.round(y.get() / (size + GAP)), 0);
       const target = Math.min(row * COLUMNS + col, count - 1);
       const current = order.get();

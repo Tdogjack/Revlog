@@ -8,7 +8,9 @@ import {
   deleteVehiclePhoto,
   readPhoto,
   signedPhotoUrls,
+  signedThumbUrls,
   uploadVehiclePhoto,
+  withThumbs,
 } from "@/lib/photos";
 import { getServiceRecord } from "@/lib/service-records";
 import { createClient } from "@/lib/supabase/server";
@@ -46,10 +48,13 @@ export async function signedPhotosFor(userId: string, vehicleId: string, target:
     .from(photos)
     .where(and(eq(photos.userId, userId), eq(photos.vehicleId, vehicleId), targetFilter(target)))
     .orderBy(asc(photos.createdAt));
-  const urls = await signedPhotoUrls(rows.map((r) => r.storagePath));
+  const [urls, thumbs] = await Promise.all([
+    signedPhotoUrls(rows.map((r) => r.storagePath)),
+    signedThumbUrls(rows.map((r) => r.storagePath)),
+  ]);
   return rows.flatMap((r) => {
     const url = urls.get(r.storagePath);
-    return url ? [{ id: r.id, url }] : [];
+    return url ? [{ id: r.id, url, thumb: thumbs.get(r.storagePath) ?? url }] : [];
   });
 }
 
@@ -192,7 +197,7 @@ export async function photoPathsFor(userId: string, target: PhotoTarget) {
 export async function removePhotoFiles(paths: string[]) {
   if (paths.length === 0) return;
   const supabase = await createClient();
-  await supabase.storage.from("vehicle-photos").remove(paths);
+  await supabase.storage.from("vehicle-photos").remove(withThumbs(paths));
 }
 
 export async function getPhotosByIds(userId: string, ids: string[]) {

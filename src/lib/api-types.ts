@@ -21,6 +21,8 @@ export type GarageCar = {
   currentMileage: number;
   favorite: boolean;
   photoUrl: string | null;
+  // The small copy, for the garage list. Older servers don't send it.
+  photoThumbUrl?: string | null;
   urgency: { status: ReminderStatus; count: number } | null;
 };
 
@@ -125,6 +127,8 @@ export type ModOptions = {
 export type CarPhoto = {
   id: string;
   url: string;
+  // The small copy, for grids. Older servers don't send it.
+  thumbUrl?: string;
   recordId: string | null;
   modId: string | null;
 };
@@ -207,12 +211,12 @@ export type BuildDraft = {
     title: string;
     body: string | null;
     showParts: boolean;
-    photos: { id: string; url: string }[];
+    photos: { id: string; url: string; thumbUrl?: string }[];
   } | null;
   defaultTitle: string;
   partCount: number;
   maxPhotos: number;
-  gallery: { id: string; url: string }[];
+  gallery: { id: string; url: string; thumbUrl?: string }[];
 };
 
 export type Costs = {
@@ -244,7 +248,8 @@ export type FeedPost = {
   vehicleId: string;
   modId: string | null;
   showParts: boolean;
-  photos: { id: string; url: string }[];
+  // thumbUrl is the small copy for feed cards; older servers don't send it.
+  photos: { id: string; url: string; thumbUrl?: string }[];
   likeCount: number;
   commentCount: number;
   liked: boolean;

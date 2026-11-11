@@ -11,14 +11,15 @@ import { orderPhotos, uploadPostPhoto, type PostFormState } from "../actions";
 
 const inputClass = "field mt-1";
 
-type SharePhoto = { id: string; url: string; fromMod: boolean };
-type PostPhoto = { id: string; url: string };
+// `thumb` is the small copy shown in the grids; `url` is the full photo, for cropping.
+type SharePhoto = { id: string; url: string; thumb?: string; fromMod: boolean };
+type PostPhoto = { id: string; url: string; thumbUrl?: string };
 
 // One photo in the post, in the order it'll show: already on the post, picked
 // from the garage, or uploaded just for this post.
 type Entry =
-  | { key: string; kind: "post"; id: string; url: string }
-  | { key: string; kind: "garage"; id: string; url: string }
+  | { key: string; kind: "post"; id: string; url: string; thumb?: string }
+  | { key: string; kind: "garage"; id: string; url: string; thumb?: string }
   | { key: string; kind: "upload"; file: File; url: string };
 
 let nextKey = 0;
@@ -69,12 +70,18 @@ export function ShareForm({
   // other new posts with the first few garage photos.
   const [entries, setEntries] = useState<Entry[]>(() => {
     if (currentPhotos) {
-      return currentPhotos.map((p) => ({ key: newKey(), kind: "post", id: p.id, url: p.url }));
+      return currentPhotos.map((p) => ({
+        key: newKey(),
+        kind: "post",
+        id: p.id,
+        url: p.url,
+        thumb: p.thumbUrl,
+      }));
     }
     const fromMod = photos.filter((p) => p.fromMod);
     return (fromMod.length ? fromMod : photos)
       .slice(0, Math.min(6, maxPhotos))
-      .map((p) => ({ key: newKey(), kind: "garage", id: p.id, url: p.url }));
+      .map((p) => ({ key: newKey(), kind: "garage", id: p.id, url: p.url, thumb: p.thumb }));
   });
   const room = maxPhotos - entries.length;
   const editing = !!currentPhotos;
@@ -112,7 +119,7 @@ export function ShareForm({
     else if (room > 0) {
       setEntries((current) => [
         ...current,
-        { key: newKey(), kind: "garage", id: photo.id, url: photo.url },
+        { key: newKey(), kind: "garage", id: photo.id, url: photo.url, thumb: photo.thumb },
       ]);
     }
   }
@@ -293,7 +300,14 @@ export function ShareForm({
               className={`relative overflow-hidden rounded-md border-2 bg-carbon ${dragging === i ? "border-steel opacity-50" : "border-graphite"}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={e.url} alt="" className="aspect-square w-full cursor-grab object-cover" />
+              <img
+                src={(e.kind !== "upload" && e.thumb) || e.url}
+                onError={(ev) => {
+                  if (ev.currentTarget.src !== e.url) ev.currentTarget.src = e.url;
+                }}
+                alt=""
+                className="aspect-square w-full cursor-grab object-cover"
+              />
               <span className="readout absolute top-1 left-1 rounded bg-carbon/85 px-1.5 text-xs text-chalk">
                 {i + 1}
               </span>
@@ -388,7 +402,7 @@ export function ShareForm({
                   className={`relative aspect-square overflow-hidden rounded-md border-2 ${on ? "border-redline" : "border-graphite opacity-60"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.url} alt="" className="h-full w-full object-cover" />
+                  <img src={p.thumb ?? p.url} alt="" className="h-full w-full object-cover" />
                   {on && (
                     <span className="absolute top-1 right-1 rounded-full bg-redline-fill p-0.5 text-on-accent">
                       <Check className="h-3 w-3" aria-hidden />

@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { countShareableParts, getPost, MAX_POST_PHOTOS } from "@/lib/community";
 import { isEmailVerified } from "@/lib/email-verification";
 import { listPhotosForVehicle } from "@/lib/gallery";
-import { signedPhotoUrls } from "@/lib/photos";
+import { signedPhotoUrls, signedThumbUrls } from "@/lib/photos";
 import { getVehicle, vehicleName } from "@/lib/vehicles";
 import { savePostEdits } from "../../actions";
 import { ShareForm } from "../../new/share-form";
@@ -37,14 +37,24 @@ async function EditPost({ params }: Pick<PageProps<"/community/[postId]/edit">, 
         (p) => !p.serviceRecordId && (!post.modId || p.modId === null || p.modId === post.modId),
       )
     : [];
-  const [urls, partCount, canUpload] = await Promise.all([
+  const [urls, thumbs, partCount, canUpload] = await Promise.all([
     signedPhotoUrls(gallery.map((p) => p.storagePath)),
+    signedThumbUrls(gallery.map((p) => p.storagePath)),
     countShareableParts(user.id, post.vehicleId, post.modId),
     isEmailVerified(user.id),
   ]);
   const photos = gallery.flatMap((p) => {
     const url = urls.get(p.storagePath);
-    return url ? [{ id: p.id, url, fromMod: !!post.modId && p.modId === post.modId }] : [];
+    return url
+      ? [
+          {
+            id: p.id,
+            url,
+            thumb: thumbs.get(p.storagePath) ?? url,
+            fromMod: !!post.modId && p.modId === post.modId,
+          },
+        ]
+      : [];
   });
 
   return (

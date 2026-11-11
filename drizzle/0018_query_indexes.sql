@@ -1,0 +1,22 @@
+CREATE INDEX "attachments_service_record_idx" ON "attachments" USING btree ("service_record_id");--> statement-breakpoint
+CREATE INDEX "attachments_mod_idx" ON "attachments" USING btree ("mod_id");--> statement-breakpoint
+CREATE INDEX "mileage_readings_user_idx" ON "mileage_readings" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "mods_vehicle_idx" ON "mods" USING btree ("vehicle_id");--> statement-breakpoint
+CREATE INDEX "mods_user_idx" ON "mods" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "part_prices_part_idx" ON "part_prices" USING btree ("part_id");--> statement-breakpoint
+CREATE INDEX "parts_vehicle_idx" ON "parts" USING btree ("vehicle_id");--> statement-breakpoint
+CREATE INDEX "parts_mod_idx" ON "parts" USING btree ("mod_id");--> statement-breakpoint
+CREATE INDEX "parts_service_record_idx" ON "parts" USING btree ("service_record_id");--> statement-breakpoint
+CREATE INDEX "photos_vehicle_idx" ON "photos" USING btree ("vehicle_id");--> statement-breakpoint
+CREATE INDEX "photos_mod_idx" ON "photos" USING btree ("mod_id");--> statement-breakpoint
+CREATE INDEX "photos_service_record_idx" ON "photos" USING btree ("service_record_id");--> statement-breakpoint
+CREATE INDEX "post_photos_post_idx" ON "post_photos" USING btree ("post_id","position");--> statement-breakpoint
+CREATE INDEX "posts_created_idx" ON "posts" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "posts_user_idx" ON "posts" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "posts_vehicle_idx" ON "posts" USING btree ("vehicle_id");--> statement-breakpoint
+CREATE INDEX "posts_mod_idx" ON "posts" USING btree ("mod_id");--> statement-breakpoint
+CREATE INDEX "reminders_vehicle_idx" ON "reminders" USING btree ("vehicle_id");--> statement-breakpoint
+CREATE INDEX "reminders_user_idx" ON "reminders" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "service_records_vehicle_idx" ON "service_records" USING btree ("vehicle_id","serviced_on");--> statement-breakpoint
+CREATE INDEX "service_records_user_idx" ON "service_records" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "vehicles_user_idx" ON "vehicles" USING btree ("user_id");

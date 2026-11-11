@@ -1,12 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ChevronLeft, ChevronRight, Crop, ImagePlus, Trash2, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Crop,
+  ImagePlus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { removePhoto, replacePhoto, uploadPhoto } from "@/app/garage/[id]/photos/actions";
 import { editPhotos, photoFromUrl } from "@/components/photo-editor";
 import { PHOTO_ACCEPT, resizeImage } from "@/lib/resize-image";
 
-export type StripPhoto = { id: string; url: string };
+// `thumb` is the small copy shown in grids and inline; `url` is the full photo
+// for the full-size viewer.
+export type StripPhoto = { id: string; url: string; thumb?: string };
 
 type Props = {
   vehicleId: string;
@@ -35,6 +46,9 @@ export function PhotoStrip({
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<number | null>(null);
+  // The large grid starts at two rows (with the add tile in the last spot) so
+  // a big library doesn't fill the page; "Show all" opens the rest.
+  const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const room = canAdd ? max - photos.length : 0;
 
@@ -96,6 +110,14 @@ export function PhotoStrip({
 
   const thumb =
     size === "large" ? "aspect-[4/3] w-full rounded-lg" : "h-16 w-16 shrink-0 rounded-md";
+  // Two rows: 2 across on phones, 3 from sm up, less one spot for the add tile.
+  const addSpot = room > 0 ? 1 : 0;
+  const phoneShown = 4 - addSpot;
+  const wideShown = 6 - addSpot;
+  const collapsible = size === "large" && photos.length > phoneShown;
+  const collapsed = collapsible && !expanded;
+  const hideClass = (i: number) =>
+    !collapsed ? "" : i >= wideShown ? "hidden" : i >= phoneShown ? "hidden sm:block" : "";
 
   return (
     <div className={size === "small" ? "mt-3" : ""}>
@@ -109,11 +131,17 @@ export function PhotoStrip({
             key={p.id}
             type="button"
             onClick={() => setOpen(i)}
-            className={`overflow-hidden border border-graphite bg-carbon ${thumb}`}
+            aria-label={`Open photo ${i + 1} of ${photos.length}`}
+            className={`overflow-hidden border border-graphite bg-carbon ${thumb} ${hideClass(i)}`}
           >
             {/* Signed links expire, so these skip Next's image optimizer. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={p.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+            <img
+              src={p.thumb ?? p.url}
+              alt=""
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
           </button>
         ))}
         {room > 0 && (
@@ -135,6 +163,27 @@ export function PhotoStrip({
           </label>
         )}
       </div>
+      {collapsible && (
+        <button
+          type="button"
+          onClick={() => setExpanded((on) => !on)}
+          aria-expanded={expanded}
+          // With few enough photos to fit on wider screens, only phones need it.
+          className={`btn mt-3 w-full ${photos.length <= wideShown ? "sm:hidden" : ""}`}
+        >
+          {expanded ? (
+            <>
+              <ChevronUp className="h-4 w-4" aria-hidden />
+              Show fewer
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-4 w-4" aria-hidden />
+              Show all {photos.length} photos
+            </>
+          )}
+        </button>
+      )}
       {size === "small" && pending && <p className="mt-1 text-xs text-steel">{progress}</p>}
       {error && (
         <p role="alert" className="mt-1 text-xs text-overdue">
@@ -277,7 +326,12 @@ function Carousel({
           const img = (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={p.url}
+              // Inline cards show the small copy; the full-size viewer the full photo.
+              // Post photos saved before small copies existed fall back to the full one.
+              src={fit === "cover" ? (p.thumb ?? p.url) : p.url}
+              onError={(e) => {
+                if (e.currentTarget.src !== p.url) e.currentTarget.src = p.url;
+              }}
               alt=""
               className={`h-full w-full ${fit === "cover" ? "object-cover" : "object-contain"}`}
               loading={Math.abs(i - current) <= 1 ? "eager" : "lazy"}

@@ -14,7 +14,7 @@ import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
 import { modCategoryLabel } from "@/lib/mod-categories";
 import { listMods } from "@/lib/mods";
 import { listPartsForVehicle } from "@/lib/parts";
-import { signedPhotoUrls } from "@/lib/photos";
+import { signedPhotoUrls, signedThumbUrls } from "@/lib/photos";
 import { listReminders } from "@/lib/reminder-store";
 import {
   describeDue,
@@ -134,11 +134,15 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       listMileageReadings(user.id, car.id),
       isEmailVerified(user.id),
     ]);
-  const photos = await signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]);
+  const [photos, thumbs] = await Promise.all([
+    signedPhotoUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]),
+    signedThumbUrls([car.photoPath, ...gallery.map((p) => p.storagePath)]),
+  ]);
+  // Grids load the small copy; the full photo only opens in the viewer.
   const stripPhotos = (match: (p: (typeof gallery)[number]) => boolean): StripPhoto[] =>
     gallery.filter(match).flatMap((p) => {
       const url = photos.get(p.storagePath);
-      return url ? [{ id: p.id, url }] : [];
+      return url ? [{ id: p.id, url, thumb: thumbs.get(p.storagePath) ?? url }] : [];
     });
   const buildPhotos = stripPhotos((p) => !p.modId && !p.serviceRecordId);
   const partsFor = (key: "modId" | "serviceRecordId", id: string) =>
@@ -232,7 +236,11 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
       <title>{`${car.nickname ?? vehicleName(car)} · Revlog`}</title>
       <header className="mt-6 flex flex-col gap-6 border-b border-graphite pb-8 sm:flex-row sm:items-end">
         <div className="flex flex-col items-start gap-2">
-          <ProfilePhoto src={photoUrl ?? null} alt={vehicleName(car)} />
+          <ProfilePhoto
+            src={photoUrl ?? null}
+            thumb={car.photoPath ? thumbs.get(car.photoPath) : undefined}
+            alt={vehicleName(car)}
+          />
           <PhotoControls
             vehicleId={car.id}
             hasPhoto={!!car.photoPath}

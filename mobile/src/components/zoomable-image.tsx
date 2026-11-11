@@ -1,4 +1,5 @@
 import { Image, type ImageContentFit } from "expo-image";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -31,6 +32,7 @@ const clamp = (value: number, limit: number) => {
 // eases back as soon as you let go.
 export function ZoomableImage({
   uri,
+  fallbackUri,
   cacheKey,
   width,
   height,
@@ -44,6 +46,8 @@ export function ZoomableImage({
   onDismiss,
 }: {
   uri: string;
+  // Shown instead if `uri` fails to load, like a small copy that doesn't exist yet.
+  fallbackUri?: string;
   cacheKey?: string;
   width: number;
   height: number;
@@ -59,6 +63,7 @@ export function ZoomableImage({
   onZoomChange?: (zoomed: boolean) => void;
   onDismiss?: () => void;
 }) {
+  const [failed, setFailed] = useState(false);
   const scale = useSharedValue(1);
   const startScale = useSharedValue(1);
   const x = useSharedValue(0);
@@ -276,7 +281,11 @@ export function ZoomableImage({
       >
         <Animated.View style={[StyleSheet.absoluteFill, motion]}>
           <Image
-            source={{ uri, cacheKey }}
+            source={{
+              uri: failed && fallbackUri ? fallbackUri : uri,
+              cacheKey: failed ? undefined : cacheKey,
+            }}
+            onError={() => setFailed(true)}
             style={StyleSheet.absoluteFill}
             contentFit={contentFit}
             transition={150}

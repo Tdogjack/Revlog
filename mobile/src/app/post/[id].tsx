@@ -221,6 +221,7 @@ export default function Post() {
           <View style={styles.photos}>
             <PhotoPager
               photos={post.photos}
+              full
               footer={(close) => (
                 <PostPhotoFooter
                   post={post}

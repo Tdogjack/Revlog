@@ -7,8 +7,16 @@ import { VehiclePhoto } from "@/components/vehicle-photo";
 // Landscape, since car photos are shot that way.
 const size = "aspect-[4/3] w-full sm:w-80";
 
-// The car's main photo; click it to see it full size.
-export function ProfilePhoto({ src, alt }: { src: string | null; alt: string }) {
+// The car's main photo, shown from its small copy; click it to see it full size.
+export function ProfilePhoto({
+  src,
+  thumb,
+  alt,
+}: {
+  src: string | null;
+  thumb?: string;
+  alt: string;
+}) {
   const [open, setOpen] = useState(false);
   if (!src) return <VehiclePhoto src={null} alt={alt} className={size} />;
 
@@ -21,7 +29,7 @@ export function ProfilePhoto({ src, alt }: { src: string | null; alt: string }) 
         title="Enlarge photo"
         className="block w-full rounded-lg transition-opacity hover:opacity-90 sm:w-auto"
       >
-        <VehiclePhoto src={src} alt={alt} className={size} />
+        <VehiclePhoto src={thumb ?? src} alt={alt} className={size} />
       </button>
       {open && (
         <PhotoViewer

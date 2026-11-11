@@ -11,10 +11,13 @@ import { alpha, colors, radius, space } from "@/lib/theme";
 export function PhotoPager({
   photos,
   rounded = false,
+  full = false,
   footer,
 }: {
-  photos: { id: string; url: string }[];
+  photos: { id: string; url: string; thumbUrl?: string }[];
   rounded?: boolean;
+  // Full photos inline, for an opened post; feed cards load the small copies.
+  full?: boolean;
   footer?: (close: () => void) => ReactNode;
 }) {
   const [width, setWidth] = useState(0);
@@ -46,7 +49,10 @@ export function PhotoPager({
           {photos.map((photo, i) => (
             <ZoomableImage
               key={photo.id}
-              uri={photo.url}
+              // The small copy inline; the full-screen viewer loads the full photo.
+              uri={full ? photo.url : (photo.thumbUrl ?? photo.url)}
+              fallbackUri={photo.url}
+              cacheKey={!full && photo.thumbUrl ? `${photo.id}-thumb` : photo.id}
               width={width}
               height={height}
               contentFit="cover"

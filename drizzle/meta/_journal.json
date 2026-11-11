@@ -127,6 +127,13 @@
       "when": 1793921125646,
       "tag": "0017_moderation_ai_consent",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794395426070,
+      "tag": "0018_query_indexes",
+      "breakpoints": true
     }
   ]
 }

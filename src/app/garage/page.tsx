@@ -9,7 +9,7 @@ import { MileageChart } from "@/components/mileage-chart";
 import { StatusBadge } from "@/components/status-badge";
 import { buildMileageTimeline } from "@/lib/mileage-timeline";
 import { listModInstalls } from "@/lib/mods";
-import { signedPhotoUrls } from "@/lib/photos";
+import { signedPhotoUrls, signedThumbUrls } from "@/lib/photos";
 import { listAllReminders } from "@/lib/reminder-store";
 import { carUrgency, rankReminders } from "@/lib/reminders";
 import { listServiceDates } from "@/lib/service-records";
@@ -39,14 +39,18 @@ export default function GaragePage() {
 async function VehicleList() {
   const user = await requireUser();
   const cars = await listVehicles(user.id);
-  const [photos, allReminders, serviceDates, settings, modInstalls, readings] = await Promise.all([
-    signedPhotoUrls(cars.map((c) => c.photoPath)),
-    listAllReminders(user.id),
-    listServiceDates(user.id),
-    getEmailSettings(user.id),
-    listModInstalls(user.id),
-    listMileageReadings(user.id),
-  ]);
+  const [fullPhotos, thumbs, allReminders, serviceDates, settings, modInstalls, readings] =
+    await Promise.all([
+      signedPhotoUrls(cars.map((c) => c.photoPath)),
+      // Cards show the small copy of each car's photo.
+      signedThumbUrls(cars.map((c) => c.photoPath)),
+      listAllReminders(user.id),
+      listServiceDates(user.id),
+      getEmailSettings(user.id),
+      listModInstalls(user.id),
+      listMileageReadings(user.id),
+    ]);
+  const photos = new Map([...fullPhotos].map(([path, url]) => [path, thumbs.get(path) ?? url]));
   const options = { dueSoonPercent: settings.reminderPercent };
 
   // The most urgent reminder status for each car, and how many share it.
