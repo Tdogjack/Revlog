@@ -63,6 +63,12 @@
         "projectId": "071a6955-6e2b-4aaf-b263-e32e1234321a"
       }
     },
-    "owner": "tr3vor1"
+    "owner": "tr3vor1",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/071a6955-6e2b-4aaf-b263-e32e1234321a"
+    }
   }
 }
