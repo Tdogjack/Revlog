@@ -3,14 +3,22 @@ import type { GarageCar } from "@revlog/api";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  Easing,
+  type SharedValue,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import {
   Body,
   Button,
   EmptyState,
-  ListGroup,
-  ListRow,
   LoadFailed,
   Loading,
   Odometer,
@@ -22,7 +30,7 @@ import { pressFeedback, tapFeedback } from "@/lib/haptics";
 import { colors, fonts, photoInk, photoInkMuted, radius, scrim, space } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
-function CarPlate({ car }: { car: GarageCar }) {
+function CarPlate({ car, onOpen }: { car: GarageCar; onOpen: () => void }) {
   // Only work that's due earns a badge; "not logged" waits on the car page.
   const attention =
     car.urgency && (car.urgency.status === "overdue" || car.urgency.status === "due_soon")
@@ -33,10 +41,7 @@ function CarPlate({ car }: { car: GarageCar }) {
       accessibilityRole="button"
       accessibilityLabel={car.nickname ?? car.name}
       style={({ pressed }) => [styles.plate, pressed && styles.platePressed]}
-      onPress={() => {
-        pressFeedback();
-        router.push(`/car/${car.id}`);
-      }}
+      onPress={onOpen}
     >
       {car.photoUrl ? (
         <Image
@@ -71,98 +76,212 @@ function CarPlate({ car }: { car: GarageCar }) {
   );
 }
 
-function MoveButton({
-  direction,
-  name,
-  enabled,
-  onPress,
+const GAP = space.lg;
+const SETTLE = { duration: 180, easing: Easing.out(Easing.cubic) };
+
+// The garage's cars. Tap one to open it; press and hold one, then drag it to
+// a new spot. Favorites stay above the rest. The new order is handed back on drop.
+function SortableCars({
+  cars,
+  onReorder,
 }: {
-  direction: "up" | "down";
-  name: string;
-  enabled: boolean;
-  onPress: () => void;
+  cars: GarageCar[];
+  onReorder: (ids: string[]) => void;
 }) {
+  const [width, setWidth] = useState(0);
+  // Each car's spot while dragging, by id.
+  const order = useSharedValue<Record<string, number>>(
+    Object.fromEntries(cars.map((c, i) => [c.id, i])),
+  );
+  const ids = cars.map((c) => c.id).join("|");
+  useEffect(() => {
+    order.set(Object.fromEntries(ids.split("|").map((id, i) => [id, i])));
+  }, [ids, order]);
+
+  // The spots a car can move within: its favorites group.
+  const groups = cars.map((car) => {
+    const spots = cars.flatMap((c, i) => (c.favorite === car.favorite ? [i] : []));
+    return { lo: spots[0], hi: spots[spots.length - 1] };
+  });
+
+  const commit = (spots: Record<string, number>) =>
+    onReorder([...cars].sort((a, b) => spots[a.id] - spots[b.id]).map((c) => c.id));
+
+  const moveBy = (index: number, step: number) => {
+    const { lo, hi } = groups[index];
+    const to = Math.min(Math.max(index + step, lo), hi);
+    if (to === index) return;
+    const next = cars.map((c) => c.id);
+    const [id] = next.splice(index, 1);
+    next.splice(to, 0, id);
+    onReorder(next);
+  };
+
+  const height = (width * 3) / 4;
+  const step = height + GAP;
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Move ${name} ${direction}`}
-      accessibilityState={{ disabled: !enabled }}
-      disabled={!enabled}
-      hitSlop={4}
-      style={({ pressed }) => [styles.move, pressed && styles.movePressed]}
-      onPress={() => {
-        tapFeedback();
-        onPress();
-      }}
+    <View
+      style={{ height: width ? cars.length * step - GAP : 0 }}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
     >
-      <Feather
-        name={`chevron-${direction}`}
-        size={24}
-        color={enabled ? colors.amber : colors.edge}
-      />
-    </Pressable>
+      {width > 0 &&
+        cars.map((car, i) => (
+          <SortablePlate
+            key={car.id}
+            car={car}
+            index={i}
+            lo={groups[i].lo}
+            hi={groups[i].hi}
+            height={height}
+            step={step}
+            movable={groups[i].hi > groups[i].lo}
+            order={order}
+            onDrop={commit}
+            onMoveBy={(by) => moveBy(i, by)}
+          />
+        ))}
+    </View>
   );
 }
 
-function ReorderRow({
+function SortablePlate({
   car,
-  canMoveUp,
-  canMoveDown,
-  onMove,
+  index,
+  lo,
+  hi,
+  height,
+  step,
+  movable,
+  order,
+  onDrop,
+  onMoveBy,
 }: {
   car: GarageCar;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-  onMove: (direction: "up" | "down") => void;
+  index: number;
+  lo: number;
+  hi: number;
+  height: number;
+  step: number;
+  movable: boolean;
+  order: SharedValue<Record<string, number>>;
+  onDrop: (spots: Record<string, number>) => void;
+  onMoveBy: (by: number) => void;
 }) {
-  const name = car.nickname ?? car.name;
+  const id = car.id;
+  const y = useSharedValue(index * step);
+  const dragging = useSharedValue(false);
+  const from = useSharedValue(index);
+  const originY = useSharedValue(0);
+  // A drag ends with the finger lifting on the card; that isn't a tap.
+  const dragged = useSharedValue(false);
+
+  // Slides to its spot whenever the order changes, unless it's the one held.
+  useAnimatedReaction(
+    () => order.get()[id],
+    (spot) => {
+      if (spot === undefined || dragging.get()) return;
+      y.set(withTiming(spot * step, SETTLE));
+    },
+    [step],
+  );
+
+  // Let go of the "was dragged" mark once the lift has been ignored, so the
+  // next real tap opens the car.
+  const settle = () => setTimeout(() => dragged.set(false), 350);
+
+  const pan = Gesture.Pan()
+    .enabled(movable)
+    .activateAfterLongPress(300)
+    .onStart(() => {
+      dragging.set(true);
+      from.set(order.get()[id] ?? index);
+      originY.set(y.get());
+      dragged.set(true);
+      scheduleOnRN(pressFeedback);
+    })
+    .onUpdate((event) => {
+      y.set(Math.min(Math.max(originY.get() + event.translationY, lo * step), hi * step));
+      const target = Math.min(Math.max(Math.round(y.get() / step), lo), hi);
+      const current = order.get();
+      const here = current[id];
+      if (target === here) return;
+      const next: Record<string, number> = {};
+      for (const k of Object.keys(current)) {
+        const spot = current[k];
+        if (k === id) next[k] = target;
+        else if (here < target && spot > here && spot <= target) next[k] = spot - 1;
+        else if (here > target && spot >= target && spot < here) next[k] = spot + 1;
+        else next[k] = spot;
+      }
+      order.set(next);
+      scheduleOnRN(tapFeedback);
+    })
+    .onFinalize(() => {
+      if (!dragging.get()) return;
+      dragging.set(false);
+      scheduleOnRN(settle);
+      const spots = order.get();
+      y.set(withTiming(spots[id] * step, SETTLE));
+      if (spots[id] !== from.get()) scheduleOnRN(onDrop, spots);
+    });
+
+  const motion = useAnimatedStyle(() => ({
+    transform: [{ translateY: y.get() }, { scale: withTiming(dragging.get() ? 1.03 : 1, SETTLE) }],
+    zIndex: dragging.get() ? 10 : 0,
+    shadowOpacity: withTiming(dragging.get() ? 0.45 : 0, SETTLE),
+  }));
+
+  const open = () => {
+    if (dragged.get()) {
+      dragged.set(false);
+      return;
+    }
+    pressFeedback();
+    router.push(`/car/${car.id}`);
+  };
+
   return (
-    <View style={styles.reorderRow}>
-      {car.photoUrl ? (
-        <Image source={{ uri: car.photoUrl, cacheKey: `car-${car.id}` }} style={styles.thumb} />
-      ) : (
-        <View style={[styles.thumb, styles.noThumb]}>
-          <Feather name="camera" size={18} color={colors.edge} />
-        </View>
-      )}
-      <Text style={styles.reorderName} numberOfLines={2}>
-        {name}
-      </Text>
-      {car.favorite && <Feather name="star" size={18} color={colors.amber} />}
-      <MoveButton direction="up" name={name} enabled={canMoveUp} onPress={() => onMove("up")} />
-      <MoveButton
-        direction="down"
-        name={name}
-        enabled={canMoveDown}
-        onPress={() => onMove("down")}
-      />
-    </View>
+    <GestureDetector gesture={pan}>
+      <Animated.View
+        style={[styles.slot, { height }, motion]}
+        accessibilityActions={
+          movable
+            ? [
+                { name: "up", label: "Move up" },
+                { name: "down", label: "Move down" },
+              ]
+            : undefined
+        }
+        onAccessibilityAction={(event) => onMoveBy(event.nativeEvent.actionName === "up" ? -1 : 1)}
+      >
+        <CarPlate car={car} onOpen={open} />
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
 export default function Garage() {
   const { data, error, reload } = useApi<GarageCar[]>("/vehicles");
   const [refreshing, setRefreshing] = useState(false);
-  const [reordering, setReordering] = useState(false);
-  const [moving, setMoving] = useState(false);
+  // The dragged order, shown right away while it saves.
+  const [order, setOrder] = useState<string[] | null>(null);
 
   if (!data) return error ? <LoadFailed message={error} onRetry={reload} /> : <Loading />;
 
-  const move = async (car: GarageCar, direction: "up" | "down") => {
-    setMoving(true);
+  const cars = order ? order.flatMap((id) => data.filter((c) => c.id === id)) : data;
+
+  const reorder = async (ids: string[]) => {
+    setOrder(ids);
     try {
-      await api(`/vehicles/${car.id}/move`, { method: "POST", body: { direction } });
+      await api("/vehicles/order", { method: "PUT", body: { order: ids } });
       await reload();
     } catch (err) {
-      Alert.alert("Car not moved", errorMessage(err));
+      Alert.alert("Order not saved", errorMessage(err));
     } finally {
-      setMoving(false);
+      setOrder(null);
     }
   };
-
-  // Favorites and the rest are ordered separately, so a car can't cross that line.
-  const canSwap = (index: number, neighbor: number) =>
-    !moving && !!data[neighbor] && data[neighbor].favorite === data[index].favorite;
 
   return (
     <>
@@ -211,33 +330,13 @@ export default function Garage() {
             body="Start a timeline of every service and mod for it."
             action={<Button label="Add a car" onPress={() => router.push("/add-car")} />}
           />
-        ) : reordering ? (
-          <>
-            <Body style={styles.hint}>
-              Favorites stay at the top, so a car moves within its own group.
-            </Body>
-            <View style={styles.reorderList}>
-              {data.map((car, i) => (
-                <ReorderRow
-                  key={car.id}
-                  car={car}
-                  canMoveUp={canSwap(i, i - 1)}
-                  canMoveDown={canSwap(i, i + 1)}
-                  onMove={(direction) => move(car, direction)}
-                />
-              ))}
-            </View>
-            <Button label="Done" onPress={() => setReordering(false)} />
-          </>
         ) : (
           <>
-            {data.map((car) => (
-              <CarPlate key={car.id} car={car} />
-            ))}
-            {data.length > 1 && (
-              <ListGroup>
-                <ListRow icon="list" label="Reorder cars" onPress={() => setReordering(true)} />
-              </ListGroup>
+            <SortableCars cars={cars} onReorder={reorder} />
+            {cars.length > 1 && (
+              <Body style={styles.hint}>
+                Press and hold a car to drag it into a new spot. Favorites stay at the top.
+              </Body>
             )}
           </>
         )}
@@ -249,8 +348,18 @@ export default function Garage() {
 const styles = StyleSheet.create({
   headerActions: { flexDirection: "row", alignItems: "center" },
   headerButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  slot: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    borderRadius: radius.lg,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 18,
+  },
   plate: {
-    aspectRatio: 4 / 3,
+    flex: 1,
     borderRadius: radius.lg,
     overflow: "hidden",
     backgroundColor: colors.panel,
@@ -274,25 +383,4 @@ const styles = StyleSheet.create({
   onPhoto: { color: photoInk },
   onPhotoMuted: { color: photoInkMuted },
   hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },
-  reorderList: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.panel },
-  reorderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.md,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.edge,
-  },
-  thumb: { width: 56, height: 42, borderRadius: radius.sm, backgroundColor: colors.graphite },
-  noThumb: { alignItems: "center", justifyContent: "center" },
-  reorderName: {
-    flex: 1,
-    color: colors.chalk,
-    fontFamily: fonts.medium,
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  move: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 22 },
-  movePressed: { backgroundColor: colors.graphite },
 });

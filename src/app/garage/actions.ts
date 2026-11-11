@@ -13,6 +13,7 @@ import {
   createVehicle,
   getVehicle,
   moveVehicle,
+  setVehicleOrder,
   readVehicleFields,
   removalConfirmed,
   setVehicleFavorite,
@@ -114,6 +115,13 @@ export async function removeVehicle(vehicleId: string, formData: FormData) {
 export async function toggleFavorite(vehicleId: string, favorite: boolean) {
   const user = await requireUser();
   await setVehicleFavorite(user.id, vehicleId, favorite);
+  revalidatePath("/garage");
+}
+
+// Saves the order the cars were dragged into.
+export async function orderVehicles(ids: string[]) {
+  const user = await requireUser();
+  await setVehicleOrder(user.id, ids.map(String));
   revalidatePath("/garage");
 }
 
