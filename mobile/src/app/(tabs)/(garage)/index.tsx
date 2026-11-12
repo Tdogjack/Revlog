@@ -28,6 +28,7 @@ import {
 import { api, errorMessage } from "@/lib/api";
 import { pressFeedback, tapFeedback } from "@/lib/haptics";
 import { colors, fonts, photoInk, photoInkMuted, radius, scrim, space } from "@/lib/theme";
+import { registerForPush } from "@/lib/push";
 import { useApi } from "@/lib/use-api";
 
 function CarPlate({ car, onOpen }: { car: GarageCar; onOpen: () => void }) {
@@ -265,9 +266,19 @@ function SortablePlate({
   );
 }
 
+// Asked once a car is in the garage, when reminders have something to say.
+// iOS only shows the prompt once; after that this just refreshes the token.
+let askedForPush = false;
+
 export default function Garage() {
   const { data, error, reload } = useApi<GarageCar[]>("/vehicles");
   const [refreshing, setRefreshing] = useState(false);
+  const hasCars = !!data?.length;
+  useEffect(() => {
+    if (!hasCars || askedForPush) return;
+    askedForPush = true;
+    registerForPush({ ask: true }).catch(() => undefined);
+  }, [hasCars]);
   // The dragged order, shown right away while it saves.
   const [order, setOrder] = useState<string[] | null>(null);
 

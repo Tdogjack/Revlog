@@ -241,6 +241,9 @@ export const emailSettings = pgTable(
       .default(sql`auth.uid()`)
       .references(() => authUsers.id, { onDelete: "cascade" }),
     reminderEmails: boolean("reminder_emails").notNull().default(true),
+    // Push reminders go to every phone in push_tokens; this turns them off
+    // without the phone having to forget its token.
+    pushReminders: boolean("push_reminders").notNull().default(true),
     // When set, a reminder counts as due soon once this share of its mileage
     // interval is used (e.g. 80 = 80%), in place of the 500-mile rule.
     reminderPercent: integer("reminder_percent"),
@@ -250,6 +253,23 @@ export const emailSettings = pgTable(
       .$onUpdate(() => new Date()),
   },
   () => [ownerPolicy("email_settings")],
+).enableRLS();
+
+// Expo push tokens for phones signed in to the app. A token belongs to one
+// user at a time: signing in as someone else on the same phone moves it.
+// Users can read their own; only the server writes them.
+export const pushTokens = pgTable(
+  "push_tokens",
+  {
+    ...ownerColumns,
+    token: text("token").notNull(),
+    platform: text("platform").notNull(),
+  },
+  (t) => [
+    uniqueIndex("push_tokens_token_idx").on(t.token),
+    index("push_tokens_user_idx").on(t.userId),
+    ownerReadPolicy("push_tokens"),
+  ],
 ).enableRLS();
 
 // Receipts and photos live in Supabase Storage; this table points at them.

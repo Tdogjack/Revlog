@@ -1,7 +1,17 @@
+import { router } from "expo-router";
 import { NativeTabs } from "expo-router/native-tabs";
+import { useEffect } from "react";
+import { onPushTap, registerForPush } from "@/lib/push";
 import { colors, fonts } from "@/lib/theme";
 
 export default function TabsLayout() {
+  // Signed in from here on: keep this phone's push token current (without
+  // asking) and open the screen a tapped reminder points at.
+  useEffect(() => {
+    registerForPush({ ask: false }).catch(() => undefined);
+    return onPushTap((url) => router.push(url as never));
+  }, []);
+
   return (
     <NativeTabs
       tintColor={colors.amber}

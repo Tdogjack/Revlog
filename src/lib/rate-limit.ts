@@ -9,6 +9,7 @@ export const LIMITS = {
   "photo-upload": { max: 50, hours: 24 },
   "price-check": { max: 30, hours: 1 },
   "test-email": { max: 5, hours: 24 },
+  "test-push": { max: 5, hours: 24 },
   "confirm-email": { max: 5, hours: 24 },
 } as const;
 
