@@ -20,10 +20,10 @@ export function ReportItem({ report }: { report: OpenReport }) {
   const target = `@${report.reportedUsername}'s ${noun}`;
   return (
     <li
-      className={`relative rounded-lg border border-graphite bg-panel p-5 sm:p-6 ${report.gone ? "" : "hover:border-steel"}`}
+      className={`relative rounded-2xl border border-graphite bg-panel p-5 sm:p-6 ${report.gone ? "" : "hover:border-steel"}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <h2 className="font-display text-2xl leading-tight font-semibold">
+        <h2 className="font-display text-2xl font-semibold">
           {report.gone ? (
             reason
           ) : (

@@ -116,7 +116,7 @@ export function ServiceForm({
     <form
       ref={formRef}
       action={formAction}
-      className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6"
+      className="mt-6 space-y-5 rounded-2xl border border-graphite bg-panel p-5 sm:p-6"
     >
       {!photos.target && photos.locked && (
         <div className="rounded-md border border-graphite bg-carbon p-4">

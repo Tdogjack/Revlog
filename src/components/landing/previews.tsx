@@ -10,7 +10,7 @@ import { useToday } from "@/lib/use-today";
 // Small, static slices of the app for the landing page's feature explorer.
 // Each fills the same fixed-height frame so switching never shifts the page.
 
-const panel = "h-full rounded-lg border border-graphite bg-panel p-5";
+const panel = "h-full rounded-2xl border border-graphite bg-panel p-5";
 const paper = "rounded-sm bg-chalk text-carbon";
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -186,7 +186,7 @@ export function PdfPreview() {
   return (
     <div className={`${panel} flex items-center justify-center bg-carbon`}>
       <div className={`${paper} w-full max-w-md px-6 py-5 shadow-[0_8px_30px_rgba(0,0,0,0.35)]`}>
-        <p className="font-display text-2xl leading-tight font-semibold">Service history</p>
+        <p className="font-display text-2xl font-semibold">Service history</p>
         <p className="mt-1 text-sm text-carbon/70">2011 BMW M3 Coupe, VIN WBSKG9C52BE000000</p>
         <table className="mt-4 w-full text-left text-xs">
           <thead className="text-carbon/60">
@@ -223,7 +223,7 @@ export function ModsPreview() {
   ];
   return (
     <div className={panel}>
-      <p className="font-display text-2xl leading-tight font-semibold">Build</p>
+      <p className="font-display text-2xl font-semibold">Build</p>
       <p className="mt-1 text-sm text-steel">3 installed, $5,974 invested, $7,880 planned</p>
       <ul className="mt-3">
         {mods.map(([name, cat, cost, status]) => (
@@ -356,7 +356,7 @@ function MiataPost({ children }: { children?: React.ReactNode }) {
         <span>1994 Mazda MX-5 Miata</span>
         <span className="ml-auto text-xs">New mod</span>
       </div>
-      <p className="mt-2 font-display text-2xl leading-tight font-semibold">
+      <p className="mt-2 font-display text-2xl font-semibold">
         Just installed: Racing Beat roadster exhaust
       </p>
       {children}
@@ -409,7 +409,7 @@ export function PrivatePreview() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/demo/m3.jpg" alt="" className="aspect-[4/3] w-32 rounded-md object-cover" />
         <div className="min-w-0">
-          <p className="font-display text-2xl leading-tight font-semibold">Track toy</p>
+          <p className="font-display text-2xl font-semibold">Track toy</p>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-steel">
             <Lock className="h-3.5 w-3.5" aria-hidden /> Only you can see this
           </p>

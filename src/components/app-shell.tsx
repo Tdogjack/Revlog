@@ -1,56 +1,58 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { Gauge } from "lucide-react";
 import { signOut } from "@/app/(auth)/actions";
+import { Brand, DesktopNav, TabBar, TopBar, type NavItem } from "@/components/site-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { getUser } from "@/lib/auth";
 import { getProfile } from "@/lib/profiles";
 import { listVehicles, vehicleName } from "@/lib/vehicles";
 
-const NAV = [
-  { href: "/garage", label: "Garage" },
-  { href: "/community", label: "Community" },
-  { href: "/garage/costs", label: "Costs" },
+const NAV: NavItem[] = [
+  { href: "/garage", label: "Garage", icon: "garage" },
+  { href: "/community", label: "Community", icon: "community" },
+  { href: "/garage/costs", label: "Costs", icon: "costs" },
+];
+const SIGNED_IN_TABS: NavItem[] = [
+  ...NAV,
+  { href: "/garage/settings", label: "Settings", icon: "account" },
 ];
 
-// Header and footer for signed-in areas (garage) and the public community.
+// Header, phone tab bar, and footer for signed-in areas (garage) and the
+// public community.
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-graphite">
-        <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-1">
-            <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
-              <Gauge className="h-5 w-5 text-redline" aria-hidden />
-              <span>
-                Rev<span className="text-redline">log</span>
-              </span>
-            </Link>
-            <div className="flex items-center gap-x-4 text-sm">
-              {NAV.map((item) => (
-                <Link key={item.href} href={item.href} className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-            <Suspense fallback={null}>
-              <CarLinks />
-            </Suspense>
-          </div>
+      <TopBar>
+        <div className="flex min-w-0 items-center gap-x-4">
+          <Brand />
+          <DesktopNav items={NAV} />
           <Suspense fallback={null}>
-            <AccountMenu />
+            <CarLinks />
           </Suspense>
-        </nav>
-      </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">{children}</main>
+        </div>
+        <Suspense fallback={null}>
+          <AccountMenu />
+        </Suspense>
+      </TopBar>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 md:py-10">{children}</main>
       <SiteFooter />
+      <Suspense fallback={null}>
+        <ShellTabs />
+      </Suspense>
     </div>
   );
 }
 
-// Jump straight to a car without stopping at the garage. On phones the cars
-// get their own row that scrolls sideways.
+async function ShellTabs() {
+  const user = await getUser();
+  // Signed out, the header's Log in and Sign up are the way forward.
+  if (!user) return null;
+  return <TabBar items={SIGNED_IN_TABS} />;
+}
+
+// Jump straight to a car without stopping at the garage. Wide screens only;
+// on a phone the garage list is one tap away in the tab bar.
 async function CarLinks() {
   const user = await getUser();
   if (!user) return null;
@@ -58,13 +60,13 @@ async function CarLinks() {
   if (cars.length === 0) return null;
 
   return (
-    <div className="flex basis-full items-center gap-x-4 overflow-x-auto text-sm md:basis-auto md:border-l md:border-graphite md:pl-6">
+    <div className="hidden min-w-0 items-center gap-1 overflow-x-auto border-l border-graphite pl-3 lg:flex">
       {cars.map((car) => (
         <Link
           key={car.id}
           href={`/garage/${car.id}`}
           title={vehicleName(car)}
-          className="inline-flex min-h-9 max-w-48 shrink-0 items-center text-steel hover:text-chalk"
+          className="nav-link max-w-44 shrink-0"
         >
           <span className="truncate">{car.nickname ?? `${car.make} ${car.model}`}</span>
         </Link>
@@ -77,14 +79,11 @@ async function AccountMenu() {
   const user = await getUser();
   if (!user) {
     return (
-      <div className="flex items-center gap-x-4 text-sm">
-        <Link href="/login" className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
+      <div className="flex shrink-0 items-center gap-x-1">
+        <Link href="/login" className="nav-link">
           Log in
         </Link>
-        <Link
-          href="/signup"
-          className="btn btn-primary"
-        >
+        <Link href="/signup" className="btn btn-primary">
           Sign up
         </Link>
       </div>
@@ -96,15 +95,15 @@ async function AccountMenu() {
   if (!profile) redirect("/username");
 
   return (
-    <div className="flex items-center gap-x-4 text-sm">
-      <Link href={`/u/${profile.username}`} className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
-        @{profile.username}
+    <div className="flex min-w-0 shrink-0 items-center gap-x-1">
+      <Link href={`/u/${profile.username}`} className="nav-link max-w-40">
+        <span className="truncate">@{profile.username}</span>
       </Link>
-      <Link href="/garage/settings" className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
+      <Link href="/garage/settings" className="nav-link hidden md:inline-flex">
         Settings
       </Link>
-      <form action={signOut}>
-        <button type="submit" className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
+      <form action={signOut} className="hidden md:block">
+        <button type="submit" className="nav-link">
           Log out
         </button>
       </form>

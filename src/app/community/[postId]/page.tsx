@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BackLink } from "@/components/back-link";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -25,9 +26,7 @@ export async function generateMetadata({
 export default function PostPage({ params, searchParams }: PageProps<"/community/[postId]">) {
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/community" className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
-        ← Back to community
-      </Link>
+      <BackLink href="/community">Community</BackLink>
       <Suspense fallback={<div className="skeleton mt-4 h-[32rem]" aria-busy="true" />}>
         <PostDetails params={params} searchParams={searchParams} />
       </Suspense>
@@ -67,8 +66,8 @@ async function PostDetails({
       />
 
       {buildList.length > 0 && (
-        <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-          <h2 className="font-display text-2xl leading-tight font-semibold">Build list</h2>
+        <section className="rounded-2xl border border-graphite bg-panel p-5 sm:p-6">
+          <h2 className="font-display text-2xl font-semibold">Build list</h2>
           <ul className="mt-3">
             {buildList.map((m) => (
               <li key={m.id} className="border-t border-rule py-3 text-sm first:border-t-0">
@@ -84,8 +83,8 @@ async function PostDetails({
       )}
 
       {post.kind === "mod" && sharedParts.length > 0 && (
-        <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-          <h2 className="font-display text-2xl leading-tight font-semibold">Parts</h2>
+        <section className="rounded-2xl border border-graphite bg-panel p-5 sm:p-6">
+          <h2 className="font-display text-2xl font-semibold">Parts</h2>
           <SharedParts parts={sharedParts} />
         </section>
       )}
@@ -136,7 +135,7 @@ function SharedParts({ parts }: { parts: Awaited<ReturnType<typeof listPostParts
   return (
     <ul className="mt-2 space-y-1">
       {parts.map((p) => (
-        <li key={p.id} className="flex items-baseline justify-between gap-3 text-xs">
+        <li key={p.id} className="flex items-baseline justify-between gap-3 text-sm">
           <span className="min-w-0 truncate">
             {p.url ? (
               <a

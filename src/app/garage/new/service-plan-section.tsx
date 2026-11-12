@@ -11,7 +11,7 @@ import {
   type ServicePlan,
 } from "@/lib/service-plan";
 
-const panelClass = "rounded-lg border border-graphite bg-panel p-5 sm:p-6";
+const panelClass = "rounded-2xl border border-graphite bg-panel p-5 sm:p-6";
 
 function ChoiceRow<V extends string>({
   legend,

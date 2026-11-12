@@ -45,9 +45,9 @@ function formatMonth(isoDate: string) {
 
 // Same look as the real car page.
 const summaryClass = "cursor-pointer list-none [&::-webkit-details-marker]:hidden";
-const panelClass = "rounded-lg border border-graphite bg-panel p-5 sm:p-6";
+const panelClass = "rounded-2xl border border-graphite bg-panel p-4 sm:p-6";
 const sectionHeadClass = "flex flex-wrap items-start justify-between gap-3";
-const headingClass = "font-display text-2xl leading-tight font-semibold";
+const headingClass = "font-display text-2xl font-semibold";
 const dateClass = "shrink-0 pt-0.5 text-sm text-steel tabular-nums sm:w-24";
 
 const statusStyle: Record<ModStatus, string> = {
@@ -107,7 +107,7 @@ export function DemoCarView() {
   const car = demo.cars.find((c) => c.id === carId);
   if (!car) {
     return (
-      <div className="mt-8 rounded-lg border border-dashed border-graphite px-6 py-12 text-center">
+      <div className="mt-8 rounded-2xl border border-dashed border-graphite px-6 py-12 text-center">
         <h1 className="font-display text-2xl font-semibold">That demo car isn&apos;t here</h1>
         <Link href="/demo" className="btn btn-primary mt-6">
           Back to the demo garage
@@ -177,7 +177,7 @@ function CarDetails({ car }: { car: DemoCar }) {
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-5 sm:pb-8">
           <div>
-            <h1 className="font-display text-4xl leading-tight font-semibold sm:text-5xl">
+            <h1 className="font-display text-4xl font-semibold sm:text-5xl">
               {car.nickname}
             </h1>
             <p className="mt-2 text-steel">{demoCarName(car)}</p>

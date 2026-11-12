@@ -54,7 +54,7 @@ export function ReminderForm({
         fd.set("today", localToday());
         return formAction(fd);
       }}
-      className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6"
+      className="mt-6 space-y-5 rounded-2xl border border-graphite bg-panel p-5 sm:p-6"
     >
       <ServiceTypeSelect
         key={state?.error ?? "initial"}

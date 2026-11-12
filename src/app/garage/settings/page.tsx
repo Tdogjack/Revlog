@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { signOut } from "@/app/(auth)/actions";
 import { PalettePicker } from "@/components/palette-picker";
 import { requireUser } from "@/lib/auth";
 import { hasAiConsent } from "@/lib/ai-consent";
@@ -21,10 +22,7 @@ export const metadata: Metadata = { title: "Settings · Revlog" };
 export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href="/garage" className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
-        ← Back to garage
-      </Link>
-      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Settings</h1>
+      <h1 className="font-display text-4xl font-semibold">Settings</h1>
       <Suspense fallback={null}>
         <SettingsSections />
       </Suspense>
@@ -44,10 +42,9 @@ async function SettingsSections() {
   ]);
 
   return (
-    <div className="mt-6 space-y-6">
-      <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-        <h2 className="font-display text-2xl leading-tight font-semibold">Account</h2>
-        <p className="mt-2 text-sm text-steel">{user.email}</p>
+    <div className="mt-8 space-y-8">
+      <Group title="Account">
+        <p className="text-sm text-steel">{user.email}</p>
         {verified ? (
           <p className="mt-1 text-sm text-done">Email confirmed</p>
         ) : (
@@ -58,43 +55,43 @@ async function SettingsSections() {
             <ResendConfirmationForm action={resendConfirmation} />
           </>
         )}
-        <Link
-          href="/reset-password"
-          className="btn mt-4"
-        >
-          Change password
-        </Link>
-      </section>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/reset-password" className="btn">
+            Change password
+          </Link>
+          <form action={signOut}>
+            <button type="submit" className="btn">
+              Log out
+            </button>
+          </form>
+        </div>
+      </Group>
 
-      <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-        <h2 className="mb-4 font-display text-2xl leading-tight font-semibold">Appearance</h2>
+      <Group title="Appearance">
         <PalettePicker />
-      </section>
+      </Group>
 
-      <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-        <h2 className="mb-4 font-display text-2xl leading-tight font-semibold">Emails</h2>
+      <Group title="Emails">
         <EmailSettingsForm
           action={saveEmailSettings}
           testAction={sendTestEmail}
           reminderEmails={settings.reminderEmails}
           reminderPercent={settings.reminderPercent}
         />
-      </section>
+      </Group>
 
-      <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-        <h2 className="font-display text-2xl leading-tight font-semibold">AI scanning</h2>
+      <Group title="AI scanning">
         <AiScanToggle allowed={aiAllowed} />
-      </section>
+      </Group>
 
-      <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-        <h2 className="font-display text-2xl leading-tight font-semibold">Blocked accounts</h2>
+      <Group title="Blocked accounts">
         {blocked.length === 0 ? (
-          <p className="mt-2 text-sm text-steel">
+          <p className="text-sm text-steel">
             No one is blocked. Block someone from the menu on their post, comment, or profile to
             hide what they share.
           </p>
         ) : (
-          <ul className="mt-3">
+          <ul className="-my-3">
             {blocked.map((account) => (
               <li
                 key={account.userId}
@@ -115,12 +112,11 @@ async function SettingsSections() {
             ))}
           </ul>
         )}
-      </section>
+      </Group>
 
       {moderator && (
-        <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-          <h2 className="font-display text-2xl leading-tight font-semibold">Moderation</h2>
-          <p className="mt-2 text-sm text-steel">
+        <Group title="Moderation">
+          <p className="text-sm text-steel">
             {openReports === 0
               ? "No open reports."
               : `${openReports} open ${openReports === 1 ? "report" : "reports"}.`}
@@ -128,13 +124,40 @@ async function SettingsSections() {
           <Link href="/garage/moderation" className="btn mt-4">
             Open moderation
           </Link>
-        </section>
+        </Group>
       )}
 
-      <section className="rounded-lg border border-overdue/40 bg-panel p-5 sm:p-6">
-        <h2 className="mb-3 font-display text-2xl leading-tight font-semibold text-overdue">Delete account</h2>
+      <Group title="Delete account" tone="danger">
         <DeleteAccountForm action={deleteAccount} />
-      </section>
+      </Group>
     </div>
+  );
+}
+
+// One settings group: a name above, its controls on a panel below, like a
+// grouped list on a phone.
+function Group({
+  title,
+  tone,
+  children,
+}: {
+  title: string;
+  tone?: "danger";
+  children: React.ReactNode;
+}) {
+  return (
+    <section aria-labelledby={`group-${title}`}>
+      <h2
+        id={`group-${title}`}
+        className={`mb-2 px-1 text-base font-semibold ${tone === "danger" ? "text-overdue" : "text-chalk"}`}
+      >
+        {title}
+      </h2>
+      <div
+        className={`rounded-2xl border bg-panel p-5 sm:p-6 ${tone === "danger" ? "border-overdue/40" : "border-graphite"}`}
+      >
+        {children}
+      </div>
+    </section>
   );
 }

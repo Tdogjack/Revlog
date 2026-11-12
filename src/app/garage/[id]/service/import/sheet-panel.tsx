@@ -70,7 +70,7 @@ export function SheetPanel({
   };
 
   return (
-    <section aria-labelledby="sheet-heading" className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+    <section aria-labelledby="sheet-heading" className="rounded-2xl border border-graphite bg-panel p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 id="sheet-heading" className="font-display text-xl leading-tight font-semibold break-words">

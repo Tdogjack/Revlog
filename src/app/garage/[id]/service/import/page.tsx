@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
@@ -50,13 +50,8 @@ async function ImportHistory({ params, searchParams }: Pick<Props, "params" | "s
 
   return (
     <>
-      <Link
-        href={`/garage/${car.id}`}
-        className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk"
-      >
-        ← Back to {name}
-      </Link>
-      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">
+      <BackLink href={`/garage/${car.id}`}>{name}</BackLink>
+      <h1 className="mt-4 font-display text-4xl font-semibold">
         {isNewCar ? `${name} is in the garage` : "Add service history"}
       </h1>
       <p className="mt-2 text-steel">

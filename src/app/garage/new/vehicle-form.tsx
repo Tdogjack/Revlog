@@ -131,7 +131,7 @@ export function VehicleForm({
     >
       <section
         aria-label="Car details"
-        className="space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6"
+        className="space-y-5 rounded-2xl border border-graphite bg-panel p-5 sm:p-6"
       >
         {!initial &&
           (canUpload ? (
@@ -155,7 +155,7 @@ export function VehicleForm({
               type="button"
               onClick={fillFromVin}
               disabled={looking}
-              className="rounded-md border border-graphite px-3 py-2 text-sm hover:border-steel disabled:opacity-60"
+              className="btn"
             >
               {looking ? "Looking up…" : "Look up"}
             </button>

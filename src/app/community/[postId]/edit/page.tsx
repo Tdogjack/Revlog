@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
@@ -59,13 +59,8 @@ async function EditPost({ params }: Pick<PageProps<"/community/[postId]/edit">, 
 
   return (
     <>
-      <Link
-        href={`/community/${post.id}`}
-        className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk"
-      >
-        ← Back to post
-      </Link>
-      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Edit post</h1>
+      <BackLink href={`/community/${post.id}`}>Post</BackLink>
+      <h1 className="mt-4 font-display text-4xl font-semibold">Edit post</h1>
       <p className="mt-2 text-steel">
         {car ? (car.nickname ?? vehicleName(car)) : "Your car"}. Changes show on the post right
         away.

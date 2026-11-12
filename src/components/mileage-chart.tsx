@@ -245,7 +245,7 @@ export function MileageChart({
         </p>
       </div>
       {ranges.length > 1 && (
-        <div className="flex gap-1" role="group" aria-label="Time range">
+        <div className="segmented" role="group" aria-label="Time range">
           {ranges.map((r) => (
             <button
               key={r.id}
@@ -255,7 +255,7 @@ export function MileageChart({
                 setRange(r.id);
                 setSelected(null);
               }}
-              className="btn min-h-8 px-2.5 text-xs text-steel aria-pressed:border-steel aria-pressed:bg-graphite aria-pressed:text-chalk"
+              className="segment"
             >
               {r.label}
             </button>

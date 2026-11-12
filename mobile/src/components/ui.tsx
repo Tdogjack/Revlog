@@ -13,6 +13,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import {
   KeyboardAwareScrollView,
   KeyboardController,
@@ -27,7 +28,9 @@ import {
   photoInkMuted,
   radius,
   space,
+  springs,
   statusStyles,
+  tracking,
 } from "@/lib/theme";
 
 export function Screen({
@@ -261,6 +264,18 @@ export function ListRow({
   );
 }
 
+// A press that sinks the moment a finger lands and springs back on release.
+// The spring starts from wherever the scale is, so quick taps never jump.
+export function usePressScale(depth = 0.97) {
+  const scale = useSharedValue(1);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
+  return {
+    style,
+    onPressIn: () => scale.set(withSpring(depth, springs.snappy)),
+    onPressOut: () => scale.set(withSpring(1, springs.settle)),
+  };
+}
+
 export function Button({
   label,
   onPress,
@@ -275,42 +290,45 @@ export function Button({
   style?: StyleProp<ViewStyle>;
 }) {
   const primary = kind === "primary";
+  const press = usePressScale();
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ busy }}
-      accessibilityLabel={label}
-      // Stays tappable; a second tap while saving just does nothing.
-      onPress={
-        busy
-          ? undefined
-          : () => {
-              pressFeedback();
-              onPress();
-            }
-      }
-      style={({ pressed }) => [
-        styles.button,
-        primary ? styles.buttonPrimary : styles.buttonSecondary,
-        pressed && styles.buttonPressed,
-        pressed && (primary ? styles.buttonPrimaryPressed : styles.buttonSecondaryPressed),
-        style,
-      ]}
-    >
-      {busy ? (
-        <ActivityIndicator color={primary ? colors.onAmber : colors.chalk} />
-      ) : (
-        <Text
-          style={[
-            styles.buttonLabel,
-            primary && styles.buttonLabelPrimary,
-            kind === "danger" && styles.buttonLabelDanger,
-          ]}
-        >
-          {label}
-        </Text>
-      )}
-    </Pressable>
+    <Animated.View style={[press.style, style]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ busy }}
+        accessibilityLabel={label}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
+        // Stays tappable; a second tap while saving just does nothing.
+        onPress={
+          busy
+            ? undefined
+            : () => {
+                pressFeedback();
+                onPress();
+              }
+        }
+        style={({ pressed }) => [
+          styles.button,
+          primary ? styles.buttonPrimary : styles.buttonSecondary,
+          pressed && (primary ? styles.buttonPrimaryPressed : styles.buttonSecondaryPressed),
+        ]}
+      >
+        {busy ? (
+          <ActivityIndicator color={primary ? colors.onAmber : colors.chalk} />
+        ) : (
+          <Text
+            style={[
+              styles.buttonLabel,
+              primary && styles.buttonLabelPrimary,
+              kind === "danger" && styles.buttonLabelDanger,
+            ]}
+          >
+            {label}
+          </Text>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -383,7 +401,13 @@ export const styles = StyleSheet.create({
   },
   body: { color: colors.chalk, fontFamily: fonts.regular, fontSize: 16, lineHeight: 24 },
   muted: { color: colors.steel },
-  heading: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 22, lineHeight: 28 },
+  heading: {
+    color: colors.chalk,
+    fontFamily: fonts.bold,
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: tracking(22),
+  },
   odometer: { flexDirection: "row", alignItems: "center", gap: 2 },
   wheel: {
     width: 20,
@@ -410,6 +434,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: space.sm,
     paddingVertical: 2,
     borderRadius: radius.sm,
+    borderCurve: "continuous",
   },
   avatar: {
     width: 32,
@@ -422,7 +447,12 @@ export const styles = StyleSheet.create({
   avatarLarge: { width: 64, height: 64, borderRadius: 32 },
   avatarLetter: { color: colors.amber, fontFamily: fonts.bold, fontSize: 15 },
   avatarLetterLarge: { fontSize: 28 },
-  group: { borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.panel },
+  group: {
+    borderRadius: radius.lg,
+    borderCurve: "continuous",
+    overflow: "hidden",
+    backgroundColor: colors.panel,
+  },
   listRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -430,7 +460,7 @@ export const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: space.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.edge,
+    borderBottomColor: colors.graphite,
   },
   listRowPressed: { backgroundColor: colors.graphite },
   listLabel: { flex: 1, color: colors.chalk, fontFamily: fonts.regular, fontSize: 16 },
@@ -445,18 +475,23 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
   },
   button: {
-    minHeight: 48,
+    minHeight: 50,
     borderRadius: radius.md,
+    borderCurve: "continuous",
     paddingHorizontal: space.lg,
     alignItems: "center",
     justifyContent: "center",
   },
-  buttonPressed: { transform: [{ scale: 0.98 }] },
   buttonPrimary: { backgroundColor: colors.amberFill },
   buttonPrimaryPressed: { backgroundColor: colors.amberPressed },
   buttonSecondary: { borderWidth: 1, borderColor: colors.edge },
   buttonSecondaryPressed: { backgroundColor: colors.panel },
-  buttonLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 16 },
+  buttonLabel: {
+    color: colors.chalk,
+    fontFamily: fonts.medium,
+    fontSize: 17,
+    letterSpacing: tracking(17),
+  },
   buttonLabelPrimary: { color: colors.onAmber, fontFamily: fonts.bold },
   buttonLabelDanger: { color: colors.overdue },
   status: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
@@ -472,5 +507,11 @@ export const styles = StyleSheet.create({
   },
   centerText: { textAlign: "center", color: colors.steel },
   empty: { gap: space.sm, paddingVertical: space.lg },
-  emptyTitle: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 17, lineHeight: 24 },
+  emptyTitle: {
+    color: colors.chalk,
+    fontFamily: fonts.bold,
+    fontSize: 20,
+    lineHeight: 26,
+    letterSpacing: tracking(20),
+  },
 });

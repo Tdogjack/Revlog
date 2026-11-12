@@ -55,7 +55,7 @@ export function SortMenu({ sort, tag, q }: { sort: PostSort; tag?: string; q?: s
       {open && (
         <div
           role="menu"
-          className="absolute top-full right-0 z-20 mt-2 w-56 overflow-hidden rounded-lg border border-edge bg-panel py-1 shadow-xl shadow-black/40"
+          className="pop-in absolute top-full right-0 z-20 mt-2 w-56 origin-top-right overflow-hidden rounded-xl border border-edge bg-panel p-1 shadow-2xl shadow-black/50"
         >
           <p className="px-4 pt-2 pb-1 text-xs font-medium text-steel">Sort by</p>
           {POST_SORTS.map((s) => {
@@ -67,7 +67,7 @@ export function SortMenu({ sort, tag, q }: { sort: PostSort; tag?: string; q?: s
                 role="menuitemradio"
                 aria-checked={active}
                 onClick={() => setOpen(false)}
-                className={`flex items-center justify-between gap-3 px-4 py-2.5 ${active ? "bg-carbon" : "hover:bg-carbon"}`}
+                className={`flex min-h-11 items-center justify-between gap-3 rounded-lg px-3 ${active ? "bg-graphite" : "hover:bg-graphite active:bg-graphite"}`}
               >
                 <span>
                   <span className="block text-sm text-chalk">{s.label}</span>

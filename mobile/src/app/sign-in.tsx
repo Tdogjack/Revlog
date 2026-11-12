@@ -8,7 +8,7 @@ import { Body, Button, FormError, Odometer, Screen } from "@/components/ui";
 import { errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { SITE_URL } from "@/lib/config";
-import { colors, fonts, space } from "@/lib/theme";
+import { colors, fonts, space, tracking } from "@/lib/theme";
 
 export default function SignIn() {
   const { signIn } = useAuth();
@@ -74,7 +74,13 @@ export default function SignIn() {
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.asphalt },
   intro: { gap: space.xs, paddingTop: space.xxl, paddingBottom: space.lg },
-  brand: { color: colors.amber, fontFamily: fonts.bold, fontSize: 48, lineHeight: 56 },
+  brand: {
+    color: colors.amber,
+    fontFamily: fonts.bold,
+    fontSize: 48,
+    lineHeight: 56,
+    letterSpacing: tracking(48),
+  },
   odometer: { marginTop: space.lg },
   muted: { color: colors.steel },
 });

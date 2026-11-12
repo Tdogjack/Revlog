@@ -201,7 +201,30 @@ export const fonts = {
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
-export const radius = { sm: 6, md: 8, lg: 14 } as const;
+// Concentric corners: bigger surfaces are rounder, so a button inside a panel
+// sits inside its curve. Pair with borderCurve: "continuous" for the iOS
+// squircle instead of a plain arc.
+export const radius = { sm: 8, md: 12, lg: 18, xl: 24 } as const;
+
+// Tracking changes with size: large type pulls in, small type opens up a hair.
+// Points of letter spacing for a font size, never one value for all.
+export function tracking(fontSize: number) {
+  if (fontSize >= 28) return -0.022 * fontSize;
+  if (fontSize >= 20) return -0.014 * fontSize;
+  if (fontSize >= 17) return -0.006 * fontSize;
+  if (fontSize <= 13) return 0.01 * fontSize;
+  return 0;
+}
+
+// Springs for anything that moves. "settle" is critically damped (no
+// overshoot) and is the default; "flick" has a little bounce and is only for
+// things the person threw. Springs start from wherever the value is now and
+// keep its velocity, so a moving thing can always be grabbed and redirected.
+export const springs = {
+  settle: { dampingRatio: 1, duration: 400 },
+  snappy: { dampingRatio: 1, duration: 250 },
+  flick: { dampingRatio: 0.8, duration: 450 },
+} as const;
 
 // Keeps text readable over a car photo. Dark palettes fade the photo into the
 // page; a light page would wash the photo out, so there the shade stays dark

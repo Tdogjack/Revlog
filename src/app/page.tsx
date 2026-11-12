@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { ArrowUpRight, Gauge } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { FeatureExplorer } from "@/components/landing/feature-explorer";
 import { FeaturedBuild } from "@/components/landing/featured-build";
 import { OdometerDemo } from "@/components/odometer-demo";
 import { PhotoCredit } from "@/components/photo-credit";
 import { SignedInSwitch } from "@/components/signed-in-switch";
+import { Brand, TopBar } from "@/components/site-chrome";
 import { SiteFooter } from "@/components/site-footer";
 import { demoCarCards } from "@/lib/demo-garage";
 
@@ -19,51 +20,47 @@ export default function Home() {
   const cars = demoCarCards();
   return (
     <div className="flex flex-1 flex-col">
-      <header className="sticky top-0 z-30 border-b border-graphite bg-carbon/95">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
-            <Gauge className="h-5 w-5 text-redline" aria-hidden />
-            <span>
-              Rev<span className="text-redline">log</span>
-            </span>
+      <TopBar>
+        <Brand />
+        <div className="flex items-center gap-x-1">
+          <a href="#log" className="nav-link hidden md:inline-flex">
+            What&apos;s in it
+          </a>
+          <Link href="/community" className="nav-link hidden sm:inline-flex">
+            Community
           </Link>
-          <div className="flex items-center gap-1 text-sm sm:gap-2">
-            <a href="#log" className="hidden px-2 py-2 text-steel hover:text-chalk md:block">
-              What&apos;s in it
-            </a>
-            <Link href="/community" className="hidden px-2 py-2 text-steel hover:text-chalk sm:block">
-              Community
-            </Link>
-            <Link href="/demo" className="hidden px-2 py-2 text-steel hover:text-chalk sm:block">
-              Demo
-            </Link>
-            <SignedInSwitch
-              signedIn={
-                <Link href="/garage" className="btn btn-primary">
-                  Your garage
+          <Link href="/demo" className="nav-link hidden sm:inline-flex">
+            Demo
+          </Link>
+          <SignedInSwitch
+            signedIn={
+              <Link href="/garage" className="btn btn-primary">
+                Your garage
+              </Link>
+            }
+            signedOut={
+              <>
+                <Link href="/login" className="nav-link">
+                  Log in
                 </Link>
-              }
-              signedOut={
-                <>
-                  <Link href="/login" className="px-2 py-2 text-steel hover:text-chalk">
-                    Log in
-                  </Link>
-                  <Link href="/signup" className="btn btn-primary">
-                    Sign up
-                  </Link>
-                </>
-              }
-            />
-          </div>
-        </nav>
-      </header>
+                <Link href="/signup" className="btn btn-primary">
+                  Sign up
+                </Link>
+              </>
+            }
+          />
+        </div>
+      </TopBar>
 
       <main className="flex-1">
         <section className="relative overflow-hidden">
           <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-20 sm:px-6 md:pt-20 lg:grid-cols-[minmax(0,1fr)_32rem] lg:gap-16 lg:pt-24 lg:pb-28">
             <div>
-              <h1 className="font-display text-5xl leading-[1.05] font-semibold sm:text-6xl xl:text-[4.25rem]">
-                Build it, Maintain it, Share it!
+              {/* One phrase per line, so the rhythm reads like the three steps it is. */}
+              <h1 className="font-display text-5xl leading-[1.02] font-semibold tracking-[-0.035em] sm:text-6xl xl:text-[4.5rem]">
+                <span className="block">Build it,</span>
+                <span className="block">Maintain it,</span>
+                <span className="block">Share it!</span>
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-pretty text-steel">
                 Revlog keeps your car&apos;s service history, tells you what&apos;s due before
@@ -97,7 +94,7 @@ export default function Home() {
         <section className="border-t border-graphite bg-panel/40">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <h2 className="font-display text-3xl leading-tight font-semibold sm:text-4xl">
+              <h2 className="font-display text-3xl font-semibold sm:text-4xl">
                 Put some miles on it
               </h2>
               <p className="max-w-md text-steel">
@@ -113,7 +110,7 @@ export default function Home() {
 
         <section id="log" className="scroll-mt-16 border-t border-graphite">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-            <h2 className="font-display text-3xl leading-tight font-semibold sm:text-4xl">
+            <h2 className="font-display text-3xl font-semibold sm:text-4xl">
               Everything in the log
             </h2>
             <p className="mt-4 max-w-xl text-steel">
@@ -129,7 +126,7 @@ export default function Home() {
         <section className="bg-paper text-carbon">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
             <div className="flex flex-col justify-between gap-4 border-b border-dashed border-carbon/30 pb-8 md:flex-row md:items-end">
-              <h2 className="font-display text-3xl leading-tight font-semibold sm:text-4xl">
+              <h2 className="font-display text-3xl font-semibold sm:text-4xl">
                 Up and running in four steps
               </h2>
               <p className="text-carbon/70">About a minute for the first car.</p>
@@ -149,7 +146,7 @@ export default function Home() {
         <section className="border-b border-graphite">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <h2 className="font-display text-3xl leading-tight font-semibold sm:text-4xl">
+              <h2 className="font-display text-3xl font-semibold sm:text-4xl">
                 Take one for a spin
               </h2>
               <p className="max-w-md text-steel">
@@ -174,7 +171,7 @@ export default function Home() {
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-display text-2xl leading-tight font-semibold">{car.nickname}</p>
+                          <p className="font-display text-2xl font-semibold">{car.nickname}</p>
                           <p className="truncate text-sm text-steel">{car.name}</p>
                         </div>
                         <ArrowUpRight className="mt-1 h-5 w-5 shrink-0 text-steel group-hover:text-chalk" aria-hidden />
@@ -196,7 +193,7 @@ export default function Home() {
             </ul>
 
             <div className="mt-20 flex flex-col items-start justify-between gap-6 rounded-2xl border border-graphite bg-panel p-8 md:flex-row md:items-end md:p-12">
-              <h2 className="max-w-2xl font-display text-3xl leading-tight font-semibold sm:text-5xl">
+              <h2 className="max-w-2xl font-display text-3xl font-semibold sm:text-5xl">
                 Add your first car. It takes about a minute.
               </h2>
               <SignedInSwitch

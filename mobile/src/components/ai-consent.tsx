@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Body, Button, FormError } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { SITE_URL } from "@/lib/config";
-import { colors, fonts, MAX_WIDTH, radius, space } from "@/lib/theme";
+import { colors, fonts, MAX_WIDTH, radius, space, tracking } from "@/lib/theme";
 
 // Asks before anything is sent to the AI service, in the website's words.
 // `ensure()` resolves true once the person has allowed it, now or earlier, and
@@ -95,6 +95,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.panel,
   },
-  title: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 22, lineHeight: 28 },
+  title: {
+    color: colors.chalk,
+    fontFamily: fonts.bold,
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: tracking(22),
+  },
   muted: { color: colors.label },
 });

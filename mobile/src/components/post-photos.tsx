@@ -13,12 +13,11 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  Easing,
   type SharedValue,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
+  withSpring,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { PhotoChoice } from "@/components/photo-choice";
@@ -26,7 +25,7 @@ import { Body, Heading } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { pressFeedback, tapFeedback } from "@/lib/haptics";
 import { choosePhotos, editPhoto, type ChosenPhoto } from "@/lib/photos";
-import { colors, fonts, radius, space } from "@/lib/theme";
+import { colors, fonts, radius, space, springs } from "@/lib/theme";
 
 // One photo in a post, in the order it'll show: already on the post, picked
 // from the garage, or new for this post.
@@ -90,9 +89,10 @@ export async function savePostPhotos(saved: SavedPost, entries: PostEntry[]) {
     return id ? [id] : [];
   });
   if (order.length > 1) {
-    await api(`/community/posts/${saved.id}/photos`, { method: "PUT", body: { order } }).catch(
-      () => {},
-    );
+    await api(`/community/posts/${saved.id}/photos`, {
+      method: "PUT",
+      body: { order },
+    }).catch(() => {});
   }
   return failed;
 }
@@ -152,7 +152,11 @@ export function PostPhotos({
       if (chosen.length > 0) {
         onChange([
           ...entries,
-          ...chosen.map((photo) => ({ key: newKey(), kind: "upload" as const, photo })),
+          ...chosen.map((photo) => ({
+            key: newKey(),
+            kind: "upload" as const,
+            photo,
+          })),
         ]);
       }
     } catch (err) {
@@ -169,7 +173,11 @@ export function PostPhotos({
     try {
       const edited = await editPhoto(
         entry.kind === "upload"
-          ? { uri: entry.photo.uri, width: entry.photo.width, height: entry.photo.height }
+          ? {
+              uri: entry.photo.uri,
+              width: entry.photo.width,
+              height: entry.photo.height,
+            }
           : { url: entry.url },
       );
       if (!edited) return;
@@ -263,7 +271,6 @@ export function PostPhotos({
 
 const COLUMNS = 3;
 const GAP = space.sm;
-const SETTLE = { duration: 180, easing: Easing.out(Easing.cubic) };
 
 // Where the photo at `index` sits in the grid.
 const slot = (index: number, size: number) => {
@@ -347,8 +354,8 @@ function SortableTile({
     (spot) => {
       if (spot === undefined || dragging.get()) return;
       const to = slot(spot, size);
-      x.set(withTiming(to.x, SETTLE));
-      y.set(withTiming(to.y, SETTLE));
+      x.set(withSpring(to.x, springs.settle));
+      y.set(withSpring(to.y, springs.settle));
     },
     [size],
   );
@@ -388,8 +395,8 @@ function SortableTile({
       dragging.set(false);
       const to = order.get()[key];
       const home = slot(to, size);
-      x.set(withTiming(home.x, SETTLE));
-      y.set(withTiming(home.y, SETTLE));
+      x.set(withSpring(home.x, springs.settle));
+      y.set(withSpring(home.y, springs.settle));
       if (to !== from.get()) scheduleOnRN(onMove, from.get(), to);
     });
 
@@ -397,10 +404,10 @@ function SortableTile({
     transform: [
       { translateX: x.get() },
       { translateY: y.get() },
-      { scale: withTiming(dragging.get() ? 1.06 : 1, SETTLE) },
+      { scale: withSpring(dragging.get() ? 1.06 : 1, springs.settle) },
     ],
     zIndex: dragging.get() ? 10 : 0,
-    shadowOpacity: withTiming(dragging.get() ? 0.35 : 0, SETTLE),
+    shadowOpacity: withSpring(dragging.get() ? 0.35 : 0, springs.settle),
   }));
 
   return (
@@ -510,5 +517,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: space.xs,
   },
-  addLabel: { color: colors.chalk, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
+  addLabel: {
+    color: colors.chalk,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    lineHeight: 20,
+  },
 });

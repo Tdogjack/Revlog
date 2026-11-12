@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BackLink } from "@/components/back-link";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -19,12 +20,7 @@ export const metadata: Metadata = { title: "Share to the community · Revlog" };
 export default function NewPostPage({ searchParams }: PageProps<"/community/new">) {
   return (
     <div className="mx-auto max-w-2xl">
-      <Link
-        href="/community"
-        className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk"
-      >
-        ← Back to community
-      </Link>
+      <BackLink href="/community">Community</BackLink>
       <Suspense fallback={<p className="mt-6 text-sm text-steel">Loading…</p>}>
         <NewPost searchParams={searchParams} />
       </Suspense>
@@ -86,7 +82,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
   if (isBuild) {
     return (
       <>
-        <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">
+        <h1 className="mt-4 font-display text-4xl font-semibold">
           {build ? "Update public build" : "Post public build"}
         </h1>
         <p className="mt-2 text-steel">
@@ -118,7 +114,7 @@ async function NewPost({ searchParams }: Pick<PageProps<"/community/new">, "sear
 
   return (
     <>
-      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">
+      <h1 className="mt-4 font-display text-4xl font-semibold">
         {mod ? "Share a new mod" : "Share to the community"}
       </h1>
       <p className="mt-2 text-steel">
@@ -161,7 +157,7 @@ async function ChooseCar({ userId }: { userId: string }) {
   const photoUrls = new Map([...full].map(([path, url]) => [path, thumbs.get(path) ?? url]));
   return (
     <>
-      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">
+      <h1 className="mt-4 font-display text-4xl font-semibold">
         Share to the community
       </h1>
       <p className="mt-2 text-steel">

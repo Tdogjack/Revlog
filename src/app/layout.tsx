@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { DEFAULT_PALETTE, paletteScript } from "@/lib/palettes";
 import "./globals.css";
@@ -23,6 +23,13 @@ export const metadata: Metadata = {
   title: "Revlog: car maintenance and mod tracker",
   description:
     "Track every oil change, repair, and mod for your cars, with reminders before service is due.",
+};
+
+// Edge to edge on phones, so the translucent bars can sit under the notch and
+// over the home indicator, with safe-area padding keeping their contents clear.
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: "#1c1c1e",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

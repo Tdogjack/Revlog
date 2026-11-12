@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, useNumberPadFocus } from "@/components/ui";
 import { formatDate, fromIsoDate, toIsoDate } from "@/lib/format";
 import { tapFeedback } from "@/lib/haptics";
-import { colors, fonts, lightTheme, MAX_WIDTH, space } from "@/lib/theme";
+import { colors, fonts, lightTheme, MAX_WIDTH, space, tracking } from "@/lib/theme";
 
 function Label({ text }: { text: string }) {
   return <Text style={styles.label}>{text}</Text>;
@@ -373,7 +373,13 @@ const styles = StyleSheet.create({
     padding: space.lg,
     gap: space.md,
   },
-  sheetTitle: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 22, lineHeight: 28 },
+  sheetTitle: {
+    color: colors.chalk,
+    fontFamily: fonts.bold,
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: tracking(22),
+  },
   option: {
     minHeight: 52,
     flexDirection: "row",

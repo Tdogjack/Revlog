@@ -9,8 +9,7 @@ import type { AuthState } from "./actions";
 
 type Action = (prev: AuthState, formData: FormData) => Promise<AuthState>;
 
-const inputClass =
-  "mt-1 w-full rounded-md border border-graphite bg-carbon px-3 py-2 outline-none focus:border-redline";
+const inputClass = "field mt-1.5";
 
 export function AuthShell({
   children,
@@ -20,18 +19,18 @@ export function AuthShell({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-16">
+    <div className="flex flex-1 items-center justify-center px-4 pt-[calc(4rem+env(safe-area-inset-top))] pb-16">
       <div className="w-full max-w-sm">
         <Link
           href="/"
-          className="mb-8 flex items-center justify-center gap-2 text-xl font-semibold"
+          className="mx-auto mb-8 flex min-h-11 w-fit items-center justify-center gap-2 text-2xl font-semibold"
         >
-          <Gauge className="h-6 w-6 text-redline" aria-hidden />
+          <Gauge className="h-7 w-7 text-redline" aria-hidden />
           <span>
             Rev<span className="text-redline">log</span>
           </span>
         </Link>
-        <div className="rounded-xl border border-graphite bg-panel p-6">{children}</div>
+        <div className="rounded-2xl border border-graphite bg-panel p-6 sm:p-8">{children}</div>
         {footer && <p className="mt-6 text-center text-sm text-steel">{footer}</p>}
         <p className="mt-4 text-center text-xs text-steel">
           <Link href="/privacy" className="hover:text-chalk">
@@ -50,7 +49,7 @@ export function AuthShell({
 }
 
 function Notice({ children }: { children: React.ReactNode }) {
-  return <p className="mt-4 rounded-md bg-done-bg px-3 py-2 text-sm text-done">{children}</p>;
+  return <p className="mt-4 rounded-lg bg-done-bg px-3.5 py-2.5 text-sm text-done">{children}</p>;
 }
 
 function ErrorText({ error }: { error?: string }) {
@@ -67,7 +66,7 @@ function SubmitButton({ pending, label }: { pending: boolean; label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md bg-redline-fill py-2.5 font-medium text-on-accent hover:bg-redline-fill-hover disabled:opacity-60"
+      className="btn btn-primary btn-lg w-full"
     >
       {pending ? "One sec…" : label}
     </button>
@@ -77,7 +76,7 @@ function SubmitButton({ pending, label }: { pending: boolean; label: string }) {
 function EmailField({ defaultValue }: { defaultValue?: string }) {
   return (
     <label className="block text-sm">
-      <span className="text-steel">Email</span>
+      <span className="field-label">Email</span>
       <input
         name="email"
         type="email"
@@ -94,9 +93,9 @@ function EmailField({ defaultValue }: { defaultValue?: string }) {
 export function UsernameField({ defaultValue }: { defaultValue?: string }) {
   return (
     <label className="block text-sm">
-      <span className="text-steel">Username</span>
-      <div className="mt-1 flex items-center rounded-md border border-graphite bg-carbon focus-within:border-redline">
-        <span className="pl-3 text-steel" aria-hidden>
+      <span className="field-label">Username</span>
+      <div className="field mt-1.5 flex items-center py-0 pl-0 focus-within:border-redline focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-redline)_30%,transparent)]">
+        <span className="pl-3.5 text-steel" aria-hidden>
           @
         </span>
         <input
@@ -110,7 +109,7 @@ export function UsernameField({ defaultValue }: { defaultValue?: string }) {
           spellCheck={false}
           placeholder="redline_rob"
           defaultValue={defaultValue}
-          className="w-full bg-transparent py-2 pr-3 pl-1 outline-none"
+          className="min-h-11 w-full bg-transparent pr-0 pl-1 outline-none"
         />
       </div>
       <span className="mt-1 block text-xs text-steel">
@@ -126,7 +125,7 @@ function NewPasswordField({ label = "Password" }: { label?: string }) {
   return (
     <div>
       <label className="block text-sm">
-        <span className="text-steel">{label}</span>
+        <span className="field-label">{label}</span>
         <input
           name="password"
           type="password"
@@ -183,15 +182,15 @@ export function LoginForm({
       footer={
         <>
           New to Revlog?{" "}
-          <Link href="/signup" className="text-chalk hover:text-redline">
+          <Link href="/signup" className="font-medium text-redline hover:text-redline-hover">
             Create an account
           </Link>
         </>
       }
     >
-      <h1 className="text-lg font-semibold">Log in to your garage</h1>
+      <h1 className="font-display text-2xl font-semibold">Log in to your garage</h1>
       {linkError && LINK_ERRORS[linkError] && (
-        <p className="mt-4 rounded-md bg-overdue-bg px-3 py-2 text-sm text-overdue">
+        <p className="mt-4 rounded-lg bg-overdue-bg px-3.5 py-2.5 text-sm text-overdue">
           {LINK_ERRORS[linkError]}
         </p>
       )}
@@ -200,8 +199,8 @@ export function LoginForm({
         <EmailField />
         <label className="block text-sm">
           <span className="flex items-baseline justify-between">
-            <span className="text-steel">Password</span>
-            <Link href="/forgot-password" className="text-xs text-steel hover:text-redline">
+            <span className="field-label">Password</span>
+            <Link href="/forgot-password" className="text-sm font-medium text-redline hover:text-redline-hover">
               Forgot password?
             </Link>
           </span>
@@ -227,13 +226,13 @@ export function SignupForm({ action }: { action: Action }) {
       footer={
         <>
           Already have an account?{" "}
-          <Link href="/login" className="text-chalk hover:text-redline">
+          <Link href="/login" className="font-medium text-redline hover:text-redline-hover">
             Log in
           </Link>
         </>
       }
     >
-      <h1 className="text-lg font-semibold">Create your garage</h1>
+      <h1 className="font-display text-2xl font-semibold">Create your garage</h1>
       {state?.message ? (
         <Notice>{state.message}</Notice>
       ) : (
@@ -250,11 +249,11 @@ export function SignupForm({ action }: { action: Action }) {
             />
             <span>
               I agree to the{" "}
-              <Link href="/terms" className="text-chalk hover:text-redline">
+              <Link href="/terms" className="font-medium text-redline hover:text-redline-hover">
                 Terms
               </Link>{" "}
               and{" "}
-              <Link href="/privacy" className="text-chalk hover:text-redline">
+              <Link href="/privacy" className="font-medium text-redline hover:text-redline-hover">
                 Privacy Policy
               </Link>
               , including no abusive or objectionable content.
@@ -275,13 +274,13 @@ export function ForgotPasswordForm({ action }: { action: Action }) {
       footer={
         <>
           Remembered it?{" "}
-          <Link href="/login" className="text-chalk hover:text-redline">
+          <Link href="/login" className="font-medium text-redline hover:text-redline-hover">
             Log in
           </Link>
         </>
       }
     >
-      <h1 className="text-lg font-semibold">Reset your password</h1>
+      <h1 className="font-display text-2xl font-semibold">Reset your password</h1>
       {state?.message ? (
         <Notice>{state.message}</Notice>
       ) : (
@@ -302,13 +301,13 @@ export function ResetPasswordForm({ action, email }: { action: Action; email: st
   const [state, formAction, pending] = useActionState(action, undefined);
   return (
     <AuthShell>
-      <h1 className="text-lg font-semibold">Set a new password</h1>
+      <h1 className="font-display text-2xl font-semibold">Set a new password</h1>
       {state?.message ? (
         <>
           <Notice>{state.message}</Notice>
           <Link
             href="/garage"
-            className="mt-4 block w-full rounded-md bg-redline-fill py-2.5 text-center font-medium text-on-accent hover:bg-redline-fill-hover"
+            className="btn btn-primary btn-lg mt-4 w-full"
           >
             Go to your garage
           </Link>
@@ -318,7 +317,7 @@ export function ResetPasswordForm({ action, email }: { action: Action; email: st
           <p className="text-sm text-steel">For {email}</p>
           <NewPasswordField label="New password" />
           <label className="block text-sm">
-            <span className="text-steel">Confirm new password</span>
+            <span className="field-label">Confirm new password</span>
             <input
               name="confirm"
               type="password"
@@ -340,7 +339,7 @@ export function ChooseUsernameForm({ action, next }: { action: Action; next?: st
   const [state, formAction, pending] = useActionState(action, undefined);
   return (
     <AuthShell>
-      <h1 className="text-lg font-semibold">Pick a username</h1>
+      <h1 className="font-display text-2xl font-semibold">Pick a username</h1>
       <p className="mt-2 text-sm text-steel">
         Revlog now has a community. Your username is how others see your posts.
       </p>

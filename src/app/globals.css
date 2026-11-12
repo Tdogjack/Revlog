@@ -44,6 +44,44 @@
   --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
   --font-display: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* Concentric corners: the bigger the surface, the rounder it is, so a button
+     inside a card sits inside its curve instead of fighting it. */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.5rem;
+
+  /* Tracking and leading change with size. Large type pulls in and sits tight;
+     small type opens up a hair so it stays legible. Never one value for all. */
+  --text-xs--letter-spacing: 0.01em;
+  --text-lg--letter-spacing: -0.005em;
+  --text-xl--letter-spacing: -0.01em;
+  --text-2xl--line-height: 1.2;
+  --text-2xl--letter-spacing: -0.015em;
+  --text-3xl--line-height: 1.15;
+  --text-3xl--letter-spacing: -0.02em;
+  --text-4xl--line-height: 1.1;
+  --text-4xl--letter-spacing: -0.025em;
+  --text-5xl--line-height: 1.05;
+  --text-5xl--letter-spacing: -0.03em;
+  --text-6xl--line-height: 1.02;
+  --text-6xl--letter-spacing: -0.035em;
+
+  /* Springs, sampled into CSS. "spring" is critically damped (no overshoot,
+     response 0.4s) and is the default for anything that moves. "spring-bounce"
+     (damping 0.8) is only for things the person threw or flicked. */
+  --ease-spring: linear(
+    0, 0.06, 0.186, 0.329, 0.466, 0.584, 0.682, 0.76, 0.821, 0.868, 0.903, 0.929, 0.949,
+    0.963, 0.973, 0.981, 0.986, 0.99, 0.993, 0.995, 0.997, 0.998, 1
+  );
+  --ease-spring-bounce: linear(
+    0, 0.079, 0.248, 0.436, 0.608, 0.747, 0.851, 0.922, 0.968, 0.995, 1.009, 1.014, 1.015,
+    1.013, 1.01, 1.008, 1.005, 1.003, 1.002, 1.001, 1
+  );
+  /* The iOS sheet curve, for surfaces that slide in. */
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* Palettes people can pick in Settings. Redline, in @theme above, is the base;
@@ -170,6 +208,11 @@
 body {
   background: var(--color-carbon);
   color: var(--color-chalk);
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+  font-optical-sizing: auto;
+  /* Every control gives its own press feedback, so the gray flash goes. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Anything you can click reads as clickable: semibold, unless a utility says
@@ -178,6 +221,15 @@ body {
   :where(a, button, select, summary, [role="tab"]):not(:has(p, div, img, h2, h3, ul, ol, table)) {
     font-weight: 600;
   }
+
+  /* Panels on a dark page catch a little light along their top edge, the way a
+     real surface does. Light palettes get depth from the page tone instead. */
+  :where(.bg-panel) {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+  }
+  :where([data-theme="clean-spec"]) :where(.bg-panel) {
+    box-shadow: 0 1px 2px rgb(16 24 40 / 0.05);
+  }
 }
 
 :focus-visible {
@@ -185,136 +237,200 @@ body {
   outline-offset: 2px;
 }
 
-/* Shared garage controls. One button family, one field style. */
+/* Shared controls. One button family, one field style. Feedback lands on
+   press, not release, and it is instant; anything that only appears on hover
+   is kept to pointers that can hover. */
 @layer components {
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.375rem;
-    min-height: 2.25rem;
-    padding: 0 0.875rem;
-    border-radius: 0.375rem;
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    border-radius: var(--radius-md);
     border: 1px solid var(--color-edge);
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--color-chalk);
     white-space: nowrap;
+    user-select: none;
+    touch-action: manipulation;
     transition:
-      border-color 120ms,
-      background-color 120ms;
+      border-color 150ms ease-out,
+      background-color 150ms ease-out,
+      transform 300ms var(--ease-spring);
   }
-  .btn:hover {
-    border-color: var(--color-steel);
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
+    transition-duration: 150ms, 150ms, 80ms;
   }
-  /* A deeper red than the brand accent so white labels pass 4.5:1. */
+  @media (hover: hover) {
+    .btn:hover {
+      border-color: var(--color-steel);
+    }
+  }
+  /* A deeper red than the brand accent so white labels pass 4.5:1. The faint
+     top highlight reads as light on a raised key. */
   .btn-primary {
     border-color: transparent;
     background: var(--color-redline-fill);
     color: var(--color-on-accent);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2);
   }
-  .btn-primary:hover {
-    border-color: transparent;
+  .btn-primary:active:not(:disabled) {
     background: var(--color-redline-fill-hover);
+  }
+  @media (hover: hover) {
+    .btn-primary:hover {
+      border-color: transparent;
+      background: var(--color-redline-fill-hover);
+    }
   }
   /* For actions that remove or block something. */
   .btn-danger {
     border-color: transparent;
     background: var(--color-overdue-solid);
     color: #fff;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.15);
   }
-  .btn-danger:hover {
-    border-color: transparent;
-    opacity: 0.9;
+  @media (hover: hover) {
+    .btn-danger:hover {
+      border-color: transparent;
+      opacity: 0.9;
+    }
   }
   .btn:disabled {
     opacity: 0.6;
     cursor: default;
   }
   .btn-lg {
-    min-height: 2.75rem;
+    min-height: 3rem;
+    padding: 0 1.25rem;
+    border-radius: var(--radius-lg);
     font-size: 1rem;
   }
 
-  /* Square icon button, 36px so it is a comfortable tap target. */
+  /* Round icon button, so it reads as a control rather than a box. */
   .icon-btn {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: 0.375rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
     color: var(--color-steel);
+    touch-action: manipulation;
     transition:
-      color 120ms,
-      background-color 120ms;
+      color 150ms ease-out,
+      background-color 150ms ease-out,
+      transform 300ms var(--ease-spring);
   }
-  .icon-btn:hover {
+  .icon-btn:active {
     background: var(--color-graphite);
     color: var(--color-chalk);
+    transform: scale(0.92);
+    transition-duration: 150ms, 150ms, 80ms;
   }
-  .icon-btn-danger:hover {
-    color: var(--color-overdue);
+  @media (hover: hover) {
+    .icon-btn:hover {
+      background: var(--color-graphite);
+      color: var(--color-chalk);
+    }
+    .icon-btn-danger:hover {
+      color: var(--color-overdue);
+    }
   }
 
-  /* An on/off switch. It is a checkbox underneath, so keyboards and screen readers work. */
+  /* Fingers need more room than a cursor: 44px targets on touch screens. */
+  @media (pointer: coarse) {
+    .btn {
+      min-height: 2.75rem;
+    }
+    .icon-btn {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+  }
+
+  /* An on/off switch in iOS proportions. It is a checkbox underneath, so
+     keyboards and screen readers work. The knob stretches while pressed and
+     settles on a spring. */
   .switch {
     appearance: none;
     position: relative;
     flex-shrink: 0;
-    width: 2.75rem;
-    height: 1.5rem;
+    width: 3rem;
+    height: 1.75rem;
     border-radius: 9999px;
-    border: 1px solid var(--color-field-edge);
-    background: var(--color-carbon);
+    background: var(--color-graphite);
+    box-shadow: inset 0 0 0 1px var(--color-edge);
     cursor: pointer;
     transition:
-      background-color 120ms,
-      border-color 120ms;
+      background-color 250ms ease-out,
+      box-shadow 250ms ease-out;
   }
   .switch::before {
     content: "";
     position: absolute;
-    top: 0.1875rem;
-    left: 0.1875rem;
-    width: 1rem;
-    height: 1rem;
+    top: 0.125rem;
+    left: 0.125rem;
+    width: 1.5rem;
+    height: 1.5rem;
     border-radius: 9999px;
-    background: var(--color-steel);
-    transition: transform 120ms;
+    background: #fff;
+    box-shadow:
+      0 2px 4px rgb(0 0 0 / 0.25),
+      0 0 0 0.5px rgb(0 0 0 / 0.08);
+    transform-origin: left center;
+    transition: transform 350ms var(--ease-spring);
+  }
+  /* The knob stretches toward where it's going while pressed. */
+  .switch:active::before {
+    transform: scaleX(1.25);
   }
   .switch:checked {
-    border-color: transparent;
     background: var(--color-redline-fill);
+    box-shadow: none;
   }
   .switch:checked::before {
-    background: var(--color-on-accent);
+    transform-origin: right center;
     transform: translateX(1.25rem);
+  }
+  .switch:checked:active::before {
+    transform: translateX(1.25rem) scaleX(1.25);
   }
 
   .field {
     display: block;
     width: 100%;
-    min-height: 2.5rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.375rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: var(--radius-md);
     border: 1px solid var(--color-field-edge);
     background: var(--color-carbon);
     color: var(--color-chalk);
     outline: none;
-    transition: border-color 120ms;
+    transition:
+      border-color 150ms ease-out,
+      box-shadow 200ms ease-out;
   }
   .field::placeholder {
     color: var(--color-placeholder);
   }
-  .field:hover {
-    border-color: var(--color-steel);
+  @media (hover: hover) {
+    .field:hover {
+      border-color: var(--color-steel);
+    }
   }
+  /* A soft ring around the focused field, like a lit edge, instead of a hard
+     double outline. */
   .field:focus,
   .field:focus-visible {
     border-color: var(--color-redline);
-    outline: 1px solid var(--color-redline);
-    outline-offset: 0;
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-redline) 30%, transparent);
   }
 
   .field-label {
@@ -338,22 +454,31 @@ body {
     justify-content: center;
     min-height: 2.75rem;
     padding: 0.375rem 0.5rem;
-    border-radius: 0.375rem;
+    border-radius: var(--radius-md);
     border: 1px solid var(--color-field-edge);
     font-size: 0.875rem;
     font-weight: 600;
     text-align: center;
     color: var(--color-label);
     cursor: pointer;
+    user-select: none;
     transition:
-      border-color 120ms,
-      background-color 120ms;
+      border-color 150ms ease-out,
+      background-color 150ms ease-out,
+      transform 300ms var(--ease-spring);
   }
-  .choice:hover {
-    border-color: var(--color-steel);
+  .choice:active {
+    transform: scale(0.97);
+    transition-duration: 150ms, 150ms, 80ms;
+  }
+  @media (hover: hover) {
+    .choice:hover {
+      border-color: var(--color-steel);
+    }
   }
   .choice:has(:checked) {
     border-color: var(--color-redline);
+    background: color-mix(in srgb, var(--color-redline) 12%, transparent);
     box-shadow: inset 0 0 0 1px var(--color-redline);
     color: var(--color-chalk);
   }
@@ -363,23 +488,188 @@ body {
   }
 
   /* Numerals for mileage and money: tabular so columns line up, semibold so
-     they're the first thing you read. */
+     they're the first thing you read. Tracking comes from the size. */
   .readout {
     font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-
-  /* Headings: tight tracking, the way a large sans should sit. */
-  .font-display {
-    letter-spacing: -0.02em;
   }
 
   .skeleton {
-    border-radius: 0.5rem;
+    border-radius: var(--radius-lg);
     background: var(--color-panel);
     animation: skeleton-pulse 1.6s ease-in-out infinite;
+  }
+
+  /* A translucent layer for chrome that floats over the page: the header and
+     the phone tab bar. Content scrolls underneath and shows through, blurred.
+     The hairline keeps the edge findable whatever is behind it, and anyone
+     who asked for less transparency, or a browser without blur, gets it solid. */
+  .chrome {
+    background: color-mix(in srgb, var(--color-carbon) 78%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .chrome {
+      background: var(--color-carbon);
+    }
+  }
+
+  /* A tab in the phone tab bar: icon over label, lit in the accent when it's
+     the page you're on. It dips on press like a key. */
+  .tab {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    min-height: 3.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-steel);
+    touch-action: manipulation;
+    transition:
+      color 150ms ease-out,
+      transform 300ms var(--ease-spring);
+  }
+  .tab:active {
+    transform: scale(0.9);
+    transition-duration: 150ms, 80ms;
+  }
+  .tab[aria-current="page"] {
+    color: var(--color-redline);
+  }
+
+  /* A link in the header nav. The current page sits on a quiet capsule. The
+     capsule is drawn smaller than the link, so the target stays 44px tall
+     without the highlight looking swollen. */
+  .nav-link {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-steel);
+    transition: color 150ms ease-out;
+  }
+  .nav-link::before {
+    content: "";
+    position: absolute;
+    inset: 0.25rem 0;
+    z-index: -1;
+    border-radius: 9999px;
+    background: transparent;
+    transition: background-color 150ms ease-out;
+  }
+  @media (hover: hover) {
+    .nav-link:hover {
+      color: var(--color-chalk);
+    }
+  }
+  .nav-link:active::before {
+    background: color-mix(in srgb, var(--color-graphite) 60%, transparent);
+  }
+  .nav-link[aria-current="page"] {
+    color: var(--color-chalk);
+  }
+  .nav-link[aria-current="page"]::before {
+    background: var(--color-graphite);
+  }
+
+  /* A segmented control: a few mutually exclusive options in one track, the
+     chosen one raised on a lighter thumb. Buttons inside carry aria-pressed. */
+  .segmented {
+    display: inline-flex;
+    gap: 0.125rem;
+    padding: 0.125rem;
+    border-radius: var(--radius-md);
+    background: var(--color-carbon);
+    box-shadow: inset 0 0 0 1px var(--color-graphite);
+  }
+  .segment {
+    min-width: 2.75rem;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    border-radius: calc(var(--radius-md) - 0.125rem);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-steel);
+    transition:
+      color 150ms ease-out,
+      background-color 200ms ease-out,
+      box-shadow 200ms ease-out;
+  }
+  @media (hover: hover) {
+    .segment:hover {
+      color: var(--color-chalk);
+    }
+  }
+  .segment[aria-pressed="true"] {
+    background: var(--color-graphite);
+    color: var(--color-chalk);
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.25),
+      inset 0 1px 0 rgb(255 255 255 / 0.05);
+  }
+  @media (pointer: coarse) {
+    .segment {
+      min-height: 2.75rem;
+    }
+  }
+
+  /* Up one level, in the accent, like a native back button. The chevron hangs
+     a little left so the label lines up with the page edge. */
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    max-width: 100%;
+    min-height: 2.75rem;
+    margin-left: -0.375rem;
+    padding-right: 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-redline);
+    transition: opacity 150ms ease-out;
+  }
+  .back-link:active {
+    opacity: 0.45;
+    transition-duration: 0ms;
+  }
+  @media (hover: hover) {
+    .back-link:hover {
+      color: var(--color-redline-hover);
+    }
+  }
+
+  /* Cards that open something sink a touch under the finger and spring back,
+     the same press as a button, just smaller because the card is bigger. */
+  .lift {
+    transition:
+      border-color 150ms ease-out,
+      transform 400ms var(--ease-spring);
+  }
+  .lift:active {
+    transform: scale(0.985);
+    transition-duration: 150ms, 100ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lift:active {
+      transform: none;
+    }
+  }
+
+  /* Rows that open something: they dim under the finger the moment it lands. */
+  .press {
+    transition: background-color 150ms ease-out;
+  }
+  .press:active {
+    background-color: color-mix(in srgb, var(--color-chalk) 6%, transparent);
+    transition-duration: 0ms;
   }
 }
 
@@ -389,9 +679,76 @@ body {
   }
 }
 
+/* Native dialogs materialize instead of popping: a centered dialog scales up
+   from just under full size, and a side sheet slides in from the right edge
+   and leaves the same way, so it always goes back where it came from. The
+   page behind dims and stays put. */
+dialog.modal {
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity 200ms ease-out,
+    transform 400ms var(--ease-spring),
+    overlay 400ms allow-discrete,
+    display 400ms allow-discrete;
+}
+dialog.modal[open] {
+  opacity: 1;
+  transform: none;
+}
+@starting-style {
+  dialog.modal[open] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+dialog.modal-sheet {
+  opacity: 1;
+  transform: translateX(100%);
+  transition:
+    transform 450ms var(--ease-sheet),
+    overlay 450ms allow-discrete,
+    display 450ms allow-discrete;
+}
+dialog.modal-sheet[open] {
+  transform: none;
+}
+@starting-style {
+  dialog.modal-sheet[open] {
+    transform: translateX(100%);
+  }
+}
+dialog.modal::backdrop {
+  background: rgb(0 0 0 / 0);
+  transition:
+    background-color 300ms ease-out,
+    overlay 300ms allow-discrete,
+    display 300ms allow-discrete;
+}
+dialog.modal[open]::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+@starting-style {
+  dialog.modal[open]::backdrop {
+    background: rgb(0 0 0 / 0);
+  }
+}
+
+/* Menus and popovers grow out of the control that opened them. Set the origin
+   with an origin-* utility on the element. */
+.pop-in {
+  animation: pop-in 300ms var(--ease-spring);
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
 /* Landing page feature explorer: the picked preview fades up into place. */
 .preview-in {
-  animation: preview-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: preview-in 400ms var(--ease-spring);
 }
 @keyframes preview-in {
   from {
@@ -421,14 +778,50 @@ body {
   }
 }
 
+/* Less motion means gentler motion, not none: slides and scales become short
+   cross-fades, and press feedback stays as a color change. */
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
     animation: none;
   }
+  .btn,
+  .icon-btn,
+  .choice,
+  .tab,
   .switch,
   .switch::before {
-    transition: none;
+    transition-property: color, background-color, border-color, box-shadow, opacity;
   }
+  .btn:active:not(:disabled),
+  .icon-btn:active,
+  .choice:active,
+  .tab:active {
+    transform: none;
+  }
+  .switch:active::before {
+    transform: none;
+  }
+  .switch:checked:active::before {
+    transform: translateX(1.25rem);
+  }
+  dialog.modal,
+  dialog.modal-sheet,
+  dialog.modal[open],
+  dialog.modal-sheet[open] {
+    transform: none;
+    transition:
+      opacity 200ms ease-out,
+      overlay 200ms allow-discrete,
+      display 200ms allow-discrete;
+  }
+  @starting-style {
+    dialog.modal[open],
+    dialog.modal-sheet[open] {
+      opacity: 0;
+      transform: none;
+    }
+  }
+  .pop-in,
   .preview-in {
     animation: preview-fade 150ms ease-out;
   }
@@ -439,6 +832,24 @@ body {
 @keyframes preview-fade {
   from {
     opacity: 0;
+  }
+}
+
+/* Less transparency: the floating chrome turns solid. More contrast: solid
+   too, with a defined edge. */
+@media (prefers-reduced-transparency: reduce) {
+  .chrome {
+    background: var(--color-carbon);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  .chrome {
+    background: var(--color-carbon);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-color: var(--color-edge);
   }
 }
 
@@ -462,4 +873,20 @@ body {
 }
 .legal a:hover {
   color: var(--color-redline);
+}
+
+/* A like lands with a small overshoot: the one place a bounce is earned,
+   because it answers a deliberate tap with something that feels physical. */
+.like-pop {
+  animation: like-pop 450ms var(--ease-spring-bounce);
+}
+@keyframes like-pop {
+  from {
+    transform: scale(0.6);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .like-pop {
+    animation: none;
+  }
 }

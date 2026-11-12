@@ -7,12 +7,11 @@ import { useEffect, useState } from "react";
 import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  Easing,
   type SharedValue,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
+  withSpring,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import {
@@ -24,10 +23,21 @@ import {
   Odometer,
   Screen,
   StatusPill,
+  usePressScale,
 } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { pressFeedback, tapFeedback } from "@/lib/haptics";
-import { colors, fonts, photoInk, photoInkMuted, radius, scrim, space } from "@/lib/theme";
+import {
+  colors,
+  fonts,
+  photoInk,
+  photoInkMuted,
+  radius,
+  scrim,
+  space,
+  springs,
+  tracking,
+} from "@/lib/theme";
 import { registerForPush } from "@/lib/push";
 import { useApi } from "@/lib/use-api";
 import { updateWidgets } from "@/lib/widgets";
@@ -38,52 +48,67 @@ function CarPlate({ car, onOpen }: { car: GarageCar; onOpen: () => void }) {
     car.urgency && (car.urgency.status === "overdue" || car.urgency.status === "due_soon")
       ? car.urgency
       : null;
+  const press = usePressScale(0.98);
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={car.nickname ?? car.name}
-      style={({ pressed }) => [styles.plate, pressed && styles.platePressed]}
-      onPress={onOpen}
-    >
-      {car.photoUrl ? (
-        <Image
-          // The small copy; the full photo loads on the car's page.
-          source={{
-            uri: car.photoThumbUrl ?? car.photoUrl,
-            cacheKey: car.photoThumbUrl ? `car-${car.id}-thumb` : `car-${car.id}`,
-          }}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          transition={150}
-          accessibilityIgnoresInvertColors
-        />
-      ) : (
-        <View style={styles.noPhoto}>
-          <Feather name="camera" size={28} color={colors.edge} />
-        </View>
-      )}
-      {car.photoUrl && <LinearGradient colors={scrim} style={styles.scrim} />}
-      <View style={styles.badges}>
-        {attention ? <StatusPill status={attention.status} count={attention.count} /> : <View />}
-        {car.favorite && <Feather name="star" size={20} color={colors.amber} />}
-      </View>
-      <View style={styles.plateText}>
-        <Text style={[styles.name, !!car.photoUrl && styles.onPhoto]} numberOfLines={1}>
-          {car.nickname ?? car.name}
-        </Text>
-        {car.nickname && (
-          <Text style={[styles.fullName, !!car.photoUrl && styles.onPhotoMuted]} numberOfLines={1}>
-            {car.name}
-          </Text>
+    <Animated.View style={[styles.fill, press.style]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={car.nickname ?? car.name}
+        style={styles.plate}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
+        onPress={onOpen}
+      >
+        {car.photoUrl ? (
+          <Image
+            // The small copy; the full photo loads on the car's page.
+            source={{
+              uri: car.photoThumbUrl ?? car.photoUrl,
+              cacheKey: car.photoThumbUrl ? `car-${car.id}-thumb` : `car-${car.id}`,
+            }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={150}
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <View style={styles.noPhoto}>
+            <Feather name="camera" size={28} color={colors.edge} />
+          </View>
         )}
-        <Odometer miles={car.currentMileage} onPhoto={!!car.photoUrl} />
-      </View>
-    </Pressable>
+        {car.photoUrl && <LinearGradient colors={scrim} style={styles.scrim} />}
+        <View style={styles.badges}>
+          {attention ? <StatusPill status={attention.status} count={attention.count} /> : <View />}
+          {car.favorite && <Feather name="star" size={20} color={colors.amber} />}
+        </View>
+        <View style={styles.plateText}>
+          <Text style={[styles.name, !!car.photoUrl && styles.onPhoto]} numberOfLines={1}>
+            {car.nickname ?? car.name}
+          </Text>
+          {car.nickname && (
+            <Text
+              style={[styles.fullName, !!car.photoUrl && styles.onPhotoMuted]}
+              numberOfLines={1}
+            >
+              {car.name}
+            </Text>
+          )}
+          <Odometer miles={car.currentMileage} onPhoto={!!car.photoUrl} />
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const GAP = space.lg;
-const SETTLE = { duration: 180, easing: Easing.out(Easing.cubic) };
+
+// Past the ends of its group a held car still follows the finger, but less and
+// less the further it goes, so the edge feels soft instead of a wall.
+function rubberband(overshoot: number, dimension: number) {
+  "worklet";
+  const c = 0.55;
+  return (overshoot * dimension * c) / (dimension + c * Math.abs(overshoot));
+}
 
 // The garage's cars. Tap one to open it; press and hold one, then drag it to
 // a new spot. Favorites stay above the rest. The new order is handed back on drop.
@@ -187,7 +212,7 @@ function SortablePlate({
     () => order.get()[id],
     (spot) => {
       if (spot === undefined || dragging.get()) return;
-      y.set(withTiming(spot * step, SETTLE));
+      y.set(withSpring(spot * step, springs.settle));
     },
     [step],
   );
@@ -207,7 +232,16 @@ function SortablePlate({
       scheduleOnRN(pressFeedback);
     })
     .onUpdate((event) => {
-      y.set(Math.min(Math.max(originY.get() + event.translationY, lo * step), hi * step));
+      const raw = originY.get() + event.translationY;
+      const top = lo * step;
+      const bottom = hi * step;
+      y.set(
+        raw < top
+          ? top - rubberband(top - raw, step)
+          : raw > bottom
+            ? bottom + rubberband(raw - bottom, step)
+            : raw,
+      );
       const target = Math.min(Math.max(Math.round(y.get() / step), lo), hi);
       const current = order.get();
       const here = current[id];
@@ -223,19 +257,29 @@ function SortablePlate({
       order.set(next);
       scheduleOnRN(tapFeedback);
     })
-    .onFinalize(() => {
+    .onFinalize((event) => {
       if (!dragging.get()) return;
       dragging.set(false);
       scheduleOnRN(settle);
       const spots = order.get();
-      y.set(withTiming(spots[id] * step, SETTLE));
+      // Carries on at the finger's speed into its spot, so there's no seam
+      // between the drag and the settle.
+      y.set(
+        withSpring(spots[id] * step, {
+          ...springs.settle,
+          velocity: event.velocityY,
+        }),
+      );
       if (spots[id] !== from.get()) scheduleOnRN(onDrop, spots);
     });
 
   const motion = useAnimatedStyle(() => ({
-    transform: [{ translateY: y.get() }, { scale: withTiming(dragging.get() ? 1.03 : 1, SETTLE) }],
+    transform: [
+      { translateY: y.get() },
+      { scale: withSpring(dragging.get() ? 1.03 : 1, springs.settle) },
+    ],
     zIndex: dragging.get() ? 10 : 0,
-    shadowOpacity: withTiming(dragging.get() ? 0.45 : 0, SETTLE),
+    shadowOpacity: withSpring(dragging.get() ? 0.45 : 0, springs.settle),
   }));
 
   const open = () => {
@@ -366,26 +410,37 @@ export default function Garage() {
 
 const styles = StyleSheet.create({
   headerActions: { flexDirection: "row", alignItems: "center" },
-  headerButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  headerButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   slot: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
+    borderCurve: "continuous",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowRadius: 18,
   },
+  fill: { flex: 1 },
   plate: {
     flex: 1,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
+    borderCurve: "continuous",
     overflow: "hidden",
     backgroundColor: colors.panel,
     justifyContent: "flex-end",
   },
-  platePressed: { transform: [{ scale: 0.98 }] },
-  noPhoto: { ...StyleSheet.absoluteFill, alignItems: "center", paddingTop: space.xxl * 2 },
+  noPhoto: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    paddingTop: space.xxl * 2,
+  },
   scrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "70%" },
   badges: {
     position: "absolute",
@@ -397,8 +452,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   plateText: { padding: space.lg, gap: space.xs },
-  name: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 24, lineHeight: 30 },
-  fullName: { color: colors.label, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  name: {
+    color: colors.chalk,
+    fontFamily: fonts.bold,
+    fontSize: 26,
+    lineHeight: 32,
+    letterSpacing: tracking(26),
+  },
+  fullName: {
+    color: colors.label,
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   onPhoto: { color: photoInk },
   onPhotoMuted: { color: photoInkMuted },
   hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },

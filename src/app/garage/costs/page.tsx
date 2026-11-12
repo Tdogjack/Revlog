@@ -14,7 +14,7 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 export default function CostsPage() {
   return (
     <>
-      <h1 className="font-display text-4xl leading-tight font-semibold">Costs</h1>
+      <h1 className="font-display text-4xl font-semibold">Costs</h1>
       <p className="mt-2 text-steel">
         What you&apos;ve spent on service and installed mods, from your records.
       </p>
@@ -35,7 +35,7 @@ async function CostDetails() {
 
   if (items.length === 0) {
     return (
-      <div className="mt-6 rounded-lg border border-dashed border-graphite px-6 py-12 text-center">
+      <div className="mt-6 rounded-2xl border border-dashed border-graphite px-6 py-12 text-center">
         <p className="font-display text-2xl font-semibold">Nothing to add up yet.</p>
         <p className="mt-1 text-sm text-steel">
           Costs appear here as you log service and installed mods with a price.
@@ -63,16 +63,16 @@ async function CostDetails() {
         />
       </div>
 
-      <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-        <h2 className="font-display text-2xl leading-tight font-semibold">Spending by month</h2>
+      <section className="rounded-2xl border border-graphite bg-panel p-5 sm:p-6">
+        <h2 className="font-display text-2xl font-semibold">Spending by month</h2>
         <div className="mt-4">
           <CostChart months={months} />
         </div>
       </section>
 
       <div className="grid items-start gap-6 md:grid-cols-2">
-        <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-          <h2 className="font-display text-2xl leading-tight font-semibold">By car</h2>
+        <section className="rounded-2xl border border-graphite bg-panel p-5 sm:p-6">
+          <h2 className="font-display text-2xl font-semibold">By car</h2>
           <table className="mt-4 w-full text-left text-sm tabular-nums">
             <thead className="text-xs text-steel">
               <tr>
@@ -99,8 +99,8 @@ async function CostDetails() {
           </table>
         </section>
 
-        <section className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-          <h2 className="font-display text-2xl leading-tight font-semibold">Biggest categories</h2>
+        <section className="rounded-2xl border border-graphite bg-panel p-5 sm:p-6">
+          <h2 className="font-display text-2xl font-semibold">Biggest categories</h2>
           <ul className="mt-4">
             {topCategories.map(({ label, amount }) => (
               <li
@@ -120,7 +120,7 @@ async function CostDetails() {
 
 function Stat({ label, value, small }: { label: string; value: string; small?: boolean }) {
   return (
-    <div className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+    <div className="rounded-2xl border border-graphite bg-panel p-5 sm:p-6">
       <p className="text-sm text-steel">{label}</p>
       <p className={`readout mt-2 leading-none ${small ? "text-2xl" : "text-4xl"}`}>{value}</p>
     </div>
