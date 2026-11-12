@@ -376,15 +376,21 @@ function Carousel({
           <span className="absolute top-2 right-2 rounded-full bg-black/55 px-2 py-0.5 text-xs text-white">
             {current + 1} / {photos.length}
           </span>
-          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
+          <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2">
             {photos.map((p, i) => (
+              // A small dot on a finger-sized target.
               <button
                 key={p.id}
                 type="button"
                 onClick={() => onIndex(i)}
                 aria-label={`Show photo ${i + 1}`}
-                className={`h-1.5 w-1.5 rounded-full ${i === current ? "bg-white" : "bg-white/45"}`}
-              />
+                aria-current={i === current ? "true" : undefined}
+                className="flex h-8 w-4 items-center justify-center"
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full transition-colors ${i === current ? "bg-white" : "bg-white/45"}`}
+                />
+              </button>
             ))}
           </div>
         </>

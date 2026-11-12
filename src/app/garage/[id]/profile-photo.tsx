@@ -5,7 +5,7 @@ import { PhotoViewer } from "@/components/photo-strip";
 import { VehiclePhoto } from "@/components/vehicle-photo";
 
 // Landscape, since car photos are shot that way.
-const size = "aspect-[4/3] w-full sm:w-80";
+const size = "aspect-[4/3] w-full rounded-2xl! sm:w-80";
 
 // The car's main photo, shown from its small copy; click it to see it full size.
 export function ProfilePhoto({
@@ -27,7 +27,7 @@ export function ProfilePhoto({
         onClick={() => setOpen(true)}
         aria-label="Enlarge photo"
         title="Enlarge photo"
-        className="block w-full rounded-lg transition-opacity hover:opacity-90 sm:w-auto"
+        className="lift block w-full rounded-2xl sm:w-auto"
       >
         <VehiclePhoto src={thumb ?? src} alt={alt} className={size} />
       </button>

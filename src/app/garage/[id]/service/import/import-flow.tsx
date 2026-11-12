@@ -32,7 +32,7 @@ import { saveServiceHistory, scanHistory, scanHistorySheet } from "./actions";
 import { DraftRow } from "./draft-row";
 import { SheetPanel } from "./sheet-panel";
 
-const panelClass = "rounded-lg border border-graphite bg-panel p-5 sm:p-6";
+const panelClass = "rounded-2xl border border-graphite bg-panel p-5 sm:p-6";
 const ACCEPT = `${PHOTO_ACCEPT},application/pdf,.pdf,${SHEET_ACCEPT}`;
 const MAX_PDF_BYTES = 3.5 * 1024 * 1024;
 
@@ -417,7 +417,7 @@ export function ImportFlow({
         }}
         className={`${panelClass} transition-colors ${dragging ? "border-redline" : ""}`}
       >
-        <h2 id="add-heading" className="font-display text-2xl leading-tight font-semibold">
+        <h2 id="add-heading" className="font-display text-2xl font-semibold">
           Add your records
         </h2>
         <p className="mt-1 text-sm text-steel">
@@ -516,7 +516,7 @@ export function ImportFlow({
 
       <section aria-labelledby="review-heading" className={panelClass}>
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <h2 id="review-heading" className="font-display text-2xl leading-tight font-semibold">
+          <h2 id="review-heading" className="font-display text-2xl font-semibold">
             Check the list
           </h2>
           {drafts.length > 0 && (

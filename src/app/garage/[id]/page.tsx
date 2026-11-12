@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Check, ChevronDown, Copy, Download, FileUp, Pencil, Plus, Share2 } from "lucide-react";
@@ -39,9 +40,7 @@ import { StatusBadge } from "@/components/status-badge";
 export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
   return (
     <>
-      <Link href="/garage" className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
-        ← Back to garage
-      </Link>
+      <BackLink href="/garage">Garage</BackLink>
       <Suspense fallback={<CarSkeleton />}>
         <VehicleDetails params={params} />
       </Suspense>
@@ -76,9 +75,9 @@ function formatMonth(isoDate: string) {
 const summaryClass = "cursor-pointer list-none [&::-webkit-details-marker]:hidden";
 
 // Sections are quiet L1 panels; rows inside are split by hairlines.
-const panelClass = "rounded-lg border border-graphite bg-panel p-5 sm:p-6";
+const panelClass = "rounded-2xl border border-graphite bg-panel p-4 sm:p-6";
 const sectionHeadClass = "flex flex-wrap items-start justify-between gap-3";
-const headingClass = "font-display text-2xl leading-tight font-semibold";
+const headingClass = "font-display text-2xl font-semibold";
 const dateClass = "shrink-0 pt-0.5 text-sm text-steel tabular-nums sm:w-24";
 
 // Records always open, since their edit and copy buttons live inside; without
@@ -250,7 +249,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-5 sm:pb-8">
           <div>
-            <h1 className="font-display text-4xl leading-tight font-semibold sm:text-5xl">
+            <h1 className="font-display text-4xl font-semibold sm:text-5xl">
               {car.nickname ?? vehicleName(car)}
             </h1>
             {car.nickname && <p className="mt-2 text-steel">{vehicleName(car)}</p>}

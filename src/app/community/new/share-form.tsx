@@ -215,7 +215,7 @@ export function ShareForm({
   }
 
   return (
-    <form action={submit} className="mt-6 space-y-5 rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+    <form action={submit} className="mt-6 space-y-5 rounded-2xl border border-graphite bg-panel p-5 sm:p-6">
       <input type="hidden" name="vehicleId" value={vehicleId} />
       {modId && <input type="hidden" name="modId" value={modId} />}
       {entries.map((e) =>

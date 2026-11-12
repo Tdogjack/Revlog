@@ -22,6 +22,8 @@ export function LikeButton({
   const [, startTransition] = useTransition();
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialCount);
+  // Only a tap pops the heart; a post that loads already liked sits still.
+  const [tapped, setTapped] = useState(false);
 
   function toggle() {
     if (!signedIn) {
@@ -29,6 +31,7 @@ export function LikeButton({
       return;
     }
     const next = !liked;
+    setTapped(true);
     setLiked(next);
     setLikeCount((n) => n + (next ? 1 : -1));
     startTransition(async () => {
@@ -49,9 +52,14 @@ export function LikeButton({
       onClick={toggle}
       aria-pressed={liked}
       aria-label={liked ? "Unlike" : "Like"}
-      className={`flex min-h-9 items-center gap-1.5 rounded-md px-2 text-sm hover:bg-graphite ${liked ? "text-redline-hover" : "text-steel hover:text-chalk"}`}
+      className={`flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm transition-colors hover:bg-graphite active:bg-graphite ${liked ? "text-redline-hover" : "text-steel hover:text-chalk"}`}
     >
-      <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} aria-hidden />
+      {/* Keyed on the state, so the heart pops on the frame the like lands. */}
+      <Heart
+        key={String(liked)}
+        className={`h-5 w-5 ${liked ? "fill-current" : ""} ${liked && tapped ? "like-pop" : ""}`}
+        aria-hidden
+      />
       {likeCount > 0 && <span>{likeCount}</span>}
     </button>
   );

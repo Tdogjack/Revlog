@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Search, Share2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Share2, X } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { isModerator } from "@/lib/moderation";
 import { FEED_PAGE, listPosts } from "@/lib/community";
@@ -20,7 +20,7 @@ export default function CommunityPage({ searchParams }: PageProps<"/community">)
     <div className="mx-auto max-w-2xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-4xl leading-tight font-semibold">Community</h1>
+          <h1 className="font-display text-4xl font-semibold">Community</h1>
           <p className="mt-2 text-steel">Builds and fresh mods from Revlog drivers.</p>
         </div>
         <Link href="/community/new" className="btn btn-primary">
@@ -98,7 +98,10 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
         </form>
         <SortMenu sort={sort} tag={tag} q={q} />
       </div>
-      <nav aria-label="Filter by tag" className="mt-3 flex flex-wrap gap-1.5">
+      <nav
+        aria-label="Filter by tag"
+        className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0"
+      >
         {[{ value: undefined, label: "All" }, ...POST_TAGS].map((t) => {
           const active = t.value === tag;
           return (
@@ -106,7 +109,7 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
               key={t.label}
               href={feedHref({ q, tag: t.value, sort })}
               aria-current={active ? "page" : undefined}
-              className={`inline-flex min-h-8 items-center rounded-md border px-3 text-sm ${active ? "border-chalk/60 bg-graphite text-chalk" : "border-transparent text-steel hover:bg-graphite/60 hover:text-chalk"}`}
+              className={`inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 text-sm transition-colors ${active ? "bg-chalk text-carbon" : "bg-panel text-label hover:bg-graphite hover:text-chalk active:bg-graphite"}`}
             >
               {t.label}
             </Link>
@@ -120,8 +123,8 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
     return (
       <>
         {controls}
-        <div className="mt-6 rounded-lg border border-dashed border-graphite px-6 py-12 text-center">
-          <p className="font-display text-2xl leading-tight font-semibold">
+        <div className="mt-6 rounded-2xl border border-dashed border-graphite px-6 py-12 text-center">
+          <p className="font-display text-2xl font-semibold">
             {page > 1
               ? "No more posts."
               : q
@@ -160,14 +163,16 @@ async function Feed({ searchParams }: Pick<PageProps<"/community">, "searchParam
         <nav aria-label="Pages" className="mt-8 flex justify-between text-sm">
           {page > 1 ? (
             <Link href={feedHref({ q, tag, sort, page: page - 1 })} className="btn">
-              ← Previous
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+              Previous
             </Link>
           ) : (
             <span />
           )}
           {feed.length === FEED_PAGE && (
             <Link href={feedHref({ q, tag, sort, page: page + 1 })} className="btn">
-              More posts →
+              More posts
+              <ChevronRight className="h-4 w-4" aria-hidden />
             </Link>
           )}
         </nav>

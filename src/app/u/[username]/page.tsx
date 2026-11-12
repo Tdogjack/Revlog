@@ -37,7 +37,7 @@ async function ProfilePosts({ params }: Pick<PageProps<"/u/[username]">, "params
   const blocked = user && !isOwn ? await isBlockedBy(user.id, profile.userId) : false;
   const heading = (
     <div className="flex items-center justify-between gap-3">
-      <h1 className="min-w-0 font-display text-4xl leading-tight font-semibold break-words">
+      <h1 className="min-w-0 font-display text-4xl font-semibold break-words">
         @{profile.username}
       </h1>
       {!isOwn && (!blocked || moderator) && (

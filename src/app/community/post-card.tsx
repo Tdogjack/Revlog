@@ -47,7 +47,7 @@ export function PostCard({
 }) {
   const modName = post.modPart ? [post.modBrand, post.modPart].filter(Boolean).join(" ") : null;
   return (
-    <article className="rounded-lg border border-graphite bg-panel p-5 sm:p-6">
+    <article className="rounded-2xl border border-graphite bg-panel p-5 sm:p-6">
       <div className="flex items-start gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-steel">
           <Link href={`/u/${post.username}`} className="font-semibold text-chalk hover:text-redline">
@@ -65,7 +65,7 @@ export function PostCard({
           )}
           <Link
             href={`/community?tag=${post.tag}`}
-            className="ml-auto rounded-md border border-graphite px-2 py-0.5 text-xs text-chalk hover:border-steel"
+            className="ml-auto rounded-full bg-graphite px-2.5 py-0.5 text-xs text-chalk hover:bg-edge"
           >
             {postTagLabel(post.tag)}
           </Link>
@@ -84,7 +84,7 @@ export function PostCard({
         )}
       </div>
 
-      <h2 className="mt-3 font-display text-2xl leading-tight font-semibold sm:text-3xl">
+      <h2 className="mt-3 font-display text-2xl font-semibold sm:text-3xl">
         {link ? (
           <Link href={`/community/${post.id}`} className="hover:text-redline">
             {post.title}
@@ -123,7 +123,7 @@ export function PostCard({
           />
         </div>
       )}
-      <div className="mt-3 -ml-2 flex items-center gap-1">
+      <div className="mt-3 -ml-3 flex items-center gap-1">
         <LikeButton
           postId={post.id}
           liked={post.liked}
@@ -132,10 +132,10 @@ export function PostCard({
         />
         <Link
           href={`/community/${post.id}#comments`}
-          className="flex min-h-9 items-center gap-1.5 rounded-md px-2 text-sm text-steel hover:bg-graphite hover:text-chalk"
+          className="flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm text-steel transition-colors hover:bg-graphite hover:text-chalk active:bg-graphite"
           aria-label={`${post.commentCount} ${post.commentCount === 1 ? "comment" : "comments"}`}
         >
-          <MessageCircle className="h-4 w-4" aria-hidden />
+          <MessageCircle className="h-5 w-5" aria-hidden />
           {post.commentCount > 0 && <span>{post.commentCount}</span>}
         </Link>
       </div>

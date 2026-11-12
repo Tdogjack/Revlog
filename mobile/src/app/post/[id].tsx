@@ -11,7 +11,7 @@ import { LikeButton, PostPhotoFooter } from "@/components/post-card";
 import { Body, Heading, LoadFailed, Loading, Screen } from "@/components/ui";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { formatDay } from "@/lib/format";
-import { colors, fonts, radius, space } from "@/lib/theme";
+import { colors, fonts, radius, space, tracking } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
 const money = (amount: string, currency: string | null) => {
@@ -306,7 +306,13 @@ const styles = StyleSheet.create({
   // Runs edge to edge, past the column padding.
   photos: { marginTop: -space.lg, marginHorizontal: -space.lg },
   head: { gap: space.xs },
-  title: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 24, lineHeight: 30 },
+  title: {
+    color: colors.chalk,
+    fontFamily: fonts.bold,
+    fontSize: 24,
+    lineHeight: 30,
+    letterSpacing: tracking(24),
+  },
   meta: { color: colors.steel, fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
   muted: { color: colors.steel },
   byline: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 36 },

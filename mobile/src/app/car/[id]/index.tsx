@@ -64,6 +64,7 @@ import {
   scrim,
   space,
   statusStyles,
+  tracking,
 } from "@/lib/theme";
 import { useApi } from "@/lib/use-api";
 
@@ -670,9 +671,15 @@ export default function Car() {
       if (!edited) return;
       setChangingPhoto(true);
       if (photo.id === `car-${car.id}`) {
-        await api(`/vehicles/${id}/photo`, { method: "POST", form: edited.form });
+        await api(`/vehicles/${id}/photo`, {
+          method: "POST",
+          form: edited.form,
+        });
       } else {
-        await api(`/vehicles/${id}/photos/${photo.id}`, { method: "PUT", form: edited.form });
+        await api(`/vehicles/${id}/photos/${photo.id}`, {
+          method: "PUT",
+          form: edited.form,
+        });
       }
       await reload();
     } catch (err) {
@@ -1072,8 +1079,9 @@ const styles = StyleSheet.create({
   name: {
     color: colors.chalk,
     fontFamily: fonts.bold,
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 32,
+    lineHeight: 38,
+    letterSpacing: tracking(32),
   },
   fullName: {
     color: colors.label,

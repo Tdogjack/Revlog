@@ -11,6 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import { translucentHeader } from "@/components/tab-stack";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { colors, fonts, lightTheme } from "@/lib/theme";
 
@@ -37,9 +38,9 @@ function Routes() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.asphalt },
+        ...translucentHeader,
         headerTintColor: colors.amber,
-        headerTitleStyle: { color: colors.chalk, fontFamily: fonts.medium },
+        headerTitleStyle: { color: colors.chalk, fontFamily: fonts.bold, fontSize: 17 },
         headerShadowVisible: false,
         headerBackButtonDisplayMode: "minimal",
         contentStyle: { backgroundColor: colors.asphalt },

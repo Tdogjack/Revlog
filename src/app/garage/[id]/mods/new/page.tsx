@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
@@ -30,10 +30,8 @@ async function NewMod({ params }: Pick<PageProps<"/garage/[id]/mods/new">, "para
 
   return (
     <>
-      <Link href={`/garage/${car.id}`} className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
-        ← Back to {car.nickname ?? vehicleName(car)}
-      </Link>
-      <h1 className="mt-4 font-display text-4xl leading-tight font-semibold">Add a mod</h1>
+      <BackLink href={`/garage/${car.id}`}>{car.nickname ?? vehicleName(car)}</BackLink>
+      <h1 className="mt-4 font-display text-4xl font-semibold">Add a mod</h1>
       <ModForm
         action={addMod.bind(null, car.id)}
         currentMileage={car.currentMileage}

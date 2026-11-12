@@ -1,4 +1,5 @@
 import { Image, type ImageContentFit } from "expo-image";
+import { springs } from "@/lib/theme";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -7,6 +8,7 @@ import Animated, {
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
@@ -14,7 +16,6 @@ import { scheduleOnRN } from "react-native-worklets";
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
 // Quick and settled: no overshoot, no bounce.
-const SETTLE = { duration: 160, easing: Easing.out(Easing.cubic) };
 // How far, or how fast, a downward swipe has to go to close the viewer.
 const CLOSE_DISTANCE = 120;
 const CLOSE_VELOCITY = 900;
@@ -108,9 +109,9 @@ export function ZoomableImage({
   const reset = () => {
     "worklet";
     lock(false);
-    scale.set(withTiming(1, SETTLE));
-    x.set(withTiming(0, SETTLE));
-    y.set(withTiming(0, SETTLE));
+    scale.set(withSpring(1, springs.settle));
+    x.set(withSpring(0, springs.settle));
+    y.set(withSpring(0, springs.settle));
     reportZoom(false);
   };
 
@@ -158,8 +159,8 @@ export function ZoomableImage({
         reset();
         return;
       }
-      x.set(withTiming(clamp(x.get(), limitX(s)), SETTLE));
-      y.set(withTiming(clamp(y.get(), limitY(s)), SETTLE));
+      x.set(withSpring(clamp(x.get(), limitX(s)), springs.settle));
+      y.set(withSpring(clamp(y.get(), limitY(s)), springs.settle));
     })
     .onFinalize(() => {
       // Two fingers down but no real pinch: let the pager scroll again.
@@ -227,7 +228,7 @@ export function ZoomableImage({
           }),
         );
       } else {
-        drag.set(withTiming(0, SETTLE));
+        drag.set(withSpring(0, { ...springs.settle, velocity: event.velocityY }));
       }
     });
 
@@ -242,9 +243,9 @@ export function ZoomableImage({
       const fx = event.x - width / 2;
       const fy = event.y - height / 2;
       const grow = DOUBLE_TAP_SCALE - 1;
-      scale.set(withTiming(DOUBLE_TAP_SCALE, SETTLE));
-      x.set(withTiming(clamp(-fx * grow, limitX(DOUBLE_TAP_SCALE)), SETTLE));
-      y.set(withTiming(clamp(-fy * grow, limitY(DOUBLE_TAP_SCALE)), SETTLE));
+      scale.set(withSpring(DOUBLE_TAP_SCALE, springs.settle));
+      x.set(withSpring(clamp(-fx * grow, limitX(DOUBLE_TAP_SCALE)), springs.settle));
+      y.set(withSpring(clamp(-fy * grow, limitY(DOUBLE_TAP_SCALE)), springs.settle));
       lock(true);
       reportZoom(true);
     });

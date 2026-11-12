@@ -36,8 +36,8 @@ export function Comments({
   moderator: boolean;
 }) {
   return (
-    <section id="comments" className="scroll-mt-20 rounded-lg border border-graphite bg-panel p-5 sm:p-6">
-      <h2 className="flex items-baseline gap-2 font-display text-2xl leading-tight font-semibold">
+    <section id="comments" className="scroll-mt-20 rounded-2xl border border-graphite bg-panel p-5 sm:p-6">
+      <h2 className="flex items-baseline gap-2 font-display text-2xl font-semibold">
         Comments{comments.length > 0 && <span className="text-steel">{comments.length}</span>}
       </h2>
 

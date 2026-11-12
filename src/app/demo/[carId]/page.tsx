@@ -1,13 +1,11 @@
-import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { Suspense } from "react";
 import { CarSkeleton, DemoCarView } from "./car-view";
 
 export default function DemoCarPage() {
   return (
     <>
-      <Link href="/demo" className="inline-flex min-h-9 items-center text-sm text-steel hover:text-chalk">
-        ← Back to garage
-      </Link>
+      <BackLink href="/demo">Garage</BackLink>
       <Suspense fallback={<CarSkeleton />}>
         <DemoCarView />
       </Suspense>

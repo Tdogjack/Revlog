@@ -44,16 +44,16 @@ export function DemoGarageList() {
             <li key={car.id}>
               <Link
                 href={`/demo/${car.id}`}
-                className="group flex gap-4 rounded-lg border border-graphite bg-panel p-3 transition-colors hover:border-steel sm:gap-6"
+                className="lift group flex gap-4 rounded-2xl border border-graphite bg-panel p-3 hover:border-steel sm:gap-6"
               >
                 <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6 lg:flex-none">
                   <VehiclePhoto
                     src={car.photo.src}
                     alt={demoCarName(car)}
-                    className="aspect-[4/3] w-28 shrink-0 rounded-md sm:w-56"
+                    className="aspect-[4/3] w-28 shrink-0 rounded-[0.75rem] sm:w-56"
                   />
                   <div className="flex min-w-0 flex-1 flex-col justify-center py-1 lg:w-56 lg:flex-none">
-                    <p className="line-clamp-2 font-display text-2xl leading-tight font-semibold sm:text-3xl">
+                    <p className="line-clamp-2 font-display text-2xl font-semibold sm:text-3xl">
                       {car.nickname}
                     </p>
                     <p className="mt-0.5 truncate text-sm text-steel">{demoCarName(car)}</p>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { SiteFooter } from "@/components/site-footer";
-import { DemoBanner, DemoHeader } from "./demo-chrome";
+import { DemoBanner, DemoHeader, DemoTabBar } from "./demo-chrome";
 import { DemoProvider } from "./demo-store";
 
 export const metadata: Metadata = {
@@ -14,8 +14,9 @@ export default function DemoLayout({ children }: LayoutProps<"/demo">) {
       <div className="flex flex-1 flex-col">
         <DemoHeader />
         <DemoBanner />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">{children}</main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 md:py-10">{children}</main>
         <SiteFooter />
+        <DemoTabBar />
       </div>
     </DemoProvider>
   );

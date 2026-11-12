@@ -34,7 +34,7 @@ export function ConfirmButton({
           returnRef={opener}
           onClose={() => setOpen(false)}
         >
-          <h2 id={titleId} className="font-display text-2xl leading-tight font-semibold break-words">
+          <h2 id={titleId} className="font-display text-2xl font-semibold break-words">
             {title}
           </h2>
           <p className="mt-2 text-sm text-steel">{body}</p>

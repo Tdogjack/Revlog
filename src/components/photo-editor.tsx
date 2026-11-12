@@ -339,7 +339,7 @@ function Editor({
         e.preventDefault();
         onFinish(null);
       }}
-      className="m-auto w-[min(100vw-1rem,56rem)] max-w-none rounded-lg border border-graphite bg-panel p-0 text-chalk backdrop:bg-black/80"
+      className="m-auto w-[min(100vw-1rem,56rem)] max-w-none rounded-2xl border border-graphite bg-panel p-0 text-chalk backdrop:bg-black/80"
     >
       <div className="flex max-h-[calc(100dvh-1rem)] flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-graphite px-4 py-3">

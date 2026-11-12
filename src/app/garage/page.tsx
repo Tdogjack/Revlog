@@ -23,7 +23,7 @@ export default function GaragePage() {
   return (
     <>
       <div className="flex items-end justify-between gap-4">
-        <h1 className="font-display text-4xl leading-tight font-semibold">Your garage</h1>
+        <h1 className="font-display text-4xl font-semibold">Your garage</h1>
         <Link href="/garage/new" className="btn btn-primary">
           <Plus className="h-4 w-4" aria-hidden />
           Add a car
@@ -111,7 +111,7 @@ async function VehicleList() {
 
   if (cars.length === 0) {
     return (
-      <div className="mt-8 rounded-lg border border-dashed border-graphite px-6 py-12 text-center">
+      <div className="mt-8 rounded-2xl border border-dashed border-graphite px-6 py-12 text-center">
         <Car className="mx-auto h-8 w-8 text-steel" aria-hidden />
         <h2 className="mt-4 font-display text-2xl font-semibold">Add your first car</h2>
         <p className="mt-1 text-sm text-steel">Start a timeline of every service and mod for it.</p>
@@ -132,16 +132,16 @@ async function VehicleList() {
         card: (
           <Link
             href={`/garage/${car.id}`}
-            className="group flex gap-4 rounded-lg border border-graphite bg-panel p-3 pr-14 transition-colors hover:border-steel sm:gap-6 sm:pr-16"
+            className="lift group flex gap-4 rounded-2xl border border-graphite bg-panel p-3 pr-14 hover:border-steel sm:gap-6 sm:pr-16"
           >
             <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6 lg:flex-none">
               <VehiclePhoto
                 src={car.photoPath ? photos.get(car.photoPath) : null}
                 alt={vehicleName(car)}
-                className="aspect-[4/3] w-28 shrink-0 rounded-md sm:w-56"
+                className="aspect-[4/3] w-28 shrink-0 rounded-[0.75rem] sm:w-56"
               />
               <div className="flex min-w-0 flex-1 flex-col justify-center py-1 lg:w-56 lg:flex-none">
-                <p className="line-clamp-2 font-display text-2xl leading-tight font-semibold sm:text-3xl">
+                <p className="line-clamp-2 font-display text-2xl font-semibold sm:text-3xl">
                   {car.nickname ?? vehicleName(car)}
                 </p>
                 {car.nickname && (

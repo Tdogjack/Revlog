@@ -89,7 +89,7 @@ export function ContentMenu({
   }
 
   const itemClass =
-    "flex min-h-11 w-full items-center gap-2 px-4 text-left text-sm text-chalk hover:bg-carbon focus-visible:bg-carbon focus-visible:outline-none";
+    "flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-chalk hover:bg-graphite active:bg-graphite focus-visible:bg-graphite focus-visible:outline-none";
   const login = `/login?next=${encodeURIComponent(loginNext)}`;
   const reportLabel = `Report ${NOUN[kind]}`;
   const blockLabel = `Block @${username}`;
@@ -114,7 +114,7 @@ export function ContentMenu({
           role="menu"
           aria-label={`Options for @${username}'s ${NOUN[kind]}`}
           onKeyDown={moveFocus}
-          className="absolute top-full right-0 z-20 mt-1 w-64 overflow-hidden rounded-lg border border-edge bg-panel py-1 shadow-xl shadow-black/40"
+          className="pop-in absolute top-full right-0 z-20 mt-1 w-64 origin-top-right overflow-hidden rounded-xl border border-edge bg-panel p-1 shadow-2xl shadow-black/50"
         >
           {signedIn ? (
             <>
@@ -261,7 +261,7 @@ function ReportSheet({
     >
       {state?.sent ? (
         <div role="status">
-          <h2 id={titleId} className="font-display text-2xl leading-tight font-semibold">
+          <h2 id={titleId} className="font-display text-2xl font-semibold">
             Report sent
           </h2>
           <p className="mt-2 text-sm text-steel">
@@ -281,7 +281,7 @@ function ReportSheet({
             ref={titleRef}
             id={titleId}
             tabIndex={-1}
-            className="font-display text-2xl leading-tight font-semibold break-words focus:outline-none"
+            className="font-display text-2xl font-semibold break-words focus:outline-none"
           >
             Report @{username}&apos;s {noun}
           </h2>
@@ -365,7 +365,7 @@ function ConfirmDialog({
 
   return (
     <Modal labelledBy={titleId} focusRef={cancelRef} returnRef={returnRef} onClose={onCancel}>
-      <h2 id={titleId} className="font-display text-2xl leading-tight font-semibold break-words">
+      <h2 id={titleId} className="font-display text-2xl font-semibold break-words">
         {title}
       </h2>
       <p className="mt-2 text-sm text-steel">{body}</p>

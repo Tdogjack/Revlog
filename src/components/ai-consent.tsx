@@ -74,7 +74,7 @@ export function AiConsentDialog({
         ref={titleRef}
         id={titleId}
         tabIndex={-1}
-        className="font-display text-2xl leading-tight font-semibold focus:outline-none"
+        className="font-display text-2xl font-semibold focus:outline-none"
       >
         Send this to Anthropic&apos;s AI?
       </h2>

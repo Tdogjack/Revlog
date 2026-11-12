@@ -2,21 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Gauge, RotateCcw, X } from "lucide-react";
+import { RotateCcw, X } from "lucide-react";
+import { Brand, DesktopNav, TabBar, TopBar, type NavItem } from "@/components/site-chrome";
 import { useDemo } from "./demo-store";
 
-// Quick links to each demo car, like the signed-in header.
+const DEMO_NAV: NavItem[] = [
+  { href: "/demo", label: "Garage", icon: "garage" },
+  { href: "/community", label: "Community", icon: "community" },
+];
+
+// Quick links to each demo car, like the signed-in header. Wide screens only.
 export function DemoCarLinks() {
   const demo = useDemo();
   if (!demo) return null;
   return (
-    <div className="flex basis-full items-center gap-x-4 overflow-x-auto text-sm md:basis-auto md:border-l md:border-graphite md:pl-6">
+    <div className="hidden min-w-0 items-center gap-1 overflow-x-auto border-l border-graphite pl-3 lg:flex">
       {demo.cars.map((car) => (
-        <Link
-          key={car.id}
-          href={`/demo/${car.id}`}
-          className="inline-flex min-h-9 max-w-48 shrink-0 items-center text-steel hover:text-chalk"
-        >
+        <Link key={car.id} href={`/demo/${car.id}`} className="nav-link max-w-44 shrink-0">
           <span className="truncate">{car.nickname}</span>
         </Link>
       ))}
@@ -26,36 +28,26 @@ export function DemoCarLinks() {
 
 export function DemoHeader() {
   return (
-    <header className="border-b border-graphite">
-      <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-1">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
-            <Gauge className="h-5 w-5 text-redline" aria-hidden />
-            <span>
-              Rev<span className="text-redline">log</span>
-            </span>
-          </Link>
-          <div className="flex items-center gap-x-4 text-sm">
-            <Link href="/demo" className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
-              Garage
-            </Link>
-            <Link href="/community" className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
-              Community
-            </Link>
-          </div>
-          <DemoCarLinks />
-        </div>
-        <div className="flex items-center gap-x-4 text-sm">
-          <Link href="/login" className="inline-flex min-h-9 items-center text-steel hover:text-chalk">
-            Log in
-          </Link>
-          <Link href="/signup" className="btn btn-primary">
-            Sign up
-          </Link>
-        </div>
-      </nav>
-    </header>
+    <TopBar>
+      <div className="flex min-w-0 items-center gap-x-4">
+        <Brand />
+        <DesktopNav items={DEMO_NAV} />
+        <DemoCarLinks />
+      </div>
+      <div className="flex shrink-0 items-center gap-x-1">
+        <Link href="/login" className="nav-link">
+          Log in
+        </Link>
+        <Link href="/signup" className="btn btn-primary">
+          Sign up
+        </Link>
+      </div>
+    </TopBar>
   );
+}
+
+export function DemoTabBar() {
+  return <TabBar items={DEMO_NAV} />;
 }
 
 // Says this is a sample garage and how long changes last.
@@ -63,10 +55,11 @@ export function DemoBanner() {
   const demo = useDemo();
   return (
     <div className="border-b border-graphite bg-panel">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-2 text-sm sm:px-6">
-        <p className="py-1.5 text-steel">
-          <span className="font-medium text-chalk">Demo garage.</span> Update mileage, mark
-          services done, and change mods. Nothing is saved, and a refresh starts over.
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-2.5 text-sm sm:px-6">
+        <p className="py-1 text-pretty text-steel">
+          <span className="font-medium text-chalk">Demo garage.</span> Change anything you
+          like<span className="hidden sm:inline">: update mileage, mark services done, edit mods</span>.
+          Nothing is saved, and a refresh starts over.
         </p>
         <div className="flex items-center gap-2">
           {demo?.edited && (
@@ -75,7 +68,7 @@ export function DemoBanner() {
               Reset demo
             </button>
           )}
-          <Link href="/signup" className="btn">
+          <Link href="/signup" className="btn hidden sm:inline-flex">
             Start your own garage
           </Link>
         </div>
@@ -137,7 +130,7 @@ export function AccountOnly({
         <div
           role="dialog"
           aria-label="Needs an account"
-          className={`absolute top-full z-20 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-edge bg-panel p-4 text-left shadow-lg shadow-black/40 ${align === "right" ? "right-0" : "left-0"}`}
+          className={`pop-in absolute top-full z-20 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-edge bg-panel p-4 text-left shadow-2xl shadow-black/50 ${align === "right" ? "right-0 origin-top-right" : "left-0 origin-top-left"}`}
         >
           <div className="flex items-start gap-2">
             <p className="flex-1 text-sm leading-relaxed">{message}</p>

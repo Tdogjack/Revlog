@@ -36,7 +36,7 @@ export function RecordStats({
 // Each row is its own card with a colored edge for its kind: red for service,
 // blue for mods, and the status color for reminders.
 export const cardClass =
-  "rounded-lg border border-graphite border-l-[3px] bg-carbon/50 px-4 py-3.5 transition-colors hover:bg-graphite/30";
+  "rounded-xl border border-graphite border-l-[3px] bg-carbon/50 px-4 py-3.5 transition-colors hover:bg-graphite/30";
 
 export const reminderEdge = {
   overdue: "border-l-overdue",
