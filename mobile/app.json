@@ -48,7 +48,40 @@
         }
       ],
       "expo-sharing",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "NextService",
+              "displayName": "Next service",
+              "description": "The most urgent service across your garage.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryRectangular",
+                  "accessoryInline"
+                ],
+                "initialLayout": "./src/widgets/NextService.tsx"
+              }
+            },
+            {
+              "name": "Mileage",
+              "displayName": "Update mileage",
+              "description": "Your odometer at a glance, one tap to log new miles.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium"
+                ],
+                "initialLayout": "./src/widgets/Mileage.tsx"
+              }
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "reactCompiler": true

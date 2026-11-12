@@ -1,5 +1,10 @@
 import "server-only";
-import type { CarDetail, CarPart, GarageCar, ServiceType } from "@/lib/api-types";
+import type {
+  CarDetail,
+  CarPart,
+  GarageCar,
+  ServiceType,
+} from "@/lib/api-types";
 import { carTimeline } from "@/lib/car-timeline";
 import { getBuildPostId } from "@/lib/community";
 import { listCostItems, summarizeCosts, type CostSummary } from "@/lib/costs";
@@ -17,7 +22,12 @@ import { categoryLabel, SERVICE_CATEGORIES } from "@/lib/service-categories";
 import { suggestedIntervals } from "@/lib/service-plan";
 import { listServiceDates, listServiceRecords } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
-import { getVehicle, listMileageReadings, listVehicles, vehicleName } from "@/lib/vehicles";
+import {
+  getVehicle,
+  listMileageReadings,
+  listVehicles,
+  vehicleName,
+} from "@/lib/vehicles";
 
 const partView = (p: PartWithHistory): CarPart => ({
   id: p.id,
@@ -41,24 +51,35 @@ export async function garageView(userId: string): Promise<GarageCar[]> {
     listServiceDates(userId),
     getEmailSettings(userId),
   ]);
-  return cars.map((car) => ({
-    id: car.id,
-    name: vehicleName(car),
-    nickname: car.nickname,
-    currentMileage: car.currentMileage,
-    favorite: car.favorite,
-    photoUrl: (car.photoPath && photos.get(car.photoPath)) || null,
-    photoThumbUrl:
-      (car.photoPath && (thumbs.get(car.photoPath) ?? photos.get(car.photoPath))) || null,
-    urgency: carUrgency(
-      rankReminders(
-        reminders.filter((r) => r.vehicleId === car.id),
-        car,
-        services,
-        { dueSoonPercent: settings.reminderPercent },
-      ),
-    ),
-  }));
+  return cars.map((car) => {
+    const ranked = rankReminders(
+      reminders.filter((r) => r.vehicleId === car.id),
+      car,
+      services,
+      { dueSoonPercent: settings.reminderPercent },
+    );
+    const [next] = ranked;
+    return {
+      id: car.id,
+      name: vehicleName(car),
+      nickname: car.nickname,
+      currentMileage: car.currentMileage,
+      favorite: car.favorite,
+      photoUrl: (car.photoPath && photos.get(car.photoPath)) || null,
+      photoThumbUrl:
+        (car.photoPath &&
+          (thumbs.get(car.photoPath) ?? photos.get(car.photoPath))) ||
+        null,
+      urgency: carUrgency(ranked),
+      nextReminder: next
+        ? {
+            task: next.reminder.task,
+            status: next.result.status,
+            due: describeDue(next.result),
+          }
+        : null,
+    };
+  });
 }
 
 export async function costsView(userId: string): Promise<CostSummary> {
@@ -75,7 +96,10 @@ export async function costsView(userId: string): Promise<CostSummary> {
   );
 }
 
-export async function carView(userId: string, vehicleId: string): Promise<CarDetail | null> {
+export async function carView(
+  userId: string,
+  vehicleId: string,
+): Promise<CarDetail | null> {
   const car = await getVehicle(userId, vehicleId);
   if (!car) return null;
 

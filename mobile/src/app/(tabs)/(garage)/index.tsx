@@ -30,6 +30,7 @@ import { pressFeedback, tapFeedback } from "@/lib/haptics";
 import { colors, fonts, photoInk, photoInkMuted, radius, scrim, space } from "@/lib/theme";
 import { registerForPush } from "@/lib/push";
 import { useApi } from "@/lib/use-api";
+import { updateWidgets } from "@/lib/widgets";
 
 function CarPlate({ car, onOpen }: { car: GarageCar; onOpen: () => void }) {
   // Only work that's due earns a badge; "not logged" waits on the car page.
@@ -279,6 +280,9 @@ export default function Garage() {
     askedForPush = true;
     registerForPush({ ask: true }).catch(() => undefined);
   }, [hasCars]);
+  useEffect(() => {
+    if (data) updateWidgets(data);
+  }, [data]);
   // The dragged order, shown right away while it saves.
   const [order, setOrder] = useState<string[] | null>(null);
 
