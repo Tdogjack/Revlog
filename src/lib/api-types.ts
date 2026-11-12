@@ -24,6 +24,8 @@ export type GarageCar = {
   // The small copy, for the garage list. Older servers don't send it.
   photoThumbUrl?: string | null;
   urgency: { status: ReminderStatus; count: number } | null;
+  // The most urgent reminder, for the home screen widget. Older servers don't send it.
+  nextReminder?: { task: string; status: ReminderStatus; due: string } | null;
 };
 
 export type CarReminder = {

@@ -3,6 +3,7 @@ import { createContext, use, useEffect, useState, type ReactNode } from "react";
 import { api, setSignedOutHandler } from "@/lib/api";
 import { unregisterPush } from "@/lib/push";
 import { clearTokens, loadTokens, saveTokens } from "@/lib/session";
+import { clearWidgets } from "@/lib/widgets";
 
 type Status = "loading" | "signedIn" | "signedOut";
 
@@ -18,7 +19,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>("loading");
 
   useEffect(() => {
-    setSignedOutHandler(() => setStatus("signedOut"));
+    setSignedOutHandler(() => {
+      clearWidgets();
+      setStatus("signedOut");
+    });
     loadTokens()
       .then((tokens) => setStatus(tokens ? "signedIn" : "signedOut"))
       .catch(() => setStatus("signedOut"));
@@ -29,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("signedIn");
   };
   const forget = async () => {
+    clearWidgets();
     await clearTokens();
     setStatus("signedOut");
   };
