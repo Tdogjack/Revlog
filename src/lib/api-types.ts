@@ -229,7 +229,11 @@ export type Costs = {
   topCategories: { label: string; amount: number }[];
 };
 
-export type EmailSettings = { reminderEmails: boolean; reminderPercent: number | null };
+export type EmailSettings = {
+  reminderEmails: boolean;
+  reminderPercent: number | null;
+  pushReminders: boolean;
+};
 
 export type ServiceType = { value: string; label: string };
 

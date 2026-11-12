@@ -10,6 +10,7 @@ export async function getEmailSettings(userId: string) {
   return {
     reminderEmails: row?.reminderEmails ?? true,
     reminderPercent: row?.reminderPercent ?? null,
+    pushReminders: row?.pushReminders ?? true,
   };
 }
 
@@ -30,6 +31,16 @@ export async function setReminderEmails(userId: string, enabled: boolean) {
     .onConflictDoUpdate({
       target: emailSettings.userId,
       set: { reminderEmails: enabled, updatedAt: new Date() },
+    });
+}
+
+export async function setPushReminders(userId: string, enabled: boolean) {
+  await db
+    .insert(emailSettings)
+    .values({ userId, pushReminders: enabled })
+    .onConflictDoUpdate({
+      target: emailSettings.userId,
+      set: { pushReminders: enabled, updatedAt: new Date() },
     });
 }
 

@@ -6,11 +6,12 @@ import {
   emailSettings,
   mileageReadings,
   mods,
+  pushTokens,
   reminders,
   serviceRecords,
   vehicles,
 } from "@/db/schema";
-import { sendEmail } from "@/lib/email";
+import { emailConfigured, sendEmail } from "@/lib/email";
 import { unsubscribeToken } from "@/lib/email-settings";
 import { reminderEmail, type ReminderEmailCar } from "@/lib/email-templates";
 import {
@@ -27,6 +28,7 @@ import {
   withCarAgeStart,
   withLastService,
 } from "@/lib/reminders";
+import { pushTokensFor, sendPush, type PushMessage } from "@/lib/push";
 import { siteUrl } from "@/lib/site";
 import { vehicleName } from "@/lib/vehicles";
 
@@ -41,7 +43,9 @@ const LIKELY_DUE_DAYS = 14;
 
 type Candidate = {
   userId: string;
-  email: string;
+  // Null when the owner gets push only (no confirmed email, or emails off).
+  email: string | null;
+  wantsPush: boolean;
   reminderId: string;
   task: string;
   serviceCategory: string | null;
@@ -65,14 +69,19 @@ type Candidate = {
   currentMileage: number;
 };
 
-// Reminders whose owners have a confirmed email, haven't turned reminder
-// emails off, and haven't been emailed about this reminder recently.
+// Reminders whose owners can be reached (a confirmed email with reminder
+// emails on, or a phone with push reminders on) and haven't been notified
+// about this reminder recently.
 async function candidateReminders(): Promise<Candidate[]> {
   const cutoff = new Date(Date.now() - RENOTIFY_DAYS * 24 * 60 * 60 * 1000);
+  const wantsEmail = sql<boolean>`(${authUsers.email} is not null and ${authUsers.emailConfirmedAt} is not null and coalesce(${emailSettings.reminderEmails}, true))`;
+  const wantsPush = sql<boolean>`(coalesce(${emailSettings.pushReminders}, true) and exists (select 1 from ${pushTokens} where ${pushTokens.userId} = ${reminders.userId}))`;
   const rows = await db
     .select({
       userId: reminders.userId,
       email: authUsers.email,
+      wantsEmail,
+      wantsPush,
       reminderId: reminders.id,
       task: reminders.task,
       serviceCategory: reminders.serviceCategory,
@@ -102,16 +111,14 @@ async function candidateReminders(): Promise<Candidate[]> {
     .leftJoin(emailSettings, eq(emailSettings.userId, reminders.userId))
     .where(
       and(
-        isNotNull(authUsers.email),
-        isNotNull(authUsers.emailConfirmedAt),
-        sql`coalesce(${emailSettings.reminderEmails}, true)`,
+        or(wantsEmail, wantsPush),
         or(isNull(reminders.lastNotifiedAt), lt(reminders.lastNotifiedAt, cutoff)),
       ),
     );
 
-  return rows.map((r) => ({
+  return rows.map(({ wantsEmail: emailOk, ...r }) => ({
     ...r,
-    email: r.email!,
+    email: emailOk ? r.email : null,
     vehicle: { year: r.year, make: r.make, model: r.model, trim: r.trim, nickname: r.nickname },
   }));
 }
@@ -161,7 +168,12 @@ async function mileageLines(vehicleIds: string[], currentMileage: Map<string, nu
 
 const mi = (n: number) => Math.round(n).toLocaleString("en-US");
 
-type Outbox = { email: string; cars: Map<string, ReminderEmailCar>; reminderIds: string[] };
+type Outbox = {
+  email: string | null;
+  wantsPush: boolean;
+  cars: Map<string, ReminderEmailCar & { vehicleId: string }>;
+  reminderIds: string[];
+};
 
 // Builds one email per user listing every due-soon or overdue reminder.
 async function buildOutbox(today: Date) {
@@ -220,12 +232,12 @@ async function buildOutbox(today: Date) {
   for (const { c, result } of due) {
     let box = byUser.get(c.userId);
     if (!box) {
-      box = { email: c.email, cars: new Map(), reminderIds: [] };
+      box = { email: c.email, wantsPush: c.wantsPush, cars: new Map(), reminderIds: [] };
       byUser.set(c.userId, box);
     }
     let car = box.cars.get(c.vehicleId);
     if (!car) {
-      car = { name: c.vehicle.nickname || vehicleName(c.vehicle), items: [] };
+      car = { vehicleId: c.vehicleId, name: c.vehicle.nickname || vehicleName(c.vehicle), items: [] };
       box.cars.set(c.vehicleId, car);
     }
     const guess = likely.get(c.reminderId);
@@ -244,43 +256,97 @@ export async function previewReminderEmails(today = new Date()) {
   const outbox = await buildOutbox(today);
   return {
     users: outbox.length,
+    emails: outbox.filter(([, box]) => box.email).length,
+    pushUsers: outbox.filter(([, box]) => box.wantsPush).length,
     reminders: outbox.reduce((n, [, box]) => n + box.reminderIds.length, 0),
   };
 }
 
+// One notification per phone, naming the most urgent item and how many more.
+function pushMessagesFor(box: Outbox, tokens: string[]): PushMessage[] {
+  const cars = [...box.cars.values()];
+  const items = cars.flatMap((car) => car.items.map((item) => ({ car, item })));
+  const [{ car, item }] = items;
+  const overdue = items.some((entry) => entry.item.status === "overdue");
+  const more = items.length - 1;
+  const body =
+    `${item.task} on your ${car.name}: ${item.due}` +
+    (more > 0 ? ` Plus ${more} more ${more === 1 ? "item" : "items"}.` : "");
+  // One car opens that car; several open the garage.
+  const url = cars.length === 1 ? `/car/${car.vehicleId}` : "/";
+  return tokens.map((to) => ({
+    to,
+    title: overdue ? "Service overdue" : "Service due soon",
+    body,
+    data: { url },
+  }));
+}
+
+async function sendEmailTo(userId: string, box: Outbox & { email: string }, base: string) {
+  const unsubscribeUrl = `${base}/unsubscribe?t=${unsubscribeToken(userId)}`;
+  const message = reminderEmail({
+    cars: [...box.cars.values()],
+    garageUrl: `${base}/garage`,
+    settingsUrl: `${base}/garage/settings`,
+    unsubscribeUrl,
+  });
+  const result = await sendEmail({
+    to: box.email,
+    ...message,
+    headers: {
+      "List-Unsubscribe": `<${base}/api/unsubscribe?t=${unsubscribeToken(userId)}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  });
+  return result.ok;
+}
+
 export async function sendReminderEmails(today = new Date()) {
-  const outbox = (await buildOutbox(today)).slice(0, MAX_EMAILS_PER_RUN);
+  const outbox = await buildOutbox(today);
   const base = siteUrl();
+  const canEmail = emailConfigured();
+  const reached = new Set<string>();
   let sent = 0;
   let failed = 0;
 
-  for (const [index, [userId, box]] of outbox.entries()) {
+  // Push first: it has no daily cap, so every phone hears even on a busy day.
+  const tokens = await pushTokensFor(outbox.filter(([, box]) => box.wantsPush).map(([id]) => id));
+  const messages = outbox.flatMap(([userId, box]) =>
+    box.wantsPush ? pushMessagesFor(box, tokens.get(userId) ?? []) : [],
+  );
+  const accepted = await sendPush(messages);
+  for (const [userId] of outbox) {
+    if ((tokens.get(userId) ?? []).some((t) => accepted.has(t))) reached.add(userId);
+  }
+
+  const emailBoxes = canEmail
+    ? outbox
+        .filter((entry): entry is [string, Outbox & { email: string }] => entry[1].email != null)
+        .slice(0, MAX_EMAILS_PER_RUN)
+    : [];
+  for (const [index, [userId, box]] of emailBoxes.entries()) {
     if (index > 0) await new Promise((resolve) => setTimeout(resolve, SEND_GAP_MS));
-    const unsubscribeUrl = `${base}/unsubscribe?t=${unsubscribeToken(userId)}`;
-    const message = reminderEmail({
-      cars: [...box.cars.values()],
-      garageUrl: `${base}/garage`,
-      settingsUrl: `${base}/garage/settings`,
-      unsubscribeUrl,
-    });
-    const result = await sendEmail({
-      to: box.email,
-      ...message,
-      headers: {
-        "List-Unsubscribe": `<${base}/api/unsubscribe?t=${unsubscribeToken(userId)}>`,
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-      },
-    });
-    if (!result.ok) {
+    if (await sendEmailTo(userId, box, base)) {
+      sent++;
+      reached.add(userId);
+    } else {
       failed++;
-      continue;
     }
-    sent++;
+  }
+
+  for (const [userId, box] of outbox) {
+    if (!reached.has(userId)) continue;
     await db
       .update(reminders)
       .set({ lastNotifiedAt: new Date() })
       .where(and(eq(reminders.userId, userId), inArray(reminders.id, box.reminderIds)));
   }
 
-  return { users: outbox.length, sent, failed };
+  return {
+    users: outbox.length,
+    sent,
+    failed,
+    pushed: accepted.size,
+    emailSkipped: canEmail ? undefined : "Set RESEND_API_KEY and EMAIL_FROM to send email.",
+  };
 }

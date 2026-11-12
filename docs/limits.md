@@ -18,6 +18,7 @@ The website and the phone app share the same checks, because both go through `sr
 | "Check price now" | 30 | 1 hour | `LIMITS["price-check"]` in `src/lib/rate-limit.ts` |
 | "Check price now" on the same part | 1 | 1 minute | `priceCheckBlocked` in `src/lib/parts.ts` |
 | Test reminder email | 5 | 24 hours | `LIMITS["test-email"]` in `src/lib/rate-limit.ts` |
+| Test push notification | 5 | 24 hours | `LIMITS["test-push"]` in `src/lib/rate-limit.ts` |
 | Resend confirmation link | 5 | 24 hours | `LIMITS["confirm-email"]` in `src/lib/rate-limit.ts` |
 | Receipt and mod scans (AI) | 20 | 24 hours | `DAILY_SCAN_LIMIT` in `src/lib/receipt-scan.ts` |
 | Service history scans (AI) | 60 | 24 hours | `HISTORY_SCAN_LIMIT` in `src/lib/history-scan.ts` |

@@ -107,7 +107,7 @@ function Routes() {
           options={{ title: "Choose a username", presentation: "modal" }}
         />
         <Stack.Screen name="costs" options={{ title: "Costs" }} />
-        <Stack.Screen name="email-settings" options={{ title: "Email reminders" }} />
+        <Stack.Screen name="email-settings" options={{ title: "Reminders" }} />
         <Stack.Screen name="appearance" options={{ title: "Appearance" }} />
         <Stack.Screen name="change-password" options={{ title: "Change password" }} />
         <Stack.Screen name="blocked" options={{ title: "Blocked accounts" }} />

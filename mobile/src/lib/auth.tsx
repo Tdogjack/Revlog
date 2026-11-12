@@ -1,6 +1,7 @@
 import type { Tokens } from "@revlog/api";
 import { createContext, use, useEffect, useState, type ReactNode } from "react";
 import { api, setSignedOutHandler } from "@/lib/api";
+import { unregisterPush } from "@/lib/push";
 import { clearTokens, loadTokens, saveTokens } from "@/lib/session";
 
 type Status = "loading" | "signedIn" | "signedOut";
@@ -45,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         signOut: async () => {
           // The phone forgets the session even if the server can't be reached.
+          await unregisterPush().catch(() => undefined);
           await api("/auth/signout", { method: "POST", body: {} }).catch(() => undefined);
           await forget();
         },

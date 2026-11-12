@@ -47,11 +47,29 @@
           "microphonePermission": false
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-notifications"
     ],
     "experiments": {
       "reactCompiler": true
     },
-    "backgroundColor": "#1c1c1e"
+    "backgroundColor": "#1c1c1e",
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "071a6955-6e2b-4aaf-b263-e32e1234321a"
+      }
+    },
+    "owner": "tr3vor1",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/071a6955-6e2b-4aaf-b263-e32e1234321a"
+    }
   }
 }

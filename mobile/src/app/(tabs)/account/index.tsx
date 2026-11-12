@@ -114,7 +114,7 @@ export default function Account() {
 
       <GroupLabel>Settings</GroupLabel>
       <ListGroup>
-        <ListRow icon="mail" label="Email reminders" onPress={() => router.push("/email-settings")} />
+        <ListRow icon="bell" label="Reminders" onPress={() => router.push("/email-settings")} />
         <ListRow
           icon="droplet"
           label="Appearance"

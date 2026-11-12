@@ -21,6 +21,7 @@ lives in application code and every query filters by user id.
 | Photos | list, upload one at a time, delete | `photos/actions.ts`, `lib/gallery.ts`, `lib/photos.ts` | 1 |
 | AI consent | read, grant, withdraw | `garage/ai-consent-actions.ts`, `lib/ai-consent.ts` | 1 |
 | Settings | reminder emails and percent, test email | `garage/settings/actions.ts`, `lib/email-settings.ts` | 2 |
+| Push | phone push token (PUT, DELETE), test notification, push on/off in `/me/email-settings` | `lib/push.ts`, `lib/reminder-emails.ts` | 3 |
 | Scans | receipt, mod, history file (email check, then AI consent check) | `service/actions.ts`, `mods/actions.ts`, `service/import/actions.ts` | 2 |
 | Mods and parts | mods, status, parts, price checks, costs | `mods/actions.ts`, `parts/actions.ts`, `lib/costs.ts` | 2 |
 | Community | feed, post, build, photos, likes, comments, profiles | `community/actions.ts`, `lib/community.ts` | 3 |
