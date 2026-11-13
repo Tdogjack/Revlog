@@ -159,7 +159,10 @@ export function SortableCars({ cars }: { cars: SortableCar[] }) {
                 if (el) rows.current.set(car.id, el);
                 else rows.current.delete(car.id);
               }}
-              className={`relative ${dragging ? "z-10" : ""}`}
+              // Pressing the card sinks the whole row, so the buttons beside it
+              // (they can't sit inside the link) move with it. The card skips
+              // its own press so it doesn't shrink twice.
+              className={`relative transition-[scale] duration-400 ease-(--ease-spring) has-[>.lift:active]:duration-100 motion-safe:has-[>.lift:active]:scale-[0.985] [&>.lift:active]:transform-none ${dragging ? "z-10" : ""}`}
               style={
                 dragging
                   ? {

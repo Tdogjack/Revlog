@@ -5,8 +5,10 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Check, ChevronDown, Copy, Download, Pencil, Plus, Share2 } from "lucide-react";
 import { MileageChart } from "@/components/mileage-chart";
-import { cardClass, RecordStats, reminderEdge } from "@/components/record-stats";
+import { cardClass, RecordStats } from "@/components/record-stats";
+import { SectionGrid } from "@/components/section-grid";
 import { StatusBadge } from "@/components/status-badge";
+import { readLayoutCookie } from "@/lib/car-layout";
 import { ProfilePhoto } from "@/app/garage/[id]/profile-photo";
 import {
   demoCarName,
@@ -45,10 +47,10 @@ function formatMonth(isoDate: string) {
 
 // Same look as the real car page.
 const summaryClass = "cursor-pointer list-none [&::-webkit-details-marker]:hidden";
-const panelClass = "rounded-2xl border border-graphite bg-panel p-4 sm:p-6";
+const panelClass = "@container rounded-2xl border border-graphite bg-panel p-4 sm:p-6";
 const sectionHeadClass = "flex flex-wrap items-start justify-between gap-3";
 const headingClass = "font-display text-2xl font-semibold";
-const dateClass = "shrink-0 pt-0.5 text-sm text-steel tabular-nums sm:w-24";
+const dateClass = "shrink-0 pt-0.5 text-sm text-steel tabular-nums @md:w-24";
 
 const statusStyle: Record<ModStatus, string> = {
   installed: "border-done/30 text-done",
@@ -128,7 +130,7 @@ function CarDetails({ car }: { car: DemoCar }) {
   const plannedCost = sumCost(car.mods.filter((m) => m.status === "planned"));
 
   const renderRecord = (r: DemoRecord) => (
-    <li key={r.id} className={`${cardClass} flex flex-col gap-1 border-l-chart-service sm:flex-row sm:gap-4`}>
+    <li key={r.id} className={`${cardClass} flex flex-col gap-1 @md:flex-row @md:gap-4`}>
       <div className={dateClass}>{formatDate(r.servicedOn)}</div>
       <details className="group min-w-0 flex-1">
         <summary className={summaryClass}>
@@ -163,6 +165,228 @@ function CarDetails({ car }: { car: DemoCar }) {
         </div>
       </details>
     </li>
+  );
+
+  const mileageSection = (
+    <section className={panelClass}>
+      <h2 className={headingClass}>Mileage</h2>
+      {timeline && (
+        <div className="mt-4">
+          <MileageChart timeline={timeline} />
+        </div>
+      )}
+    </section>
+  );
+
+  const serviceSection = (
+    <section className={panelClass}>
+      <div className={sectionHeadClass}>
+        <div>
+          <h2 className={headingClass}>Service history</h2>
+          <p className="mt-1 text-sm text-steel">
+            {car.records.length} {car.records.length === 1 ? "record" : "records"}
+            {totalSpent > 0 && `, ${money.format(totalSpent)} spent`}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <AccountOnly
+            title="Download service history as a PDF"
+            message="With an account, download a printable PDF of the whole history to hand the next owner."
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            PDF
+          </AccountOnly>
+          <AccountOnly className="btn btn-primary" message={SCAN_NOTE}>
+            <Plus className="h-4 w-4" aria-hidden />
+            Log service
+          </AccountOnly>
+        </div>
+      </div>
+
+      <ol className="mt-4 space-y-2">
+        {groupByType(car.records).map((group) =>
+          group.length === 1 ? (
+            renderRecord(group[0])
+          ) : (
+            <li key={group[0].category} className={`${cardClass}`}>
+              <details className="group/type">
+                <summary
+                  className={`${summaryClass} flex flex-col gap-1 @md:flex-row @md:gap-4`}
+                >
+                  <div className={dateClass}>{formatDate(group[0].servicedOn)}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">{categoryLabel(group[0].category, [])}</p>
+                    <RecordStats
+                          miles={group[0].mileage}
+                          extra={[
+                            `Last of ${group.length}`,
+                            sumCost(group) > 0 && `${money.format(sumCost(group))} total`,
+                          ]}
+                        />
+                        <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
+                          <ChevronDown
+                            className="h-3.5 w-3.5 transition-transform group-open/type:rotate-180"
+                            aria-hidden
+                          />
+                          Show all {group.length}
+                        </p>
+                  </div>
+                </summary>
+                <ol className="mt-3 space-y-2">
+                  {group.map(renderRecord)}
+                </ol>
+              </details>
+            </li>
+          ),
+        )}
+      </ol>
+    </section>
+  );
+
+  const buildSection = (
+    <section className={panelClass}>
+      <div className={sectionHeadClass}>
+        <div>
+          <h2 className={headingClass}>Build</h2>
+          <p className="mt-1 text-sm text-steel">
+            {[
+              `${installed.length} installed`,
+              installedSpent > 0 && `${money.format(installedSpent)} invested`,
+              plannedCost > 0 && `${money.format(plannedCost)} planned`,
+            ]
+              .filter(Boolean)
+              .join(", ")}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <AccountOnly message="With an account, post your installed mods, photos, and part links as one public build page.">
+            <Share2 className="h-4 w-4" aria-hidden />
+            Post public build
+          </AccountOnly>
+          <AccountOnly message="With an account, screenshot an order email or product page and the mod, brand, price, and parts fill in.">
+            <Plus className="h-4 w-4" aria-hidden />
+            Add mod
+          </AccountOnly>
+        </div>
+      </div>
+
+      <ul className="mt-4 space-y-2">
+        {car.mods.map((m) => {
+          const summary = (
+            <>
+              <p className={`font-semibold ${m.status === "removed" ? "text-steel line-through" : ""}`}>
+                {modName(m)}
+              </p>
+              <RecordStats
+                    miles={m.installedMileage}
+                    cost={m.cost}
+                    extra={[modCategoryLabel(m.category), m.installedOn && formatDate(m.installedOn)]}
+                  />
+            </>
+          );
+          return (
+            <li key={m.id} className={`${cardClass} flex flex-col gap-2 @md:flex-row @md:gap-4`}>
+              {m.notes || m.parts.length > 0 ? (
+                <details className="group min-w-0 flex-1">
+                  <summary className={summaryClass}>
+                    {summary}
+                    <DetailsHint notes={!!m.notes} parts={m.parts.length} />
+                  </summary>
+                  {m.notes && <p className="mt-2 whitespace-pre-line text-sm">{m.notes}</p>}
+                  <Parts parts={m.parts} label={m.status === "planned" ? "Parts wanted" : "Parts used"} />
+                </details>
+              ) : (
+                <div className="min-w-0 flex-1">{summary}</div>
+              )}
+              <div className="-ml-1 flex items-center gap-1 @md:ml-0 @md:flex-col @md:items-end">
+                <select
+                  value={m.status}
+                  aria-label={`Status of ${modName(m)}`}
+                  onChange={(e) => demo.setModStatus(car.id, m.id, e.target.value as ModStatus)}
+                  className={`min-h-8 cursor-pointer rounded-md border bg-carbon px-2 text-xs font-semibold ${statusStyle[m.status]}`}
+                >
+                  {MOD_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+
+  const remindersSection = (
+    <section className={panelClass}>
+      <div className={sectionHeadClass}>
+        <h2 className={headingClass}>Reminders</h2>
+        <AccountOnly message="With an account, pick a service and the interval fills in. Revlog emails you before it's due.">
+          <Plus className="h-4 w-4" aria-hidden />
+          Add
+        </AccountOnly>
+      </div>
+      <ul className="mt-4 space-y-2">
+        {reminders.map(({ reminder: r, result }) => (
+          <li key={r.id} className={`${cardClass} flex gap-3`}>
+            <details className="group min-w-0 flex-1">
+              <summary className={summaryClass}>
+                <p className="font-semibold">{r.task}</p>
+                <p
+                  className={`mt-1 text-base font-semibold ${
+                      result.status === "overdue"
+                        ? "text-overdue"
+                      : result.status === "due_soon"
+                        ? "text-due"
+                        : "text-steel"
+                  }`}
+                >
+                  {describeDue(result)}
+                </p>
+                <ChevronDown
+                  className="mt-1 h-3.5 w-3.5 text-steel transition-transform group-open:rotate-180 hover:text-chalk"
+                  aria-label="Details"
+                />
+              </summary>
+              <p className="mt-1 text-xs text-steel">
+                {r.lastDoneOn ? (
+                  <>
+                    Last done {formatDate(r.lastDoneOn)}
+                    {r.lastDoneMileage != null && ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
+                  </>
+                ) : (
+                  "Last done: never"
+                )}
+              </p>
+              <p className="mt-0.5 text-xs text-steel">
+                Every{" "}
+                {[
+                  r.intervalMiles && `${r.intervalMiles.toLocaleString("en-US")} mi`,
+                  r.intervalMonths &&
+                    `${r.intervalMonths} ${r.intervalMonths === 1 ? "month" : "months"}`,
+                ]
+                  .filter(Boolean)
+                  .join(" or ")}
+              </p>
+            </details>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <StatusBadge status={result.status} />
+              <button
+                type="button"
+                onClick={() => demo.markDone(car.id, r.id)}
+                className="btn min-h-8 px-2.5 text-xs"
+                aria-label={`Mark ${r.task} done today at ${car.currentMileage.toLocaleString("en-US")} miles`}
+              >
+                <Check className="h-3.5 w-3.5" aria-hidden />
+                Done
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 
   return (
@@ -204,225 +428,15 @@ function CarDetails({ car }: { car: DemoCar }) {
         </div>
       </header>
 
-      <section className={`${panelClass} mt-8`}>
-        <h2 className={headingClass}>Mileage</h2>
-        {timeline && (
-          <div className="mt-4">
-            <MileageChart timeline={timeline} />
-          </div>
-        )}
-      </section>
-
-      <div className="mt-6 grid items-start gap-6 md:grid-cols-3">
-        <div className="space-y-6 md:col-span-2">
-          <section className={panelClass}>
-            <div className={sectionHeadClass}>
-              <div>
-                <h2 className={headingClass}>Service history</h2>
-                <p className="mt-1 text-sm text-steel">
-                  {car.records.length} {car.records.length === 1 ? "record" : "records"}
-                  {totalSpent > 0 && `, ${money.format(totalSpent)} spent`}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <AccountOnly
-                  title="Download service history as a PDF"
-                  message="With an account, download a printable PDF of the whole history to hand the next owner."
-                >
-                  <Download className="h-4 w-4" aria-hidden />
-                  PDF
-                </AccountOnly>
-                <AccountOnly className="btn btn-primary" message={SCAN_NOTE}>
-                  <Plus className="h-4 w-4" aria-hidden />
-                  Log service
-                </AccountOnly>
-              </div>
-            </div>
-
-            <ol className="mt-4 space-y-2">
-              {groupByType(car.records).map((group) =>
-                group.length === 1 ? (
-                  renderRecord(group[0])
-                ) : (
-                  <li key={group[0].category} className={`${cardClass} border-l-chart-service`}>
-                    <details className="group/type">
-                      <summary
-                        className={`${summaryClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}
-                      >
-                        <div className={dateClass}>{formatDate(group[0].servicedOn)}</div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold">{categoryLabel(group[0].category, [])}</p>
-                          <RecordStats
-                                miles={group[0].mileage}
-                                extra={[
-                                  `Last of ${group.length}`,
-                                  sumCost(group) > 0 && `${money.format(sumCost(group))} total`,
-                                ]}
-                              />
-                              <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
-                                <ChevronDown
-                                  className="h-3.5 w-3.5 transition-transform group-open/type:rotate-180"
-                                  aria-hidden
-                                />
-                                Show all {group.length}
-                              </p>
-                        </div>
-                      </summary>
-                      <ol className="mt-3 space-y-2">
-                        {group.map(renderRecord)}
-                      </ol>
-                    </details>
-                  </li>
-                ),
-              )}
-            </ol>
-          </section>
-
-          <section className={panelClass}>
-            <div className={sectionHeadClass}>
-              <div>
-                <h2 className={headingClass}>Build</h2>
-                <p className="mt-1 text-sm text-steel">
-                  {[
-                    `${installed.length} installed`,
-                    installedSpent > 0 && `${money.format(installedSpent)} invested`,
-                    plannedCost > 0 && `${money.format(plannedCost)} planned`,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <AccountOnly message="With an account, post your installed mods, photos, and part links as one public build page.">
-                  <Share2 className="h-4 w-4" aria-hidden />
-                  Post public build
-                </AccountOnly>
-                <AccountOnly message="With an account, screenshot an order email or product page and the mod, brand, price, and parts fill in.">
-                  <Plus className="h-4 w-4" aria-hidden />
-                  Add mod
-                </AccountOnly>
-              </div>
-            </div>
-
-            <ul className="mt-4 space-y-2">
-              {car.mods.map((m) => {
-                const summary = (
-                  <>
-                    <p className={`font-semibold ${m.status === "removed" ? "text-steel line-through" : ""}`}>
-                      {modName(m)}
-                    </p>
-                    <RecordStats
-                          miles={m.installedMileage}
-                          cost={m.cost}
-                          extra={[modCategoryLabel(m.category), m.installedOn && formatDate(m.installedOn)]}
-                        />
-                  </>
-                );
-                return (
-                  <li key={m.id} className={`${cardClass} flex flex-col gap-2 sm:flex-row sm:gap-4 ${m.status === "removed" ? "border-l-graphite" : "border-l-chart-mods"}`}>
-                    {m.notes || m.parts.length > 0 ? (
-                      <details className="group min-w-0 flex-1">
-                        <summary className={summaryClass}>
-                          {summary}
-                          <DetailsHint notes={!!m.notes} parts={m.parts.length} />
-                        </summary>
-                        {m.notes && <p className="mt-2 whitespace-pre-line text-sm">{m.notes}</p>}
-                        <Parts parts={m.parts} label={m.status === "planned" ? "Parts wanted" : "Parts used"} />
-                      </details>
-                    ) : (
-                      <div className="min-w-0 flex-1">{summary}</div>
-                    )}
-                    <div className="-ml-1 flex items-center gap-1 sm:ml-0 sm:flex-col sm:items-end">
-                      <select
-                        value={m.status}
-                        aria-label={`Status of ${modName(m)}`}
-                        onChange={(e) => demo.setModStatus(car.id, m.id, e.target.value as ModStatus)}
-                        className={`min-h-8 cursor-pointer rounded-md border bg-carbon px-2 text-xs font-semibold ${statusStyle[m.status]}`}
-                      >
-                        {MOD_STATUSES.map((s) => (
-                          <option key={s.value} value={s.value}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        </div>
-
-        <div className="space-y-4">
-          <section className={panelClass}>
-            <div className={sectionHeadClass}>
-              <h2 className={headingClass}>Reminders</h2>
-              <AccountOnly message="With an account, pick a service and the interval fills in. Revlog emails you before it's due.">
-                <Plus className="h-4 w-4" aria-hidden />
-                Add
-              </AccountOnly>
-            </div>
-            <ul className="mt-4 space-y-2">
-              {reminders.map(({ reminder: r, result }) => (
-                <li key={r.id} className={`${cardClass} flex gap-3 ${reminderEdge[result.status]}`}>
-                  <details className="group min-w-0 flex-1">
-                    <summary className={summaryClass}>
-                      <p className="font-semibold">{r.task}</p>
-                      <p
-                        className={`mt-1 text-base font-semibold ${
-                            result.status === "overdue"
-                              ? "text-overdue"
-                            : result.status === "due_soon"
-                              ? "text-due"
-                              : "text-steel"
-                        }`}
-                      >
-                        {describeDue(result)}
-                      </p>
-                      <ChevronDown
-                        className="mt-1 h-3.5 w-3.5 text-steel transition-transform group-open:rotate-180 hover:text-chalk"
-                        aria-label="Details"
-                      />
-                    </summary>
-                    <p className="mt-1 text-xs text-steel">
-                      {r.lastDoneOn ? (
-                        <>
-                          Last done {formatDate(r.lastDoneOn)}
-                          {r.lastDoneMileage != null && ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
-                        </>
-                      ) : (
-                        "Last done: never"
-                      )}
-                    </p>
-                    <p className="mt-0.5 text-xs text-steel">
-                      Every{" "}
-                      {[
-                        r.intervalMiles && `${r.intervalMiles.toLocaleString("en-US")} mi`,
-                        r.intervalMonths &&
-                          `${r.intervalMonths} ${r.intervalMonths === 1 ? "month" : "months"}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" or ")}
-                    </p>
-                  </details>
-                  <div className="flex shrink-0 flex-col items-end gap-2">
-                    <StatusBadge status={result.status} />
-                    <button
-                      type="button"
-                      onClick={() => demo.markDone(car.id, r.id)}
-                      className="btn min-h-8 px-2.5 text-xs"
-                      aria-label={`Mark ${r.task} done today at ${car.currentMileage.toLocaleString("en-US")} miles`}
-                    >
-                      <Check className="h-3.5 w-3.5" aria-hidden />
-                      Done
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
-      </div>
+      <SectionGrid
+        initialLayout={readLayoutCookie()}
+        sections={{
+          mileage: { label: "Mileage", node: mileageSection },
+          service: { label: "Service history", node: serviceSection },
+          reminders: { label: "Reminders", node: remindersSection },
+          build: { label: "Build", node: buildSection },
+        }}
+      />
     </>
   );
 }

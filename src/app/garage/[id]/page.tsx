@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BackLink } from "@/components/back-link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Check, ChevronDown, Copy, Download, FileUp, Pencil, Plus, Share2 } from "lucide-react";
@@ -34,8 +35,10 @@ import { RemoveCar } from "./remove-car";
 import { MileageEditor, ReminderControls } from "./reminder-controls";
 import { markNeverDone } from "./reminders/actions";
 import { MileageChart } from "@/components/mileage-chart";
-import { cardClass, RecordStats, reminderEdge } from "@/components/record-stats";
+import { cardClass, RecordStats } from "@/components/record-stats";
+import { SectionGrid } from "@/components/section-grid";
 import { StatusBadge } from "@/components/status-badge";
+import { LAYOUT_COOKIE, parseLayout } from "@/lib/car-layout";
 
 export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
   return (
@@ -75,10 +78,10 @@ function formatMonth(isoDate: string) {
 const summaryClass = "cursor-pointer list-none [&::-webkit-details-marker]:hidden";
 
 // Sections are quiet L1 panels; rows inside are split by hairlines.
-const panelClass = "rounded-2xl border border-graphite bg-panel p-4 sm:p-6";
+const panelClass = "@container rounded-2xl border border-graphite bg-panel p-4 sm:p-6";
 const sectionHeadClass = "flex flex-wrap items-start justify-between gap-3";
 const headingClass = "font-display text-2xl font-semibold";
-const dateClass = "shrink-0 pt-0.5 text-sm text-steel tabular-nums sm:w-24";
+const dateClass = "shrink-0 pt-0.5 text-sm text-steel tabular-nums @md:w-24";
 
 // Records always open, since their edit and copy buttons live inside; without
 // notes, parts, or photos the hint just says so.
@@ -109,6 +112,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
   const user = await requireUser();
   const car = await getVehicle(user.id, id);
   if (!car) notFound();
+  const layout = parseLayout((await cookies()).get(LAYOUT_COOKIE)?.value);
 
   const [
     records,
@@ -173,7 +177,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
     return (
       <li
         key={r.id}
-        className={`${cardClass} flex flex-col gap-1 border-l-chart-service sm:flex-row sm:gap-4`}
+        className={`${cardClass} flex flex-col gap-1 @md:flex-row @md:gap-4`}
       >
         <div className={dateClass}>{formatDate(r.servicedOn)}</div>
         <details className="group min-w-0 flex-1">
@@ -230,6 +234,361 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
     );
   };
 
+  const mileageSection = (
+    <section className={panelClass}>
+      <h2 className={headingClass}>Mileage</h2>
+      {timeline ? (
+        <div className="mt-4">
+          <MileageChart timeline={timeline} />
+        </div>
+      ) : (
+        <p className="mt-4 text-sm text-steel">
+          Update the odometer or log a service with its mileage to start the graph.
+        </p>
+      )}
+    </section>
+  );
+
+  const serviceSection = (
+    <section className={panelClass}>
+      <div className={sectionHeadClass}>
+        <div>
+          <h2 className={headingClass}>Service history</h2>
+          {records.length > 0 && (
+            <p className="mt-1 text-sm text-steel">
+              {records.length} {records.length === 1 ? "record" : "records"}
+              {totalSpent > 0 && `, ${money.format(totalSpent)} spent`}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {records.length > 0 && (
+            <a
+              href={`/garage/${car.id}/history`}
+              className="btn"
+              title="Download service history as a PDF"
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              PDF
+            </a>
+          )}
+          <Link
+            href={`/garage/${car.id}/service/import`}
+            className="btn"
+            title="Add past services from photos, PDFs, or a spreadsheet"
+          >
+            <FileUp className="h-4 w-4" aria-hidden />
+            Import
+          </Link>
+          <Link href={`/garage/${car.id}/service/new`} className="btn btn-primary">
+            <Plus className="h-4 w-4" aria-hidden />
+            Log service
+          </Link>
+        </div>
+      </div>
+
+      {records.length === 0 ? (
+        <p className="mt-4 text-sm text-steel">
+          No service records yet. Log your last oil change to start the timeline, or{" "}
+          <Link
+            href={`/garage/${car.id}/service/import`}
+            className="text-chalk underline underline-offset-2 hover:text-redline"
+          >
+            import its past services
+          </Link>{" "}
+          all at once.
+        </p>
+      ) : (
+        <>
+          <ol className="mt-4 space-y-2">
+            {groupByType(records).map((group) =>
+              group.length === 1 ? (
+                renderRecord(group[0])
+              ) : (
+                <li key={group[0].category} className={`${cardClass}`}>
+                  <details className="group/type">
+                    <summary
+                      className={`${summaryClass} flex flex-col gap-1 @md:flex-row @md:gap-4`}
+                    >
+                      <div className={dateClass}>{formatDate(group[0].servicedOn)}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">
+                          {categoryLabel(group[0].category, customTypes)}
+                        </p>
+                        <RecordStats
+                          miles={group[0].mileage}
+                          extra={[
+                            `Last of ${group.length}`,
+                            sumCost(group) > 0 && `${money.format(sumCost(group))} total`,
+                          ]}
+                        />
+                        <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
+                          <ChevronDown
+                            className="h-3.5 w-3.5 transition-transform group-open/type:rotate-180"
+                            aria-hidden
+                          />
+                          Show all {group.length}
+                        </p>
+                      </div>
+                    </summary>
+                    <ol className="mt-3 space-y-2">
+                      {group.map(renderRecord)}
+                    </ol>
+                  </details>
+                </li>
+              ),
+            )}
+          </ol>
+        </>
+      )}
+    </section>
+  );
+
+  const buildSection = (
+    <section className={panelClass}>
+      <div className={sectionHeadClass}>
+        <div>
+          <h2 className={headingClass}>Build</h2>
+          {carMods.length > 0 && (
+            <p className="mt-1 text-sm text-steel">
+              {[
+                `${installed.length} installed`,
+                installedSpent > 0 && `${money.format(installedSpent)} invested`,
+                plannedCost > 0 && `${money.format(plannedCost)} planned`,
+              ]
+                .filter(Boolean)
+                .join(", ")}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={`/community/new?vehicle=${car.id}&build=1`} className="btn">
+            <Share2 className="h-4 w-4" aria-hidden />
+            {buildPostId ? "Update public build" : "Post public build"}
+          </Link>
+          <Link href={`/garage/${car.id}/mods/new`} className="btn">
+            <Plus className="h-4 w-4" aria-hidden />
+            Add mod
+          </Link>
+        </div>
+      </div>
+
+      {buildPostId && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-carbon/60 px-3 py-2 text-sm text-steel">
+          <span className="flex items-center gap-2 text-chalk">
+            <span className="h-1.5 w-1.5 rounded-full bg-done" aria-hidden />
+            Your public build is live.
+          </span>
+          <Link
+            href={`/community/${buildPostId}`}
+            className="underline-offset-4 hover:text-chalk hover:underline"
+          >
+            View post
+          </Link>
+          <DeletePostButton
+            postId={buildPostId}
+            next={`/garage/${car.id}`}
+            label="Take down"
+            confirmText="Take down your public build? The post and its shared photos are removed. You can post it again any time."
+          />
+        </div>
+      )}
+
+      <div className="mt-4">
+        <PhotoStrip
+          vehicleId={car.id}
+          kind="build"
+          photos={buildPhotos}
+          max={PHOTO_LIMITS.build}
+          addLabel="Add build photos"
+          size="large"
+          canAdd={canUpload}
+        />
+        {!canUpload && (
+          <div className="mt-2">
+            <ConfirmEmailNote />
+          </div>
+        )}
+      </div>
+
+      {carMods.length === 0 ? (
+        <p className="mt-4 text-sm text-steel">
+          No mods logged yet. Add parts you&apos;ve installed, or plan your next build.
+        </p>
+      ) : (
+        <>
+          <ul className="mt-4 space-y-2">
+            {carMods.map((m) => {
+              const modParts = partsFor("modId", m.id);
+              const modPhotos = stripPhotos((p) => p.modId === m.id);
+              const summary = (
+                <>
+                  <p
+                    className={`font-semibold ${m.status === "removed" ? "text-steel line-through" : ""}`}
+                  >
+                    {m.brand ? `${m.brand} ${m.part}` : m.part}
+                  </p>
+                  <RecordStats
+                    miles={m.installedMileage}
+                    cost={m.cost}
+                    extra={[modCategoryLabel(m.category), m.installedOn && formatDate(m.installedOn)]}
+                  />
+                </>
+              );
+              return (
+                <li key={m.id} className={`${cardClass} flex flex-col gap-2 @md:flex-row @md:gap-4`}>
+                  {m.notes || modParts.length > 0 || modPhotos.length > 0 ? (
+                    <details className="group min-w-0 flex-1">
+                      <summary className={summaryClass}>
+                        {summary}
+                        <DetailsHint
+                          notes={!!m.notes}
+                          parts={modParts.length}
+                          photos={modPhotos.length}
+                        />
+                      </summary>
+                      {m.notes && <p className="mt-2 whitespace-pre-line text-sm">{m.notes}</p>}
+                      <PartsList
+                        vehicleId={car.id}
+                        parts={modParts}
+                        label={m.status === "planned" ? "Parts wanted" : "Parts used"}
+                      />
+                      {modPhotos.length > 0 && (
+                        <PhotoStrip
+                          vehicleId={car.id}
+                          kind="mod"
+                          targetId={m.id}
+                          photos={modPhotos}
+                          max={PHOTO_LIMITS.mod}
+                          addLabel="Add mod photos"
+                          canAdd={false}
+                        />
+                      )}
+                    </details>
+                  ) : (
+                    <div className="min-w-0 flex-1">{summary}</div>
+                  )}
+                  <div className="-ml-1 flex items-center gap-1 @md:ml-0 @md:flex-col @md:items-end">
+                    <ModControls vehicleId={car.id} modId={m.id} status={m.status} />
+                    {m.status === "installed" && (
+                      <Link
+                        href={`/community/new?vehicle=${car.id}&mod=${m.id}`}
+                        className="flex min-h-9 items-center gap-1 px-1 text-xs text-steel hover:text-chalk"
+                      >
+                        <Share2 className="h-3.5 w-3.5" aria-hidden />
+                        Share
+                      </Link>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+
+  const remindersSection = (
+    <section className={panelClass}>
+      <div className={sectionHeadClass}>
+        <h2 className={headingClass}>Reminders</h2>
+        <Link href={`/garage/${car.id}/reminders/new`} className="btn">
+          <Plus className="h-4 w-4" aria-hidden />
+          Add
+        </Link>
+      </div>
+
+      {carReminders.length === 0 ? (
+        <p className="mt-4 text-sm text-steel">
+          No reminders set. Add one for oil changes, rotations, or anything on a schedule.
+        </p>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {carReminders.map(({ reminder: r, result }) => (
+            <li
+              key={r.id}
+              className={`${cardClass} flex flex-wrap gap-3`}
+            >
+              <details className="group min-w-0 flex-1">
+                <summary className={summaryClass}>
+                  <p className="font-semibold">{r.task}</p>
+                  <p
+                    className={`mt-1 text-base font-semibold ${
+                      result.status === "overdue"
+                        ? "text-overdue"
+                        : result.status === "due_soon"
+                          ? "text-due"
+                          : "text-steel"
+                    }`}
+                  >
+                    {describeDue(result)}
+                  </p>
+                  <ChevronDown
+                    className="mt-1 h-3.5 w-3.5 text-steel transition-transform group-open:rotate-180 hover:text-chalk"
+                    aria-label="Details"
+                  />
+                </summary>
+                <p className="mt-1 text-xs text-steel">
+                  {r.lastDoneOn ? (
+                    <>
+                      Last done {formatDate(r.lastDoneOn)}
+                      {r.lastDoneMileage != null &&
+                        ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
+                    </>
+                  ) : result.status === "unknown" ? (
+                    "Last done: not logged"
+                  ) : (
+                    "Last done: never"
+                  )}
+                </p>
+                <p className="mt-0.5 text-xs text-steel">
+                  Every{" "}
+                  {[
+                    r.intervalMiles && `${r.intervalMiles.toLocaleString("en-US")} mi`,
+                    r.intervalMonths &&
+                      `${r.intervalMonths} ${r.intervalMonths === 1 ? "month" : "months"}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" or ")}
+                </p>
+                <ReminderControls vehicleId={car.id} reminderId={r.id} />
+              </details>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <StatusBadge status={result.status} />
+                {/* Opens Log service with this reminder's type filled in. */}
+                {result.status !== "unknown" && (
+                  <Link
+                    href={`/garage/${car.id}/service/new?reminder=${r.id}`}
+                    className="btn min-h-8 px-2.5 text-xs"
+                  >
+                    <Check className="h-3.5 w-3.5" aria-hidden />
+                    Done
+                  </Link>
+                )}
+              </div>
+              {result.status === "unknown" && (
+                <div className="grid basis-full grid-cols-2 gap-2">
+                  <Link
+                    href={`/garage/${car.id}/service/new?reminder=${r.id}`}
+                    className="btn"
+                  >
+                    Log service
+                  </Link>
+                  <form action={markNeverDone.bind(null, car.id, r.id)}>
+                    <button type="submit" className="btn w-full">
+                      Never done
+                    </button>
+                  </form>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
   return (
     <>
       <title>{`${car.nickname ?? vehicleName(car)} · Revlog`}</title>
@@ -274,358 +633,15 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
         </div>
       </header>
 
-      <section className={`${panelClass} mt-8`}>
-        <h2 className={headingClass}>Mileage</h2>
-        {timeline ? (
-          <div className="mt-4">
-            <MileageChart timeline={timeline} />
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-steel">
-            Update the odometer or log a service with its mileage to start the graph.
-          </p>
-        )}
-      </section>
-
-      <div className="mt-6 grid items-start gap-6 md:grid-cols-3">
-        <div className="space-y-6 md:col-span-2">
-          <section className={panelClass}>
-            <div className={sectionHeadClass}>
-              <div>
-                <h2 className={headingClass}>Service history</h2>
-                {records.length > 0 && (
-                  <p className="mt-1 text-sm text-steel">
-                    {records.length} {records.length === 1 ? "record" : "records"}
-                    {totalSpent > 0 && `, ${money.format(totalSpent)} spent`}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {records.length > 0 && (
-                  <a
-                    href={`/garage/${car.id}/history`}
-                    className="btn"
-                    title="Download service history as a PDF"
-                  >
-                    <Download className="h-4 w-4" aria-hidden />
-                    PDF
-                  </a>
-                )}
-                <Link
-                  href={`/garage/${car.id}/service/import`}
-                  className="btn"
-                  title="Add past services from photos, PDFs, or a spreadsheet"
-                >
-                  <FileUp className="h-4 w-4" aria-hidden />
-                  Import
-                </Link>
-                <Link href={`/garage/${car.id}/service/new`} className="btn btn-primary">
-                  <Plus className="h-4 w-4" aria-hidden />
-                  Log service
-                </Link>
-              </div>
-            </div>
-
-            {records.length === 0 ? (
-              <p className="mt-4 text-sm text-steel">
-                No service records yet. Log your last oil change to start the timeline, or{" "}
-                <Link
-                  href={`/garage/${car.id}/service/import`}
-                  className="text-chalk underline underline-offset-2 hover:text-redline"
-                >
-                  import its past services
-                </Link>{" "}
-                all at once.
-              </p>
-            ) : (
-              <>
-                <ol className="mt-4 space-y-2">
-                  {groupByType(records).map((group) =>
-                    group.length === 1 ? (
-                      renderRecord(group[0])
-                    ) : (
-                      <li key={group[0].category} className={`${cardClass} border-l-chart-service`}>
-                        <details className="group/type">
-                          <summary
-                            className={`${summaryClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}
-                          >
-                            <div className={dateClass}>{formatDate(group[0].servicedOn)}</div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-semibold">
-                                {categoryLabel(group[0].category, customTypes)}
-                              </p>
-                              <RecordStats
-                                miles={group[0].mileage}
-                                extra={[
-                                  `Last of ${group.length}`,
-                                  sumCost(group) > 0 && `${money.format(sumCost(group))} total`,
-                                ]}
-                              />
-                              <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
-                                <ChevronDown
-                                  className="h-3.5 w-3.5 transition-transform group-open/type:rotate-180"
-                                  aria-hidden
-                                />
-                                Show all {group.length}
-                              </p>
-                            </div>
-                          </summary>
-                          <ol className="mt-3 space-y-2">
-                            {group.map(renderRecord)}
-                          </ol>
-                        </details>
-                      </li>
-                    ),
-                  )}
-                </ol>
-              </>
-            )}
-          </section>
-
-          <section className={panelClass}>
-            <div className={sectionHeadClass}>
-              <div>
-                <h2 className={headingClass}>Build</h2>
-                {carMods.length > 0 && (
-                  <p className="mt-1 text-sm text-steel">
-                    {[
-                      `${installed.length} installed`,
-                      installedSpent > 0 && `${money.format(installedSpent)} invested`,
-                      plannedCost > 0 && `${money.format(plannedCost)} planned`,
-                    ]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Link href={`/community/new?vehicle=${car.id}&build=1`} className="btn">
-                  <Share2 className="h-4 w-4" aria-hidden />
-                  {buildPostId ? "Update public build" : "Post public build"}
-                </Link>
-                <Link href={`/garage/${car.id}/mods/new`} className="btn">
-                  <Plus className="h-4 w-4" aria-hidden />
-                  Add mod
-                </Link>
-              </div>
-            </div>
-
-            {buildPostId && (
-              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-carbon/60 px-3 py-2 text-sm text-steel">
-                <span className="flex items-center gap-2 text-chalk">
-                  <span className="h-1.5 w-1.5 rounded-full bg-done" aria-hidden />
-                  Your public build is live.
-                </span>
-                <Link
-                  href={`/community/${buildPostId}`}
-                  className="underline-offset-4 hover:text-chalk hover:underline"
-                >
-                  View post
-                </Link>
-                <DeletePostButton
-                  postId={buildPostId}
-                  next={`/garage/${car.id}`}
-                  label="Take down"
-                  confirmText="Take down your public build? The post and its shared photos are removed. You can post it again any time."
-                />
-              </div>
-            )}
-
-            <div className="mt-4">
-              <PhotoStrip
-                vehicleId={car.id}
-                kind="build"
-                photos={buildPhotos}
-                max={PHOTO_LIMITS.build}
-                addLabel="Add build photos"
-                size="large"
-                canAdd={canUpload}
-              />
-              {!canUpload && (
-                <div className="mt-2">
-                  <ConfirmEmailNote />
-                </div>
-              )}
-            </div>
-
-            {carMods.length === 0 ? (
-              <p className="mt-4 text-sm text-steel">
-                No mods logged yet. Add parts you&apos;ve installed, or plan your next build.
-              </p>
-            ) : (
-              <>
-                <ul className="mt-4 space-y-2">
-                  {carMods.map((m) => {
-                    const modParts = partsFor("modId", m.id);
-                    const modPhotos = stripPhotos((p) => p.modId === m.id);
-                    const summary = (
-                      <>
-                        <p
-                          className={`font-semibold ${m.status === "removed" ? "text-steel line-through" : ""}`}
-                        >
-                          {m.brand ? `${m.brand} ${m.part}` : m.part}
-                        </p>
-                        <RecordStats
-                          miles={m.installedMileage}
-                          cost={m.cost}
-                          extra={[modCategoryLabel(m.category), m.installedOn && formatDate(m.installedOn)]}
-                        />
-                      </>
-                    );
-                    return (
-                      <li key={m.id} className={`${cardClass} flex flex-col gap-2 sm:flex-row sm:gap-4 ${m.status === "removed" ? "border-l-graphite" : "border-l-chart-mods"}`}>
-                        {m.notes || modParts.length > 0 || modPhotos.length > 0 ? (
-                          <details className="group min-w-0 flex-1">
-                            <summary className={summaryClass}>
-                              {summary}
-                              <DetailsHint
-                                notes={!!m.notes}
-                                parts={modParts.length}
-                                photos={modPhotos.length}
-                              />
-                            </summary>
-                            {m.notes && <p className="mt-2 whitespace-pre-line text-sm">{m.notes}</p>}
-                            <PartsList
-                              vehicleId={car.id}
-                              parts={modParts}
-                              label={m.status === "planned" ? "Parts wanted" : "Parts used"}
-                            />
-                            {modPhotos.length > 0 && (
-                              <PhotoStrip
-                                vehicleId={car.id}
-                                kind="mod"
-                                targetId={m.id}
-                                photos={modPhotos}
-                                max={PHOTO_LIMITS.mod}
-                                addLabel="Add mod photos"
-                                canAdd={false}
-                              />
-                            )}
-                          </details>
-                        ) : (
-                          <div className="min-w-0 flex-1">{summary}</div>
-                        )}
-                        <div className="-ml-1 flex items-center gap-1 sm:ml-0 sm:flex-col sm:items-end">
-                          <ModControls vehicleId={car.id} modId={m.id} status={m.status} />
-                          {m.status === "installed" && (
-                            <Link
-                              href={`/community/new?vehicle=${car.id}&mod=${m.id}`}
-                              className="flex min-h-9 items-center gap-1 px-1 text-xs text-steel hover:text-chalk"
-                            >
-                              <Share2 className="h-3.5 w-3.5" aria-hidden />
-                              Share
-                            </Link>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            )}
-          </section>
-        </div>
-
-        <div className="space-y-4">
-          <section className={panelClass}>
-            <div className={sectionHeadClass}>
-              <h2 className={headingClass}>Reminders</h2>
-              <Link href={`/garage/${car.id}/reminders/new`} className="btn">
-                <Plus className="h-4 w-4" aria-hidden />
-                Add
-              </Link>
-            </div>
-
-            {carReminders.length === 0 ? (
-              <p className="mt-4 text-sm text-steel">
-                No reminders set. Add one for oil changes, rotations, or anything on a schedule.
-              </p>
-            ) : (
-              <ul className="mt-4 space-y-2">
-                {carReminders.map(({ reminder: r, result }) => (
-                  <li
-                    key={r.id}
-                    className={`${cardClass} flex flex-wrap gap-3 ${reminderEdge[result.status]}`}
-                  >
-                    <details className="group min-w-0 flex-1">
-                      <summary className={summaryClass}>
-                        <p className="font-semibold">{r.task}</p>
-                        <p
-                          className={`mt-1 text-base font-semibold ${
-                            result.status === "overdue"
-                              ? "text-overdue"
-                              : result.status === "due_soon"
-                                ? "text-due"
-                                : "text-steel"
-                          }`}
-                        >
-                          {describeDue(result)}
-                        </p>
-                        <ChevronDown
-                          className="mt-1 h-3.5 w-3.5 text-steel transition-transform group-open:rotate-180 hover:text-chalk"
-                          aria-label="Details"
-                        />
-                      </summary>
-                      <p className="mt-1 text-xs text-steel">
-                        {r.lastDoneOn ? (
-                          <>
-                            Last done {formatDate(r.lastDoneOn)}
-                            {r.lastDoneMileage != null &&
-                              ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
-                          </>
-                        ) : result.status === "unknown" ? (
-                          "Last done: not logged"
-                        ) : (
-                          "Last done: never"
-                        )}
-                      </p>
-                      <p className="mt-0.5 text-xs text-steel">
-                        Every{" "}
-                        {[
-                          r.intervalMiles && `${r.intervalMiles.toLocaleString("en-US")} mi`,
-                          r.intervalMonths &&
-                            `${r.intervalMonths} ${r.intervalMonths === 1 ? "month" : "months"}`,
-                        ]
-                          .filter(Boolean)
-                          .join(" or ")}
-                      </p>
-                      <ReminderControls vehicleId={car.id} reminderId={r.id} />
-                    </details>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <StatusBadge status={result.status} />
-                      {/* Opens Log service with this reminder's type filled in. */}
-                      {result.status !== "unknown" && (
-                        <Link
-                          href={`/garage/${car.id}/service/new?reminder=${r.id}`}
-                          className="btn min-h-8 px-2.5 text-xs"
-                        >
-                          <Check className="h-3.5 w-3.5" aria-hidden />
-                          Done
-                        </Link>
-                      )}
-                    </div>
-                    {result.status === "unknown" && (
-                      <div className="grid basis-full grid-cols-2 gap-2">
-                        <Link
-                          href={`/garage/${car.id}/service/new?reminder=${r.id}`}
-                          className="btn"
-                        >
-                          Log service
-                        </Link>
-                        <form action={markNeverDone.bind(null, car.id, r.id)}>
-                          <button type="submit" className="btn w-full">
-                            Never done
-                          </button>
-                        </form>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
-      </div>
+      <SectionGrid
+        initialLayout={layout}
+        sections={{
+          mileage: { label: "Mileage", node: mileageSection },
+          service: { label: "Service history", node: serviceSection },
+          reminders: { label: "Reminders", node: remindersSection },
+          build: { label: "Build", node: buildSection },
+        }}
+      />
 
       <RemoveCar vehicleId={car.id} name={car.nickname ?? vehicleName(car)} />
     </>
