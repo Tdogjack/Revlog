@@ -57,6 +57,26 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   redirect(safeNext(formData.get("next")));
 }
 
+const OAUTH_PROVIDERS = ["google", "apple"] as const;
+type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
+
+// Sends the browser to Google or Apple. They come back to /auth/callback.
+export async function signInWithProvider(formData: FormData) {
+  const provider = String(formData.get("provider") ?? "") as OAuthProvider;
+  if (!OAUTH_PROVIDERS.includes(provider)) redirect("/login");
+
+  const next = safeNext(formData.get("next"));
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${await siteOrigin()}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
+  });
+  if (error || !data.url) redirect("/login?error=oauth");
+  redirect(data.url);
+}
+
 export async function requestPasswordReset(
   _prev: AuthState,
   formData: FormData,

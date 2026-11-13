@@ -4,10 +4,15 @@ import { markEmailVerified } from "@/lib/email-verification";
 import { RESET_COOKIE } from "@/lib/reset-cookie";
 import { createClient } from "@/lib/supabase/server";
 
-// Supabase's confirmation and password-reset emails land here with a one-time code.
+// Supabase's confirmation and password-reset emails, and Google and Apple
+// sign-in, land here with a one-time code.
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
+  const nextParam = searchParams.get("next");
+  // Only paths inside the app, never another site.
+  const next =
+    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
   const cookieStore = await cookies();
   const resetting = cookieStore.has(RESET_COOKIE);
 
@@ -20,9 +25,10 @@ export async function GET(request: NextRequest) {
         cookieStore.delete(RESET_COOKIE);
         return NextResponse.redirect(`${origin}/reset-password`);
       }
-      return NextResponse.redirect(`${origin}/garage`);
+      return NextResponse.redirect(`${origin}${next ?? "/garage"}`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=${resetting ? "reset" : "confirm"}`);
+  const reason = resetting ? "reset" : next || searchParams.has("error") ? "oauth" : "confirm";
+  return NextResponse.redirect(`${origin}/login?error=${reason}`);
 }

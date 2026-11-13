@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { NativeTabs } from "expo-router/native-tabs";
 import { useEffect } from "react";
 import { onPushTap, registerForPush } from "@/lib/push";
+import { takeUsernamePrompt } from "@/lib/username-prompt";
 import { colors, fonts } from "@/lib/theme";
 
 export default function TabsLayout() {
@@ -9,6 +10,7 @@ export default function TabsLayout() {
   // asking) and open the screen a tapped reminder points at.
   useEffect(() => {
     registerForPush({ ask: false }).catch(() => undefined);
+    if (takeUsernamePrompt()) router.push("/username");
     return onPushTap((url) => router.push(url as never));
   }, []);
 

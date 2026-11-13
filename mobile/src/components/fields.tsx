@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   FlatList,
   Modal,
@@ -39,11 +39,21 @@ type FieldProps = Omit<TextInputProps, "value" | "onChangeText" | "onBlur"> & {
   // Checked when the person leaves the field. Returns what to fix, or null.
   validate?: (value: string) => string | null;
   error?: string | null;
+  // Sits at the right end of the label row, like a "Forgot password?" link.
+  labelAccessory?: ReactNode;
 };
 
 const NUMBER_PADS = new Set(["number-pad", "decimal-pad", "numeric", "phone-pad"]);
 
-export function Field({ label, value, onChangeText, validate, error, ...input }: FieldProps) {
+export function Field({
+  label,
+  value,
+  onChangeText,
+  validate,
+  error,
+  labelAccessory,
+  ...input
+}: FieldProps) {
   const [blurError, setBlurError] = useState<string | null>(null);
   const [engaged, setEngaged] = useState(false);
   const message = engaged ? null : (blurError ?? error);
@@ -60,7 +70,14 @@ export function Field({ label, value, onChangeText, validate, error, ...input }:
 
   return (
     <View style={styles.field}>
-      <Label text={label} />
+      {labelAccessory ? (
+        <View style={styles.labelRow}>
+          <Label text={label} />
+          {labelAccessory}
+        </View>
+      ) : (
+        <Label text={label} />
+      )}
       <TextInput
         accessibilityLabel={label}
         placeholderTextColor={colors.placeholder}
@@ -309,6 +326,7 @@ export function SelectField({
 
 const styles = StyleSheet.create({
   field: { gap: space.xs },
+  labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   label: { color: colors.label, fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },
   input: {
     minHeight: 48,

@@ -12,7 +12,8 @@
       "bundleIdentifier": "me.revlog.app",
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "me.revlog.app",
@@ -81,7 +82,8 @@
             }
           ]
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "reactCompiler": true

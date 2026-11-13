@@ -281,12 +281,15 @@ export function Button({
   onPress,
   kind = "primary",
   busy = false,
+  icon,
   style,
 }: {
   label: string;
   onPress: () => void;
   kind?: "primary" | "secondary" | "danger";
   busy?: boolean;
+  // Shown before the label, like a sign-in provider's logo.
+  icon?: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
   const primary = kind === "primary";
@@ -317,15 +320,18 @@ export function Button({
         {busy ? (
           <ActivityIndicator color={primary ? colors.onAmber : colors.chalk} />
         ) : (
-          <Text
-            style={[
-              styles.buttonLabel,
-              primary && styles.buttonLabelPrimary,
-              kind === "danger" && styles.buttonLabelDanger,
-            ]}
-          >
-            {label}
-          </Text>
+          <View style={styles.buttonContent}>
+            {icon}
+            <Text
+              style={[
+                styles.buttonLabel,
+                primary && styles.buttonLabelPrimary,
+                kind === "danger" && styles.buttonLabelDanger,
+              ]}
+            >
+              {label}
+            </Text>
+          </View>
         )}
       </Pressable>
     </Animated.View>
@@ -482,6 +488,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  buttonContent: { flexDirection: "row", alignItems: "center", gap: space.sm },
   buttonPrimary: { backgroundColor: colors.amberFill },
   buttonPrimaryPressed: { backgroundColor: colors.amberPressed },
   buttonSecondary: { borderWidth: 1, borderColor: colors.edge },
