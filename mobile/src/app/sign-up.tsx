@@ -1,14 +1,36 @@
 import { Feather } from "@expo/vector-icons";
 import type { Tokens } from "@revlog/api";
-import * as WebBrowser from "expo-web-browser";
+import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { AuthPage, authStyles, openSite } from "@/components/auth-page";
 import { Field } from "@/components/fields";
-import { Body, Button, FormError, Screen } from "@/components/ui";
+import { ProviderButtons } from "@/components/provider-buttons";
+import { Body, Button, FormError } from "@/components/ui";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { SITE_URL } from "@/lib/config";
 import { colors, fonts, space } from "@/lib/theme";
+
+// Same rules and wording as the website's sign-up checklist.
+const PASSWORD_RULES = [
+  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { label: "An uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "A lowercase letter", test: (p: string) => /[a-z]/.test(p) },
+  { label: "A number", test: (p: string) => /\d/.test(p) },
+];
+
+const logInLink = (
+  <>
+    Already have an account?{" "}
+    <Text
+      style={authStyles.link}
+      accessibilityRole="link"
+      onPress={() => router.back()}
+    >
+      Log in
+    </Text>
+  </>
+);
 
 export default function SignUp() {
   const { acceptTokens } = useAuth();
@@ -39,86 +61,139 @@ export default function SignUp() {
 
   if (sent) {
     return (
-      <Screen>
-        <Body>Check your email for a link to confirm your account, then log in.</Body>
-      </Screen>
+      <AuthPage heading="Check your email" footer={logInLink}>
+        <Body>
+          We sent a link to confirm your account. Open it, then log in.
+        </Body>
+      </AuthPage>
     );
   }
 
   return (
-    <Screen>
-      <Field
-        label="Username"
-        value={username}
-        onChangeText={setUsername}
-        autoCapitalize="none"
-        autoCorrect={false}
-        autoComplete="username-new"
-        validate={(v) => (v.trim() ? null : "Choose a username.")}
-      />
+    <AuthPage heading="Create your garage" footer={logInLink}>
+      <View style={styles.group}>
+        <Field
+          label="Username"
+          value={username}
+          onChangeText={setUsername}
+          placeholder="redline_rob"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="username-new"
+          maxLength={21}
+          validate={(v) => (v.trim() ? null : "Choose a username.")}
+        />
+        <Text style={authStyles.hint}>
+          Shown on your community posts. 3 to 20 characters: letters, numbers,
+          and underscores.
+        </Text>
+      </View>
       <Field
         label="Email"
         value={email}
         onChangeText={setEmail}
+        placeholder="you@example.com"
         autoCapitalize="none"
         autoComplete="email"
         keyboardType="email-address"
-        validate={(v) => (/.+@.+\..+/.test(v.trim()) ? null : "Enter an email like name@domain.com.")}
+        validate={(v) =>
+          /.+@.+\..+/.test(v.trim())
+            ? null
+            : "Enter an email like name@domain.com."
+        }
       />
-      <Field
-        label="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoComplete="new-password"
-        textContentType="newPassword"
-      />
-      <Body style={styles.hint}>
-        At least 8 characters, with an uppercase letter, a lowercase letter, and a number.
-      </Body>
+      <View style={styles.group}>
+        <Field
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoComplete="new-password"
+          textContentType="newPassword"
+          maxLength={72}
+        />
+        <View style={styles.rules}>
+          {PASSWORD_RULES.map((rule) => {
+            const met = rule.test(password);
+            return (
+              <View
+                key={rule.label}
+                style={styles.rule}
+                accessible
+                accessibilityLabel={`${rule.label}, ${met ? "done" : "missing"}`}
+              >
+                <Feather
+                  name={met ? "check" : "circle"}
+                  size={14}
+                  color={met ? colors.done : colors.steel}
+                />
+                <Text style={[styles.ruleText, met && styles.ruleMet]}>
+                  {rule.label}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
       <View style={styles.agreeRow}>
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: agree }}
           accessibilityLabel="I agree to the Terms and Privacy Policy"
-          hitSlop={8}
+          hitSlop={10}
           style={[styles.box, agree && styles.boxOn]}
           onPress={() => setAgree(!agree)}
         >
-          {agree && <Feather name="check" size={18} color={colors.onAmber} />}
+          {agree && <Feather name="check" size={16} color={colors.onAmber} />}
         </Pressable>
         <Text style={styles.agree}>
           I agree to the{" "}
           <Text
-            style={styles.link}
+            style={styles.inlineLink}
             accessibilityRole="link"
-            onPress={() => WebBrowser.openBrowserAsync(`${SITE_URL}/terms`)}
+            onPress={() => openSite("/terms")}
           >
             Terms
           </Text>{" "}
           and{" "}
           <Text
-            style={styles.link}
+            style={styles.inlineLink}
             accessibilityRole="link"
-            onPress={() => WebBrowser.openBrowserAsync(`${SITE_URL}/privacy`)}
+            onPress={() => openSite("/privacy")}
           >
             Privacy Policy
           </Text>
-          .
+          , including no abusive or objectionable content.
         </Text>
       </View>
       <FormError message={error} />
       <Button label="Create account" busy={busy} onPress={submit} />
-    </Screen>
+      <ProviderButtons />
+    </AuthPage>
   );
 }
 
 const styles = StyleSheet.create({
-  hint: { color: colors.steel, fontSize: 14, lineHeight: 20 },
-  agreeRow: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 44 },
+  group: { gap: space.xs },
+  rules: { gap: space.xs, paddingTop: space.xs },
+  rule: { flexDirection: "row", alignItems: "center", gap: 6 },
+  ruleText: {
+    color: colors.steel,
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  ruleMet: { color: colors.done },
+  agreeRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: space.md,
+    minHeight: 44,
+  },
   box: {
-    width: 26,
-    height: 26,
+    width: 22,
+    height: 22,
+    marginTop: 1,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: colors.fieldEdge,
@@ -126,6 +201,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   boxOn: { backgroundColor: colors.amberFill, borderColor: colors.amberFill },
-  agree: { flex: 1, color: colors.chalk, fontFamily: fonts.regular, fontSize: 15, lineHeight: 22 },
-  link: { color: colors.amber, textDecorationLine: "underline" },
+  agree: {
+    flex: 1,
+    color: colors.steel,
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  inlineLink: { color: colors.amber, fontFamily: fonts.bold },
 });

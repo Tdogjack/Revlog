@@ -1,14 +1,12 @@
 import { router } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Pressable, Text } from "react-native";
+import { AuthPage, authStyles, openSite } from "@/components/auth-page";
 import { Field } from "@/components/fields";
-import { Body, Button, FormError, Odometer, Screen } from "@/components/ui";
+import { ProviderButtons } from "@/components/provider-buttons";
+import { Button, FormError } from "@/components/ui";
 import { errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { SITE_URL } from "@/lib/config";
-import { colors, fonts, space, tracking } from "@/lib/theme";
 
 export default function SignIn() {
   const { signIn } = useAuth();
@@ -29,58 +27,52 @@ export default function SignIn() {
   };
 
   return (
-    <SafeAreaView style={styles.page}>
-      <Screen>
-        <View style={styles.intro}>
-          <Text style={styles.brand} accessibilityRole="header">
-            Revlog
+    <AuthPage
+      heading="Log in to your garage"
+      footer={
+        <>
+          New to Revlog?{" "}
+          <Text
+            style={authStyles.link}
+            accessibilityRole="link"
+            onPress={() => router.push("/sign-up")}
+          >
+            Create an account
           </Text>
-          <Body style={styles.muted}>Every service and mod, kept with the car.</Body>
-          <View style={styles.odometer}>
-            <Odometer miles={0} large />
-          </View>
-        </View>
-        <Field
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-          textContentType="username"
-        />
-        <Field
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete="current-password"
-          textContentType="password"
-          onSubmitEditing={submit}
-        />
-        <FormError message={error} />
-        <Button label="Log in" busy={busy} onPress={submit} />
-        <Button
-          label="Forgot password"
-          kind="secondary"
-          onPress={() => WebBrowser.openBrowserAsync(`${SITE_URL}/forgot-password`)}
-        />
-        <Button label="Create an account" kind="secondary" onPress={() => router.push("/sign-up")} />
-      </Screen>
-    </SafeAreaView>
+        </>
+      }
+    >
+      <Field
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        placeholder="you@example.com"
+        autoCapitalize="none"
+        autoComplete="email"
+        keyboardType="email-address"
+        textContentType="username"
+      />
+      <Field
+        label="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        autoComplete="current-password"
+        textContentType="password"
+        onSubmitEditing={submit}
+        labelAccessory={
+          <Pressable
+            accessibilityRole="link"
+            hitSlop={12}
+            onPress={() => openSite("/forgot-password")}
+          >
+            <Text style={authStyles.link}>Forgot password?</Text>
+          </Pressable>
+        }
+      />
+      <FormError message={error} />
+      <Button label="Log in" busy={busy} onPress={submit} />
+      <ProviderButtons />
+    </AuthPage>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.asphalt },
-  intro: { gap: space.xs, paddingTop: space.xxl, paddingBottom: space.lg },
-  brand: {
-    color: colors.amber,
-    fontFamily: fonts.bold,
-    fontSize: 48,
-    lineHeight: 56,
-    letterSpacing: tracking(48),
-  },
-  odometer: { marginTop: space.lg },
-  muted: { color: colors.steel },
-});
