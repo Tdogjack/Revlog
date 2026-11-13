@@ -34,7 +34,7 @@ import { RemoveCar } from "./remove-car";
 import { MileageEditor, ReminderControls } from "./reminder-controls";
 import { markNeverDone } from "./reminders/actions";
 import { MileageChart } from "@/components/mileage-chart";
-import { cardClass, RecordStats, reminderEdge } from "@/components/record-stats";
+import { cardClass, RecordStats } from "@/components/record-stats";
 import { StatusBadge } from "@/components/status-badge";
 
 export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
@@ -173,7 +173,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
     return (
       <li
         key={r.id}
-        className={`${cardClass} flex flex-col gap-1 border-l-chart-service sm:flex-row sm:gap-4`}
+        className={`${cardClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}
       >
         <div className={dateClass}>{formatDate(r.servicedOn)}</div>
         <details className="group min-w-0 flex-1">
@@ -344,7 +344,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                     group.length === 1 ? (
                       renderRecord(group[0])
                     ) : (
-                      <li key={group[0].category} className={`${cardClass} border-l-chart-service`}>
+                      <li key={group[0].category} className={`${cardClass}`}>
                         <details className="group/type">
                           <summary
                             className={`${summaryClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}
@@ -473,7 +473,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                       </>
                     );
                     return (
-                      <li key={m.id} className={`${cardClass} flex flex-col gap-2 sm:flex-row sm:gap-4 ${m.status === "removed" ? "border-l-graphite" : "border-l-chart-mods"}`}>
+                      <li key={m.id} className={`${cardClass} flex flex-col gap-2 sm:flex-row sm:gap-4`}>
                         {m.notes || modParts.length > 0 || modPhotos.length > 0 ? (
                           <details className="group min-w-0 flex-1">
                             <summary className={summaryClass}>
@@ -545,7 +545,7 @@ async function VehicleDetails({ params }: Pick<PageProps<"/garage/[id]">, "param
                 {carReminders.map(({ reminder: r, result }) => (
                   <li
                     key={r.id}
-                    className={`${cardClass} flex flex-wrap gap-3 ${reminderEdge[result.status]}`}
+                    className={`${cardClass} flex flex-wrap gap-3`}
                   >
                     <details className="group min-w-0 flex-1">
                       <summary className={summaryClass}>

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Check, ChevronDown, Copy, Download, Pencil, Plus, Share2 } from "lucide-react";
 import { MileageChart } from "@/components/mileage-chart";
-import { cardClass, RecordStats, reminderEdge } from "@/components/record-stats";
+import { cardClass, RecordStats } from "@/components/record-stats";
 import { StatusBadge } from "@/components/status-badge";
 import { ProfilePhoto } from "@/app/garage/[id]/profile-photo";
 import {
@@ -128,7 +128,7 @@ function CarDetails({ car }: { car: DemoCar }) {
   const plannedCost = sumCost(car.mods.filter((m) => m.status === "planned"));
 
   const renderRecord = (r: DemoRecord) => (
-    <li key={r.id} className={`${cardClass} flex flex-col gap-1 border-l-chart-service sm:flex-row sm:gap-4`}>
+    <li key={r.id} className={`${cardClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}>
       <div className={dateClass}>{formatDate(r.servicedOn)}</div>
       <details className="group min-w-0 flex-1">
         <summary className={summaryClass}>
@@ -244,7 +244,7 @@ function CarDetails({ car }: { car: DemoCar }) {
                 group.length === 1 ? (
                   renderRecord(group[0])
                 ) : (
-                  <li key={group[0].category} className={`${cardClass} border-l-chart-service`}>
+                  <li key={group[0].category} className={`${cardClass}`}>
                     <details className="group/type">
                       <summary
                         className={`${summaryClass} flex flex-col gap-1 sm:flex-row sm:gap-4`}
@@ -319,7 +319,7 @@ function CarDetails({ car }: { car: DemoCar }) {
                   </>
                 );
                 return (
-                  <li key={m.id} className={`${cardClass} flex flex-col gap-2 sm:flex-row sm:gap-4 ${m.status === "removed" ? "border-l-graphite" : "border-l-chart-mods"}`}>
+                  <li key={m.id} className={`${cardClass} flex flex-col gap-2 sm:flex-row sm:gap-4`}>
                     {m.notes || m.parts.length > 0 ? (
                       <details className="group min-w-0 flex-1">
                         <summary className={summaryClass}>
@@ -364,7 +364,7 @@ function CarDetails({ car }: { car: DemoCar }) {
             </div>
             <ul className="mt-4 space-y-2">
               {reminders.map(({ reminder: r, result }) => (
-                <li key={r.id} className={`${cardClass} flex gap-3 ${reminderEdge[result.status]}`}>
+                <li key={r.id} className={`${cardClass} flex gap-3`}>
                   <details className="group min-w-0 flex-1">
                     <summary className={summaryClass}>
                       <p className="font-semibold">{r.task}</p>

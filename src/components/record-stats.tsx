@@ -33,14 +33,6 @@ export function RecordStats({
   );
 }
 
-// Each row is its own card with a colored edge for its kind: red for service,
-// blue for mods, and the status color for reminders.
+// Each row is its own plain card. Status lives in the badge and text, not the edge.
 export const cardClass =
-  "rounded-xl border border-graphite border-l-[3px] bg-carbon/50 px-4 py-3.5 transition-colors hover:bg-graphite/30";
-
-export const reminderEdge = {
-  overdue: "border-l-overdue",
-  due_soon: "border-l-due",
-  ok: "border-l-done",
-  unknown: "border-l-steel",
-} as const;
+  "rounded-xl border border-graphite bg-carbon/50 px-4 py-3.5 transition-colors hover:bg-graphite/30";
