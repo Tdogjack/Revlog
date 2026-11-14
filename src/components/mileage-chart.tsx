@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useMemo, useRef, useState, type PointerEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent,
+} from "react";
 import { Pencil, X } from "lucide-react";
 import {
   DAY,
@@ -355,13 +363,21 @@ export function MileageChart({
                     strokeDasharray="3 3"
                   />
                   {!hovered && (
-                    <circle
-                      cx={sx(readT)}
-                      cy={sy(readMiles)}
-                      r={4}
-                      className={ahead ? "fill-panel stroke-chalk/70" : "fill-chalk stroke-panel"}
-                      strokeWidth={2}
-                    />
+                    <>
+                      <circle
+                        cx={sx(readT)}
+                        cy={sy(readMiles)}
+                        r={9}
+                        className="fill-chalk/15"
+                      />
+                      <circle
+                        cx={sx(readT)}
+                        cy={sy(readMiles)}
+                        r={4.5}
+                        className={ahead ? "fill-panel stroke-chalk/70" : "fill-chalk stroke-panel"}
+                        strokeWidth={2}
+                      />
+                    </>
                   )}
                 </>
               )}
@@ -387,13 +403,19 @@ export function MileageChart({
                   className="absolute flex -translate-x-1/2 -translate-y-1/2"
                   style={{ left: c.x, top: c.y }}
                 >
-                  <MarkerFace cluster={c} active={false} />
+                  <MarkerFace cluster={c} state="idle" />
                 </span>
               ) : (
                 <ClusterMarker
                   key={c.key}
                   cluster={c}
-                  active={selectedCluster?.key === c.key || hovered?.key === c.key}
+                  state={
+                    selectedCluster?.key === c.key
+                      ? "selected"
+                      : hovered?.key === c.key
+                        ? "hover"
+                        : "idle"
+                  }
                   onSelect={() =>
                     setSelected(selectedCluster?.key === c.key ? null : c.events[0].key)
                   }
@@ -532,12 +554,12 @@ function Shape({
 
 function ClusterMarker({
   cluster,
-  active,
+  state,
   onSelect,
   onHover,
 }: {
   cluster: Cluster;
-  active: boolean;
+  state: MarkerState;
   onSelect: () => void;
   onHover: (on: boolean) => void;
 }) {
@@ -551,44 +573,60 @@ function ClusterMarker({
     <button
       type="button"
       aria-label={label}
-      aria-expanded={events.length > 1 ? active : undefined}
+      aria-expanded={events.length > 1 ? state === "selected" : undefined}
       onClick={onSelect}
       onPointerEnter={() => onHover(true)}
       onPointerLeave={() => onHover(false)}
       onFocus={() => onHover(true)}
       onBlur={() => onHover(false)}
-      className="absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md"
+      className="chart-hit absolute flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md"
       style={{ left: cluster.x, top: cluster.y }}
     >
-      <MarkerFace cluster={cluster} active={active} />
+      <MarkerFace cluster={cluster} state={state} />
     </button>
   );
 }
 
-// A lone entry's shape, or a count box for a group: bordered in the series
-// color when every entry is the same type, white when mixed.
-function MarkerFace({ cluster, active }: { cluster: Cluster; active: boolean }) {
+type MarkerState = "idle" | "hover" | "selected";
+
+const pipColor = (kind: TimelineEventKind | null, overdue?: boolean) =>
+  kind === "service"
+    ? "var(--color-chart-service)"
+    : kind === "mod"
+      ? "var(--color-chart-mods)"
+      : kind === "due"
+        ? overdue
+          ? "var(--color-overdue)"
+          : "var(--color-due)"
+        : "var(--color-chalk)";
+
+// A lone entry's pip, or a count pill for a group: tinted in the series color
+// when every entry is the same type, neutral when mixed.
+function MarkerFace({ cluster, state }: { cluster: Cluster; state: MarkerState }) {
   const { events } = cluster;
+  const dataState = state === "idle" ? undefined : state;
   if (events.length === 1) {
+    const e = events[0];
     return (
-      <span className={`flex rounded transition-transform ${active ? "scale-150" : ""}`}>
-        <Shape kind={events[0].kind} size={sizeOf(events[0].kind)} overdue={events[0].overdue} />
-      </span>
+      <span
+        className="chart-pip"
+        data-kind={e.kind}
+        data-state={dataState}
+        style={{ "--pip": pipColor(e.kind, e.overdue) } as CSSProperties}
+      />
     );
   }
   const kinds = new Set(events.map((e) => e.kind));
   const only = kinds.size === 1 ? events[0].kind : null;
-  const border =
-    only === "service"
-      ? "border-chart-service"
-      : only === "mod"
-        ? "border-chart-mods"
-        : only === "due"
-          ? "border-due"
-          : "border-chalk/70";
   return (
     <span
-      className={`readout flex h-5 min-w-5 items-center justify-center rounded border-2 bg-carbon px-1 text-xs leading-none text-chalk ${border} ${active ? "bg-graphite" : ""}`}
+      className="chart-count readout"
+      data-state={dataState}
+      style={
+        {
+          "--pip": pipColor(only, only === "due" && events.every((e) => e.overdue)),
+        } as CSSProperties
+      }
     >
       {events.length}
     </span>
