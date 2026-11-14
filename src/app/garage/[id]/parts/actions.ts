@@ -35,14 +35,14 @@ export async function editPart(
   if (!part) return { error: "That part wasn't found.", values: raw };
 
   const warning = part.trackPrice && !part.lastCheckedAt ? await checkPartPrice(part) : null;
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
   return { ok: true, warning: warning ?? undefined };
 }
 
 export async function removePart(vehicleId: string, partId: string) {
   const user = await requireUser();
   await deletePart(user.id, partId);
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
 }
 
 export type PriceCheckState = { error?: string } | undefined;
@@ -58,6 +58,6 @@ export async function refreshPartPrice(
   const blocked = await priceCheckBlocked(user.id, part);
   if (blocked) return { error: blocked };
   const error = await checkPartPrice(part);
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
   return error ? { error } : undefined;
 }

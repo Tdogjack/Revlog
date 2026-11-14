@@ -30,7 +30,7 @@ async function NewMod({ params }: Pick<PageProps<"/garage/[id]/mods/new">, "para
 
   return (
     <>
-      <BackLink href={`/garage/${car.id}`}>{car.nickname ?? vehicleName(car)}</BackLink>
+      <BackLink href={`/garage/${car.id}/build`}>{car.nickname ?? vehicleName(car)}</BackLink>
       <h1 className="mt-4 font-display text-4xl font-semibold">Add a mod</h1>
       <ModForm
         action={addMod.bind(null, car.id)}

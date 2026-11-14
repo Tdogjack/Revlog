@@ -46,7 +46,7 @@ export function ModForm({
         const ok = await uploadQueued(photos.vehicleId, "mod", result.savedId, queued);
         router.push(
           ok
-            ? `/garage/${photos.vehicleId}`
+            ? `/garage/${photos.vehicleId}/build`
             : `/garage/${photos.vehicleId}/mods/${result.savedId}/edit?photos=failed`,
         );
       }

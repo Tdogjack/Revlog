@@ -14,7 +14,7 @@ export async function uploadPhoto(
   const user = await requireUser();
   const error = await saveUploadedPhoto(user.id, vehicleId, kind, targetId, formData);
   if (error) return { error };
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
   return {};
 }
 
@@ -27,12 +27,12 @@ export async function replacePhoto(
   const user = await requireUser();
   const error = await replacePhotoFile(user.id, photoId, formData);
   if (error) return { error };
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
   return {};
 }
 
 export async function removePhoto(vehicleId: string, photoId: string) {
   const user = await requireUser();
   await deletePhoto(user.id, photoId);
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
 }

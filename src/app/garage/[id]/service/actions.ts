@@ -49,7 +49,7 @@ async function saveLog(
 
   // With photos waiting, the form uploads them to the new record, then leaves.
   if (formData.get("stay")) return { savedId: result.id };
-  redirect(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}/service`);
 }
 
 export async function editServiceRecord(
@@ -62,7 +62,7 @@ export async function editServiceRecord(
   const raw = readServiceFields((k) => formData.get(k));
   const error = await editService(user.id, vehicleId, recordId, raw);
   if (error) return { error, values: raw };
-  redirect(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}/service`);
 }
 
 // Reads a receipt photo into form values. Nothing is saved here.
@@ -80,5 +80,5 @@ export async function removeServiceRecord(vehicleId: string, recordId: string) {
   const paths = await photoPathsFor(user.id, { kind: "record", id: recordId });
   await deleteServiceRecord(user.id, recordId);
   await removePhotoFiles(paths);
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
 }

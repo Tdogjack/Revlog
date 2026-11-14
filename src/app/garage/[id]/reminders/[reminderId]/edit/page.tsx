@@ -41,7 +41,7 @@ async function EditReminder({ params }: Pick<Props, "params">) {
 
   return (
     <>
-      <BackLink href={`/garage/${car.id}`}>{car.nickname ?? vehicleName(car)}</BackLink>
+      <BackLink href={`/garage/${car.id}/reminders`}>{car.nickname ?? vehicleName(car)}</BackLink>
       <h1 className="mt-4 font-display text-4xl font-semibold">Edit reminder</h1>
       <ReminderForm
         action={editReminder.bind(null, car.id, reminder.id)}

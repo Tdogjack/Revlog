@@ -35,7 +35,7 @@ export async function saveServiceHistory(
   const user = await requireUser();
   const result = await saveHistoryRows(user.id, vehicleId, json);
   if ("saved" in result) {
-    revalidatePath(`/garage/${vehicleId}`);
+    revalidatePath(`/garage/${vehicleId}`, "layout");
     revalidatePath("/garage");
   }
   return result;

@@ -50,7 +50,7 @@ async function ImportHistory({ params, searchParams }: Pick<Props, "params" | "s
 
   return (
     <>
-      <BackLink href={`/garage/${car.id}`}>{name}</BackLink>
+      <BackLink href={`/garage/${car.id}/service`}>{name}</BackLink>
       <h1 className="mt-4 font-display text-4xl font-semibold">
         {isNewCar ? `${name} is in the garage` : "Add service history"}
       </h1>
