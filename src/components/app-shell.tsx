@@ -6,7 +6,6 @@ import { Brand, DesktopNav, TabBar, TopBar, type NavItem } from "@/components/si
 import { SiteFooter } from "@/components/site-footer";
 import { getUser } from "@/lib/auth";
 import { getProfile } from "@/lib/profiles";
-import { listVehicles, vehicleName } from "@/lib/vehicles";
 
 const NAV: NavItem[] = [
   { href: "/garage", label: "Garage", icon: "garage" },
@@ -27,9 +26,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex min-w-0 items-center gap-x-4">
           <Brand />
           <DesktopNav items={NAV} />
-          <Suspense fallback={null}>
-            <CarLinks />
-          </Suspense>
         </div>
         <Suspense fallback={null}>
           <AccountMenu />
@@ -49,30 +45,6 @@ async function ShellTabs() {
   // Signed out, the header's Log in and Sign up are the way forward.
   if (!user) return null;
   return <TabBar items={SIGNED_IN_TABS} />;
-}
-
-// Jump straight to a car without stopping at the garage. Wide screens only;
-// on a phone the garage list is one tap away in the tab bar.
-async function CarLinks() {
-  const user = await getUser();
-  if (!user) return null;
-  const cars = await listVehicles(user.id);
-  if (cars.length === 0) return null;
-
-  return (
-    <div className="hidden min-w-0 items-center gap-1 overflow-x-auto border-l border-graphite pl-3 lg:flex">
-      {cars.map((car) => (
-        <Link
-          key={car.id}
-          href={`/garage/${car.id}`}
-          title={vehicleName(car)}
-          className="nav-link max-w-44 shrink-0"
-        >
-          <span className="truncate">{car.nickname ?? `${car.make} ${car.model}`}</span>
-        </Link>
-      ))}
-    </div>
-  );
 }
 
 async function AccountMenu() {

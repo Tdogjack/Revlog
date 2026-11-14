@@ -73,7 +73,7 @@ export async function editVehicle(
   const found = await updateVehicle(user.id, vehicleId, parsed.data);
   if (!found) return { error: "That car wasn't found.", values: raw };
 
-  revalidatePath("/garage");
+  revalidatePath("/garage", "layout");
   revalidatePath(`/garage/${vehicleId}`);
   redirect(`/garage/${vehicleId}`);
 }
@@ -108,7 +108,7 @@ export async function removeVehicle(vehicleId: string, formData: FormData) {
 
   await deleteVehicle(user.id, vehicleId);
   updateTag(FEATURED_BUILD_TAG);
-  revalidatePath("/garage");
+  revalidatePath("/garage", "layout");
   revalidatePath("/community");
   redirect("/garage");
 }
@@ -116,18 +116,18 @@ export async function removeVehicle(vehicleId: string, formData: FormData) {
 export async function toggleFavorite(vehicleId: string, favorite: boolean) {
   const user = await requireUser();
   await setVehicleFavorite(user.id, vehicleId, favorite);
-  revalidatePath("/garage");
+  revalidatePath("/garage", "layout");
 }
 
 // Saves the order the cars were dragged into.
 export async function orderVehicles(ids: string[]) {
   const user = await requireUser();
   await setVehicleOrder(user.id, ids.map(String));
-  revalidatePath("/garage");
+  revalidatePath("/garage", "layout");
 }
 
 export async function reorderVehicle(vehicleId: string, direction: "up" | "down") {
   const user = await requireUser();
   await moveVehicle(user.id, vehicleId, direction === "up" ? "up" : "down");
-  revalidatePath("/garage");
+  revalidatePath("/garage", "layout");
 }

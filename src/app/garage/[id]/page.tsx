@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { BackLink } from "@/components/back-link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -26,6 +25,7 @@ import { categoryLabel } from "@/lib/service-categories";
 import { listServiceRecords } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
 import { getVehicle, listMileageReadings, vehicleName } from "@/lib/vehicles";
+import { CarSwitcher, CarSwitcherSkeleton } from "./car-switcher";
 import { DeleteRecordButton } from "./delete-record-button";
 import { ModControls } from "./mod-controls";
 import { PartsList } from "./parts-list";
@@ -43,12 +43,19 @@ import { LAYOUT_COOKIE, parseLayout } from "@/lib/car-layout";
 export default function VehiclePage({ params }: PageProps<"/garage/[id]">) {
   return (
     <>
-      <BackLink href="/garage">Garage</BackLink>
+      <Suspense fallback={<CarSwitcherSkeleton />}>
+        <Switcher params={params} />
+      </Suspense>
       <Suspense fallback={<CarSkeleton />}>
         <VehicleDetails params={params} />
       </Suspense>
     </>
   );
+}
+
+async function Switcher({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
+  const { id } = await params;
+  return <CarSwitcher currentId={id} />;
 }
 
 const money = new Intl.NumberFormat("en-US", {

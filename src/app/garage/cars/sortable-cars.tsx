@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { GripVertical } from "lucide-react";
-import { orderVehicles } from "./actions";
+import { orderVehicles } from "../actions";
 
 export type SortableCar = {
   id: string;
