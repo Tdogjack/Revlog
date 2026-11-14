@@ -663,6 +663,105 @@ body {
     }
   }
 
+  /* Mileage graph markers. Each one is a small solid pip in its series color,
+     set off the line by a ring of the panel behind it and lifted with a soft
+     shadow, so it reads as something you can press. Pointing at one grows it
+     on a spring and puts a halo of its own color around it; the open one keeps
+     the halo. --pip is the series color, set inline. */
+  .chart-pip,
+  .chart-count {
+    --pip-ring: 0 0 0 2px var(--color-panel);
+    --pip-drop: 0 1px 3px rgb(0 0 0 / 0.5);
+    --pip-halo: 0 0 0 0 transparent;
+    box-shadow: var(--pip-ring), var(--pip-halo), var(--pip-drop);
+    transition:
+      scale 350ms var(--ease-spring),
+      box-shadow 150ms ease-out,
+      background-color 150ms ease-out;
+  }
+  .chart-pip {
+    display: block;
+    width: 10px;
+    height: 10px;
+    background: var(--pip);
+    box-shadow:
+      var(--pip-ring),
+      var(--pip-halo),
+      var(--pip-drop),
+      inset 0 1px 0 rgb(255 255 255 / 0.3);
+  }
+  .chart-pip[data-kind="service"] {
+    border-radius: 3px;
+  }
+  .chart-pip[data-kind="mod"] {
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+  }
+  .chart-pip[data-kind="reading"] {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: var(--color-panel);
+    border: 2px solid var(--pip);
+  }
+  .chart-pip[data-kind="due"] {
+    rotate: 45deg;
+    border-radius: 2px;
+  }
+  .chart-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
+    min-width: 20px;
+    padding: 0 5px;
+    /* Groups stay square so they read apart from the round mod pips. */
+    border-radius: 4px;
+    border: 1.5px solid var(--pip);
+    background: color-mix(in srgb, var(--pip) 20%, var(--color-panel));
+    color: var(--color-chalk);
+    font-size: 11px;
+    line-height: 1;
+  }
+  .chart-pip[data-state="hover"],
+  .chart-count[data-state="hover"] {
+    --pip-halo: 0 0 0 6px color-mix(in srgb, var(--pip) 25%, transparent);
+    --pip-drop: 0 2px 6px rgb(0 0 0 / 0.5);
+  }
+  .chart-pip[data-state="selected"],
+  .chart-count[data-state="selected"] {
+    --pip-halo: 0 0 0 6px color-mix(in srgb, var(--pip) 40%, transparent);
+    --pip-drop: 0 2px 6px rgb(0 0 0 / 0.5);
+  }
+  .chart-pip[data-state="hover"],
+  .chart-pip[data-state="selected"] {
+    scale: 1.3;
+  }
+  .chart-count[data-state="hover"],
+  .chart-count[data-state="selected"] {
+    scale: 1.1;
+    background: color-mix(in srgb, var(--pip) 32%, var(--color-panel));
+  }
+  :where(.chart-hit:active) :is(.chart-pip, .chart-count) {
+    scale: 0.9;
+    transition-duration: 100ms, 150ms, 150ms;
+  }
+  :where([data-theme="clean-spec"]) :is(.chart-pip, .chart-count) {
+    --pip-drop: 0 1px 2px rgb(16 24 40 / 0.25);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chart-pip,
+    .chart-count {
+      transition-property: box-shadow, background-color;
+    }
+    .chart-pip[data-state],
+    .chart-count[data-state],
+    :where(.chart-hit:active) :is(.chart-pip, .chart-count) {
+      scale: none;
+    }
+  }
+
   /* Rows that open something: they dim under the finger the moment it lands. */
   .press {
     transition: background-color 150ms ease-out;
