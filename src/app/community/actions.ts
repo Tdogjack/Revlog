@@ -113,7 +113,7 @@ export async function saveBuild(_prev: PostFormState, formData: FormData): Promi
   updateTag(FEATURED_BUILD_TAG);
   revalidatePath("/community");
   revalidatePath(`/community/${result.id}`);
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
   return { postId: result.id, added: result.added };
 }
 

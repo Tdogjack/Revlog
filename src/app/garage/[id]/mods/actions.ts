@@ -24,7 +24,7 @@ export async function addMod(
 
   // With photos waiting, the form uploads them to the new mod, then leaves.
   if (formData.get("stay")) return { savedId: result.id };
-  redirect(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}/build`);
 }
 
 // Reads an order email, order page, receipt, or listing into form values.
@@ -49,7 +49,7 @@ export async function editMod(
   const error = await editModEntry(user.id, vehicleId, modId, raw);
   if (error) return { error, values: raw };
 
-  redirect(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}/build`);
 }
 
 export async function changeModStatus(vehicleId: string, modId: string, formData: FormData) {
@@ -57,7 +57,7 @@ export async function changeModStatus(vehicleId: string, modId: string, formData
   const status = modStatusInput.safeParse(formData.get("status"));
   if (!status.success) return;
   await setModStatus(user.id, modId, status.data);
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
 }
 
 export async function removeMod(vehicleId: string, modId: string) {
@@ -65,5 +65,5 @@ export async function removeMod(vehicleId: string, modId: string) {
   const paths = await photoPathsFor(user.id, { kind: "mod", id: modId });
   await deleteMod(user.id, modId);
   await removePhotoFiles(paths);
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
 }

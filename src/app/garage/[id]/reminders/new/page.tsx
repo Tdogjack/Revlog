@@ -32,7 +32,7 @@ async function NewReminder({ params }: Pick<PageProps<"/garage/[id]/reminders/ne
 
   return (
     <>
-      <BackLink href={`/garage/${car.id}`}>{car.nickname ?? vehicleName(car)}</BackLink>
+      <BackLink href={`/garage/${car.id}/reminders`}>{car.nickname ?? vehicleName(car)}</BackLink>
       <h1 className="mt-4 font-display text-4xl font-semibold">Add a reminder</h1>
       <ReminderForm
         action={addReminder.bind(null, car.id)}

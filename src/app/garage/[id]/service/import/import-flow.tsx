@@ -391,7 +391,7 @@ export function ImportFlow({
       router.push(
         failedOn
           ? `/garage/${vehicleId}/service/${failedOn}/edit?photos=failed`
-          : `/garage/${vehicleId}`,
+          : `/garage/${vehicleId}/service`,
       );
     } catch {
       setError({ text: "Those records didn't save. Your list is still here, so try again." });
@@ -595,7 +595,7 @@ export function ImportFlow({
                 ? `Save ${plural(kept.length, "record")}`
                 : "Save records"}
         </button>
-        <Link href={`/garage/${vehicleId}`} className="btn btn-lg">
+        <Link href={`/garage/${vehicleId}/service`} className="btn btn-lg">
           {skipLabel}
         </Link>
       </div>

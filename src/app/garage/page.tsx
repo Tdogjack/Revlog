@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { Car } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { CURRENT_CAR_COOKIE } from "@/lib/current-car";
@@ -11,7 +12,15 @@ export const metadata: Metadata = { title: "Your garage · Revlog" };
 
 // The garage opens straight onto a car: the one viewed last, or the first in
 // the user's order. Switching cars happens on the car page itself.
-export default async function GaragePage() {
+export default function GaragePage() {
+  return (
+    <Suspense fallback={<div className="skeleton h-40" aria-busy="true" aria-label="Opening your car" />}>
+      <OpenCar />
+    </Suspense>
+  );
+}
+
+async function OpenCar() {
   const user = await requireUser();
   const cars = await listVehicles(user.id);
 

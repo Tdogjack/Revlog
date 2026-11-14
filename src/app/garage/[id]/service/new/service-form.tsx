@@ -54,7 +54,7 @@ export function ServiceForm({
         const ok = await uploadQueued(photos.vehicleId, "record", result.savedId, queued);
         router.push(
           ok
-            ? `/garage/${photos.vehicleId}`
+            ? `/garage/${photos.vehicleId}/service`
             : `/garage/${photos.vehicleId}/service/${result.savedId}/edit?photos=failed`,
         );
       }

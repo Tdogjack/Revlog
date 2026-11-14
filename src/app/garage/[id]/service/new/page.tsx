@@ -60,7 +60,7 @@ async function NewService({ params, searchParams }: Pick<Props, "params" | "sear
 
   return (
     <>
-      <BackLink href={`/garage/${car.id}`}>{car.nickname ?? vehicleName(car)}</BackLink>
+      <BackLink href={`/garage/${car.id}/service`}>{car.nickname ?? vehicleName(car)}</BackLink>
       <h1 className="mt-4 font-display text-4xl font-semibold">Log service</h1>
       {source && (
         <p className="mt-2 rounded-md bg-graphite px-3 py-2 text-sm">

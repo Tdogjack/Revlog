@@ -42,7 +42,7 @@ async function EditMod({ params, searchParams }: Pick<Props, "params" | "searchP
 
   return (
     <>
-      <BackLink href={`/garage/${car.id}`}>{car.nickname ?? vehicleName(car)}</BackLink>
+      <BackLink href={`/garage/${car.id}/build`}>{car.nickname ?? vehicleName(car)}</BackLink>
       <h1 className="mt-4 font-display text-4xl font-semibold">Edit mod</h1>
       {failed && (
         <p role="alert" className="mt-2 rounded-md bg-graphite px-3 py-2 text-sm">

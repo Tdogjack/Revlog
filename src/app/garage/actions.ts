@@ -74,7 +74,7 @@ export async function editVehicle(
   if (!found) return { error: "That car wasn't found.", values: raw };
 
   revalidatePath("/garage", "layout");
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
   redirect(`/garage/${vehicleId}`);
 }
 
@@ -88,14 +88,14 @@ export async function changeVehiclePhoto(
   const user = await requireUser();
   const error = await replaceVehiclePhoto(user.id, vehicleId, formData);
   if (error) return { error };
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
   return { ok: true };
 }
 
 export async function removeVehiclePhoto(vehicleId: string) {
   const user = await requireUser();
   await clearVehiclePhoto(user.id, vehicleId);
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
 }
 
 export async function removeVehicle(vehicleId: string, formData: FormData) {

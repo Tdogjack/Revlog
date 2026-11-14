@@ -22,7 +22,7 @@ export async function addReminder(
   const raw = readReminderFields((k) => formData.get(k));
   const error = await addReminderFromFields(user.id, vehicleId, raw);
   if (error) return { error, values: raw };
-  redirect(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}/reminders`);
 }
 
 export async function editReminder(
@@ -35,20 +35,20 @@ export async function editReminder(
   const raw = readReminderFields((k) => formData.get(k));
   const error = await editReminderFromFields(user.id, vehicleId, reminderId, raw);
   if (error) return { error, values: raw };
-  redirect(`/garage/${vehicleId}`);
+  redirect(`/garage/${vehicleId}/reminders`);
 }
 
 // Logs the service on the chosen date, which resets the reminder.
 export async function removeReminder(vehicleId: string, reminderId: string) {
   const user = await requireUser();
   await deleteReminder(user.id, reminderId);
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
 }
 
 export async function markNeverDone(vehicleId: string, reminderId: string) {
   const user = await requireUser();
   await markReminderNeverDone(user.id, vehicleId, reminderId);
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
   revalidatePath("/garage");
 }
 
@@ -68,6 +68,6 @@ export async function updateMileage(
     parsed.data,
     localDateOrToday(formData.get("readOn")),
   );
-  revalidatePath(`/garage/${vehicleId}`);
+  revalidatePath(`/garage/${vehicleId}`, "layout");
   return undefined;
 }
