@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ChevronDown, Download, FileUp, Plus, Search, Wrench } from "lucide-react";
 import { cardClass, RecordStats } from "@/components/record-stats";
+import { RowSizeToggle } from "@/components/row-size-toggle";
 import { listPartsForVehicle } from "@/lib/parts";
 import { categoryLabel } from "@/lib/service-categories";
 import { listServiceRecords } from "@/lib/service-records";
@@ -9,6 +10,7 @@ import { listServiceTypes } from "@/lib/service-types";
 import {
   dateClass,
   formatDate,
+  getRowSize,
   loadCar,
   loadGallery,
   money,
@@ -40,11 +42,12 @@ async function ServiceHistory({
   const q = typeof query.q === "string" ? query.q.trim() : "";
   const byType = query.view === "type";
 
-  const [records, customTypes, parts, pickPhotos] = await Promise.all([
+  const [records, customTypes, parts, pickPhotos, size] = await Promise.all([
     listServiceRecords(user.id, car.id),
     listServiceTypes(user.id),
     listPartsForVehicle(user.id, car.id),
     loadGallery(user.id, car.id),
+    getRowSize("service"),
   ]);
 
   const needle = q.toLowerCase();
@@ -57,6 +60,7 @@ async function ServiceHistory({
     : records;
 
   const base = `/garage/${car.id}`;
+  const listGap = size === "small" ? "space-y-1.5" : "space-y-2";
   const spent = sumCost(records);
   const row = (r: ServiceRecord) => (
     <ServiceRow
@@ -66,6 +70,7 @@ async function ServiceHistory({
       customTypes={customTypes}
       parts={parts.filter((p) => p.serviceRecordId === r.id)}
       photos={pickPhotos((p) => p.serviceRecordId === r.id)}
+      size={size}
     />
   );
   const viewHref = (view: "date" | "type") => {
@@ -88,6 +93,7 @@ async function ServiceHistory({
               }`
         }
       >
+        {records.length > 0 && <RowSizeToggle list="service" size={size} />}
         {records.length > 0 && (
           <a href={`${base}/history`} className="btn" title="Download service history as a PDF">
             <Download className="h-4 w-4" aria-hidden />
@@ -181,7 +187,7 @@ async function ServiceHistory({
             </Link>
           </p>
         ) : byType ? (
-          <ol className="mt-4 space-y-2">
+          <ol className={`mt-4 ${listGap}`}>
             {groupByType(shown).map((group) =>
               group.length === 1 ? (
                 row(group[0])
@@ -208,7 +214,7 @@ async function ServiceHistory({
                         </p>
                       </div>
                     </summary>
-                    <ol className="mt-3 space-y-2">{group.map(row)}</ol>
+                    <ol className={`mt-3 ${listGap}`}>{group.map(row)}</ol>
                   </details>
                 </li>
               ),
@@ -225,7 +231,7 @@ async function ServiceHistory({
                     {sumCost(list) > 0 && `, ${money.format(sumCost(list))}`}
                   </span>
                 </h3>
-                <ol className="mt-3 space-y-2">{list.map(row)}</ol>
+                <ol className={`mt-3 ${listGap}`}>{list.map(row)}</ol>
               </div>
             ))}
           </div>

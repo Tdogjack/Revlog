@@ -6,9 +6,10 @@ import { Suspense } from "react";
 
 const TABS = [
   { path: "", label: "Overview" },
+  { path: "/build", label: "Build" },
   { path: "/service", label: "Service" },
   { path: "/reminders", label: "Reminders" },
-  { path: "/build", label: "Build" },
+  { path: "/photos", label: "Photos" },
 ];
 
 // The car's pages. Sticks under the top bar so switching never needs a
@@ -34,12 +35,12 @@ function Bar({ base, path }: { base?: string; path?: string }) {
       aria-label="Car pages"
       className="chrome sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 -mx-4 mt-6 border-b border-graphite/70 px-4 sm:-mx-6 sm:px-6"
     >
-      <ul className="-ml-3 flex gap-1 overflow-x-auto py-1 [scrollbar-width:none]">
+      <ul className="-ml-2 flex overflow-x-auto py-1 [scrollbar-width:none] sm:-ml-3 sm:gap-1">
         {TABS.map((tab) => {
           if (!base) {
             return (
               <li key={tab.label} className="shrink-0">
-                <span className="nav-link font-semibold">{tab.label}</span>
+                <span className="nav-link px-2 font-semibold sm:px-3">{tab.label}</span>
               </li>
             );
           }
@@ -49,7 +50,7 @@ function Bar({ base, path }: { base?: string; path?: string }) {
               <Link
                 href={href}
                 aria-current={path === href ? "page" : undefined}
-                className="nav-link font-semibold"
+                className="nav-link px-2 font-semibold sm:px-3"
               >
                 {tab.label}
               </Link>
