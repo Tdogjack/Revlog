@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { BellRing, Check, ChevronDown, Plus } from "lucide-react";
-import { cardClass } from "@/components/record-stats";
+import { Gauge, MiniDial } from "@/components/gauges";
 import { RowSizeToggle } from "@/components/row-size-toggle";
 import { StatusBadge } from "@/components/status-badge";
 import { getEmailSettings } from "@/lib/email-settings";
 import { listReminders } from "@/lib/reminder-store";
-import { describeDue, rankReminders } from "@/lib/reminders";
+import { describeDue, intervalUsed, rankReminders } from "@/lib/reminders";
 import { listServiceRecords } from "@/lib/service-records";
 import { ReminderControls } from "../../reminder-controls";
 import { markNeverDone } from "../../reminders/actions";
@@ -92,6 +92,7 @@ async function Reminders({
           {attention.length > 0 && (
             <Group
               title="Needs attention"
+              tone="attention"
               items={attention}
               vehicleId={car.id}
               size={size}
@@ -100,6 +101,7 @@ async function Reminders({
           {onTrack.length > 0 && (
             <Group
               title="On track"
+              tone="ok"
               items={onTrack}
               vehicleId={car.id}
               size={size}
@@ -116,36 +118,43 @@ function Group({
   items,
   vehicleId,
   size,
+  tone,
 }: {
   title: string;
   items: Ranked[];
   vehicleId: string;
   size: RowSize;
+  tone: "attention" | "ok";
 }) {
+  const heading = (
+    <h3 className="flex items-center gap-2.5 font-display text-xl font-semibold">
+      <span
+        className={`h-2.5 w-2.5 rounded-full ${tone === "attention" ? "bg-overdue" : "bg-gauge"}`}
+        aria-hidden
+      />
+      {title}
+      <span className="font-sans text-sm font-normal text-steel">{items.length}</span>
+    </h3>
+  );
+  if (size === "small") {
+    return (
+      <section className={panelClass}>
+        {heading}
+        <ul className="mt-4 space-y-1.5">
+          {items.map((item) => (
+            <SmallReminder key={item.reminder.id} item={item} vehicleId={vehicleId} />
+          ))}
+        </ul>
+      </section>
+    );
+  }
   return (
-    <section className={panelClass}>
-      <h3 className="flex items-baseline gap-2 font-display text-xl font-semibold">
-        {title}
-        <span className="font-sans text-sm font-normal text-steel">
-          {items.length}
-        </span>
-      </h3>
-      <ul className={`mt-4 ${size === "small" ? "space-y-1.5" : "space-y-2"}`}>
-        {items.map((item) =>
-          size === "small" ? (
-            <SmallReminder
-              key={item.reminder.id}
-              item={item}
-              vehicleId={vehicleId}
-            />
-          ) : (
-            <ReminderCard
-              key={item.reminder.id}
-              item={item}
-              vehicleId={vehicleId}
-            />
-          ),
-        )}
+    <section>
+      {heading}
+      <ul className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {items.map((item) => (
+          <ReminderCard key={item.reminder.id} item={item} vehicleId={vehicleId} />
+        ))}
       </ul>
     </section>
   );
@@ -156,13 +165,25 @@ const dueColor = (status: Ranked["result"]["status"]) =>
     ? "text-overdue"
     : status === "due_soon"
       ? "text-due"
-      : "text-steel";
+      : status === "ok"
+        ? "text-gauge"
+        : "text-steel";
 
 // When it was last done and how often it repeats.
 function ReminderFacts({ item: { reminder: r, result } }: { item: Ranked }) {
   return (
     <>
-      <p className="mt-2 text-xs text-steel">
+      <p className="mt-1 text-sm text-steel">
+        Every{" "}
+        {[
+          r.intervalMiles && `${r.intervalMiles.toLocaleString("en-US")} mi`,
+          r.intervalMonths &&
+            `${r.intervalMonths} ${r.intervalMonths === 1 ? "month" : "months"}`,
+        ]
+          .filter(Boolean)
+          .join(" or ")}
+      </p>
+      <p className="text-sm text-steel">
         {r.lastDoneOn ? (
           <>
             Last done {formatDate(r.lastDoneOn)}
@@ -174,16 +195,6 @@ function ReminderFacts({ item: { reminder: r, result } }: { item: Ranked }) {
         ) : (
           "Last done: never"
         )}
-      </p>
-      <p className="mt-0.5 text-xs text-steel">
-        Every{" "}
-        {[
-          r.intervalMiles && `${r.intervalMiles.toLocaleString("en-US")} mi`,
-          r.intervalMonths &&
-            `${r.intervalMonths} ${r.intervalMonths === 1 ? "month" : "months"}`,
-        ]
-          .filter(Boolean)
-          .join(" or ")}
       </p>
     </>
   );
@@ -211,6 +222,9 @@ function SmallReminder({
             className={`hidden shrink-0 text-sm font-semibold @md:inline ${dueColor(result.status)}`}
           >
             {describeDue(result)}
+          </span>
+          <span className="hidden @md:block">
+            <Gauge used={intervalUsed(r, result)} status={result.status} />
           </span>
           <StatusBadge status={result.status} />
           <RowChevron />
@@ -246,74 +260,49 @@ function SmallReminder({
 }
 
 function ReminderCard({
-  item: { reminder: r, result },
+  item,
   vehicleId,
 }: {
   item: Ranked;
   vehicleId: string;
 }) {
+  const { reminder: r, result } = item;
   const logHref = `/garage/${vehicleId}/service/new?reminder=${r.id}`;
   return (
-    <li className={`${cardClass} flex flex-wrap content-start gap-3`}>
-      <details className="group min-w-0 flex-1">
-        <summary className={summaryClass}>
-          <p className="font-semibold">{r.task}</p>
-          <p
-            className={`mt-1 text-base font-semibold ${
-              result.status === "overdue"
-                ? "text-overdue"
-                : result.status === "due_soon"
-                  ? "text-due"
-                  : "text-steel"
-            }`}
-          >
+    <li className="hover-pop flex flex-col gap-3 rounded-2xl border border-graphite bg-panel p-4 sm:p-5">
+      <div className="flex items-center gap-4">
+        <MiniDial used={intervalUsed(r, result)} status={result.status} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-lg font-semibold">{r.task}</p>
+          <ReminderFacts item={item} />
+          <p className={`mt-1 text-sm font-semibold ${dueColor(result.status)}`}>
             {describeDue(result)}
           </p>
-          <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <details className="group min-w-0">
+          <summary
+            className={`${summaryClass} flex min-h-11 w-fit items-center gap-1 text-sm text-steel hover:text-chalk`}
+          >
             <ChevronDown
-              className="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+              className="h-4 w-4 transition-transform group-open:rotate-180"
               aria-hidden
             />
-            Details
-          </p>
-        </summary>
-        <p className="mt-2 text-xs text-steel">
-          {r.lastDoneOn ? (
-            <>
-              Last done {formatDate(r.lastDoneOn)}
-              {r.lastDoneMileage != null &&
-                ` at ${r.lastDoneMileage.toLocaleString("en-US")} mi`}
-            </>
-          ) : result.status === "unknown" ? (
-            "Last done: not logged"
-          ) : (
-            "Last done: never"
-          )}
-        </p>
-        <p className="mt-0.5 text-xs text-steel">
-          Every{" "}
-          {[
-            r.intervalMiles && `${r.intervalMiles.toLocaleString("en-US")} mi`,
-            r.intervalMonths &&
-              `${r.intervalMonths} ${r.intervalMonths === 1 ? "month" : "months"}`,
-          ]
-            .filter(Boolean)
-            .join(" or ")}
-        </p>
-        <ReminderControls vehicleId={vehicleId} reminderId={r.id} />
-      </details>
-      <div className="flex shrink-0 flex-col items-end gap-2">
-        <StatusBadge status={result.status} />
+            Options
+          </summary>
+          <ReminderControls vehicleId={vehicleId} reminderId={r.id} />
+        </details>
         {/* Opens Log service with this reminder's type filled in. */}
         {result.status !== "unknown" && (
-          <Link href={logHref} className="btn min-h-8 px-2.5 text-xs">
-            <Check className="h-3.5 w-3.5" aria-hidden />
+          <Link href={logHref} className="btn shrink-0">
+            <Check className="h-4 w-4" aria-hidden />
             Done
           </Link>
         )}
       </div>
       {result.status === "unknown" && (
-        <div className="grid basis-full grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Link href={logHref} className="btn">
             Log service
           </Link>

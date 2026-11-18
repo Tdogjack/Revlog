@@ -205,6 +205,28 @@ export function evaluateReminder(
   return { status, milesLeft, daysLeft };
 }
 
+// How much of the interval has gone by since it was last done, from 0 up
+// (past 1 once overdue), for drawing progress. With both a mileage and a time
+// limit, the one that's further along wins, the same way status does. Null
+// when there's nothing to count from.
+export function intervalUsed(
+  reminder: Pick<ReminderInput, "intervalMiles" | "intervalMonths">,
+  result: ReminderResult,
+) {
+  if (result.status === "unknown") return null;
+  if (result.neverDone) return 1;
+  const used: number[] = [];
+  if (result.milesLeft != null && reminder.intervalMiles) {
+    used.push(1 - result.milesLeft / reminder.intervalMiles);
+  }
+  if (result.daysLeft != null && reminder.intervalMonths) {
+    used.push(1 - result.daysLeft / (reminder.intervalMonths * DAYS_PER_MONTH));
+  }
+  return used.length ? Math.max(0, ...used) : null;
+}
+
+const DAYS_PER_MONTH = 365.25 / 12;
+
 // Each reminder counted from its latest matching service record, or the car's
 // age if it's never been done; most urgent first.
 export function rankReminders<

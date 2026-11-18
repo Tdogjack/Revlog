@@ -35,4 +35,4 @@ export function RecordStats({
 
 // Each row is its own plain card. Status lives in the badge and text, not the edge.
 export const cardClass =
-  "rounded-xl border border-graphite bg-carbon/50 px-4 py-3.5 transition-colors hover:bg-graphite/30";
+  "hover-pop rounded-xl border border-graphite bg-carbon/50 px-4 py-3.5";

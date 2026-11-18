@@ -3,7 +3,10 @@ import { Suspense } from "react";
 import { ChevronDown, Download, FileUp, Plus, Search, Wrench } from "lucide-react";
 import { cardClass, RecordStats } from "@/components/record-stats";
 import { RowSizeToggle } from "@/components/row-size-toggle";
+import { getEmailSettings } from "@/lib/email-settings";
 import { listPartsForVehicle } from "@/lib/parts";
+import { listReminders } from "@/lib/reminder-store";
+import { describeDue, intervalUsed, rankReminders } from "@/lib/reminders";
 import { categoryLabel } from "@/lib/service-categories";
 import { listServiceRecords } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
@@ -15,8 +18,10 @@ import {
   loadGallery,
   money,
   panelClass,
+  CountdownBar,
   ServiceRow,
   summaryClass,
+  type Countdown,
   sumCost,
   TabHead,
   TabSkeleton,
@@ -42,13 +47,32 @@ async function ServiceHistory({
   const q = typeof query.q === "string" ? query.q.trim() : "";
   const byType = query.view === "type";
 
-  const [records, customTypes, parts, pickPhotos, size] = await Promise.all([
+  const [records, customTypes, parts, pickPhotos, size, reminderRows, settings] = await Promise.all([
     listServiceRecords(user.id, car.id),
     listServiceTypes(user.id),
     listPartsForVehicle(user.id, car.id),
     loadGallery(user.id, car.id),
     getRowSize("service"),
+    listReminders(user.id, car.id),
+    getEmailSettings(user.id),
   ]);
+
+  // A reminder counts from the newest record of its type, so that record
+  // carries the countdown. Ranked most urgent first, so the first reminder to
+  // claim a record wins.
+  const countdowns = new Map<string, Countdown>();
+  for (const { reminder, result } of rankReminders(reminderRows, car, records, {
+    dueSoonPercent: settings.reminderPercent,
+  })) {
+    const latest = records.find((r) => r.category === reminder.serviceCategory);
+    if (!latest || countdowns.has(latest.id) || result.status === "unknown") continue;
+    countdowns.set(latest.id, {
+      task: reminder.task,
+      used: intervalUsed(reminder, result),
+      status: result.status,
+      due: describeDue(result),
+    });
+  }
 
   const needle = q.toLowerCase();
   const shown = needle
@@ -60,7 +84,8 @@ async function ServiceHistory({
     : records;
 
   const base = `/garage/${car.id}`;
-  const listGap = size === "small" ? "space-y-1.5" : "space-y-2";
+  // Small rows are compact cards; medium rows are a hairline-split log.
+  const listGap = size === "small" ? "space-y-1.5" : "divide-y divide-rule";
   const spent = sumCost(records);
   const row = (r: ServiceRecord) => (
     <ServiceRow
@@ -71,6 +96,7 @@ async function ServiceHistory({
       parts={parts.filter((p) => p.serviceRecordId === r.id)}
       photos={pickPhotos((p) => p.serviceRecordId === r.id)}
       size={size}
+      countdown={countdowns.get(r.id)}
     />
   );
   const viewHref = (view: "date" | "type") => {
@@ -192,7 +218,7 @@ async function ServiceHistory({
               group.length === 1 ? (
                 row(group[0])
               ) : (
-                <li key={group[0].category} className={cardClass}>
+                <li key={group[0].category} className={`${cardClass} my-2`}>
                   <details className="group/type">
                     <summary className={`${summaryClass} flex flex-col gap-1 @md:flex-row @md:gap-4`}>
                       <div className={dateClass}>{formatDate(group[0].servicedOn)}</div>
@@ -205,6 +231,9 @@ async function ServiceHistory({
                             sumCost(group) > 0 && `${money.format(sumCost(group))} total`,
                           ]}
                         />
+                        {countdowns.has(group[0].id) && (
+                          <CountdownBar countdown={countdowns.get(group[0].id)!} />
+                        )}
                         <p className="mt-1.5 flex w-fit items-center gap-1 text-xs text-steel hover:text-chalk">
                           <ChevronDown
                             className="h-3.5 w-3.5 transition-transform group-open/type:rotate-180"

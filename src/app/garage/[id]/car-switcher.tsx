@@ -7,12 +7,11 @@ import { listVehicles, vehicleName } from "@/lib/vehicles";
 import { RememberCar } from "./remember-car";
 
 const tileClass =
-  "lift flex shrink-0 snap-start items-center gap-3 rounded-xl border p-1.5 pr-4 sm:w-48 sm:flex-col sm:items-stretch sm:gap-2 sm:p-2";
+  "lift flex min-h-11 shrink-0 snap-start items-center gap-2.5 rounded-xl border py-1.5 pr-4 pl-1.5";
 
-// The user's cars as a row of tiles above the open car, with the open one
-// outlined in the accent and an Add tile at the end. One car is the common
-// case, so the row stays short; more cars scroll sideways. On a phone the
-// tiles shrink to a thumbnail and name so the car itself stays in view.
+// The user's cars as a row of compact chips above the open car: a small
+// thumbnail and the name, the open one outlined in the accent, and an Add chip
+// at the end. More cars scroll sideways.
 export async function CarSwitcher({ currentId }: { currentId: string }) {
   const user = await requireUser();
   const cars = await listVehicles(user.id);
@@ -38,17 +37,13 @@ export async function CarSwitcher({ currentId }: { currentId: string }) {
                 <VehiclePhoto
                   src={car.photoPath ? thumbs.get(car.photoPath) : null}
                   alt=""
-                  className="aspect-[4/3] w-14 rounded-lg sm:aspect-[16/9] sm:w-full"
+                  className="h-8 w-11 rounded-lg"
                 />
-                <span className="max-w-36 min-w-0 sm:max-w-none sm:px-1 sm:pb-0.5">
-                  <span
-                    className={`block truncate text-sm font-semibold ${current ? "text-chalk" : "text-steel"}`}
-                  >
-                    {car.nickname ?? `${car.year} ${car.make}`}
-                  </span>
-                  <span className="block truncate text-xs text-steel">
-                    {car.nickname ? vehicleName(car) : car.model}
-                  </span>
+                <span
+                  className={`max-w-40 truncate text-sm font-semibold ${current ? "text-chalk" : "text-steel"}`}
+                  title={vehicleName(car)}
+                >
+                  {car.nickname ?? `${car.year} ${car.make} ${car.model}`}
                 </span>
               </Link>
             </li>
@@ -57,10 +52,10 @@ export async function CarSwitcher({ currentId }: { currentId: string }) {
         <li className="flex">
           <Link
             href="/garage/new"
-            className={`${tileClass} justify-center border-dashed border-graphite pl-4 sm:items-center text-steel hover:border-steel hover:text-chalk`}
+            className={`${tileClass} border-dashed border-graphite pl-3 text-steel hover:border-steel hover:text-chalk`}
           >
-            <Plus className="h-5 w-5 sm:self-center" aria-hidden />
-            <span className="text-sm font-semibold sm:self-center">Add a car</span>
+            <Plus className="h-4 w-4" aria-hidden />
+            <span className="text-sm font-semibold">Add a car</span>
           </Link>
         </li>
         {cars.length > 1 && (
@@ -81,7 +76,7 @@ export function CarSwitcherSkeleton() {
   return (
     <div className="flex gap-3" aria-hidden>
       {[0, 1].map((i) => (
-        <div key={i} className="skeleton h-[56px] w-48 shrink-0 sm:h-[150px]" />
+        <div key={i} className="skeleton h-11 w-36 shrink-0 rounded-xl" />
       ))}
     </div>
   );

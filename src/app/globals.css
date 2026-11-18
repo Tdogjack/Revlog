@@ -31,6 +31,10 @@
   /* Chart series, checked for colorblind separation on the panel surface. */
   --color-chart-service: #e5484d;
   --color-chart-mods: #4a92d4;
+  /* Progress gauges: lit segments for "on track" borrow the mods series blue,
+     so they follow whichever palette is picked; the unlit track is graphite. */
+  --color-gauge: var(--color-chart-mods);
+  --color-gauge-off: var(--color-graphite);
 
   /* Hairline for rows inside a panel, one step quieter than graphite. */
   --color-rule: #1f2329;
@@ -485,6 +489,60 @@ body {
   .choice:has(:focus-visible) {
     outline: 2px solid var(--color-redline);
     outline-offset: 2px;
+  }
+
+  /* Entries you can open: under a pointer they lighten a step and grow a hair
+     on a quick spring, so it's clear what's under the cursor. Touch screens
+     skip it (no hover), and reduced motion keeps the color without the grow. */
+  .hover-pop {
+    position: relative;
+    transition:
+      transform 220ms var(--ease-spring),
+      background-color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+  @media (hover: hover) {
+    .hover-pop:hover {
+      z-index: 1;
+      transform: scale(1.012);
+      background-color: color-mix(in srgb, var(--color-graphite) 55%, var(--color-panel));
+      border-color: var(--color-edge);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hover-pop:hover {
+      transform: none;
+    }
+  }
+
+  /* A progress gauge in ten segments, like a fuel gauge. Lit segments show how
+     much of the interval is used; the color says on track, due, or overdue. */
+  .gauge {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 4px;
+    width: 8rem;
+    flex-shrink: 0;
+  }
+  .gauge > i {
+    height: 0.625rem;
+    border-radius: 2px;
+    background: var(--color-gauge-off);
+  }
+  .gauge > i[data-lit] {
+    background: var(--gauge-color, var(--color-gauge));
+  }
+  .gauge[data-status="due_soon"] {
+    --gauge-color: var(--color-due);
+  }
+  .gauge[data-status="overdue"] {
+    --gauge-color: var(--color-overdue);
+  }
+  .gauge-wide {
+    width: 100%;
+  }
+  .gauge-wide > i {
+    height: 0.75rem;
   }
 
   /* Numerals for mileage and money: tabular so columns line up, semibold so
