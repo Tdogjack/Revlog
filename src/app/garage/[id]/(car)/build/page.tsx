@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DraggableMod, ModDropZone } from "../../mod-drag";
 import { Gauge } from "@/components/gauges";
 import { Suspense } from "react";
 import { Plus, Share2, Sparkles } from "lucide-react";
@@ -141,8 +142,10 @@ async function Build({
           if (list.length === 0 && !group.empty) return null;
           const cost = sumCost(list);
           return (
-            <section
+            <ModDropZone
               key={group.status}
+              vehicleId={car.id}
+              status={group.status}
               className={`${panelClass} ${group.status === "removed" ? "lg:col-span-2" : ""}`}
             >
               <h3 className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -159,7 +162,9 @@ async function Build({
                 )}
               </h3>
               {list.length === 0 ? (
-                <p className="mt-3 text-sm text-steel">{group.empty}</p>
+                <p className="mt-3 text-sm text-steel">
+                  {group.empty} Or drag a mod here from the other list.
+                </p>
               ) : (
                 <ul
                   className={`mt-2 ${size === "small" ? "mt-4 space-y-1.5" : "divide-y divide-rule"}`}
@@ -176,7 +181,7 @@ async function Build({
                   ))}
                 </ul>
               )}
-            </section>
+            </ModDropZone>
           );
         })}
         </div>
@@ -212,7 +217,7 @@ function ModCard({
 
   if (size === "small") {
     return (
-      <li className={`${smallCardClass} flex items-start gap-2`}>
+      <DraggableMod modId={m.id} status={m.status} className={`${smallCardClass} flex items-start gap-2`}>
         <details className="group min-w-0 flex-1">
           <summary
             className={`${summaryClass} flex min-h-9 items-center gap-3`}
@@ -281,7 +286,7 @@ function ModCard({
         <div className="hidden shrink-0 @md:block">
           <ModControls vehicleId={vehicleId} modId={m.id} status={m.status} />
         </div>
-      </li>
+      </DraggableMod>
     );
   }
   const summary = (
@@ -304,7 +309,11 @@ function ModCard({
     </>
   );
   return (
-    <li className="hover-pop -mx-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1 rounded-xl px-3 py-4">
+    <DraggableMod
+      modId={m.id}
+      status={m.status}
+      className="hover-pop -mx-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1 rounded-xl px-3 py-4"
+    >
       <span
         className={`mt-1.5 h-2.5 w-2.5 rounded-full ${
           m.status === "installed"
@@ -357,7 +366,7 @@ function ModCard({
         <ModControls vehicleId={vehicleId} modId={m.id} status={m.status} />
         {share}
       </div>
-    </li>
+    </DraggableMod>
   );
 }
 

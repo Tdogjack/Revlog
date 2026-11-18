@@ -31,9 +31,10 @@
   /* Chart series, checked for colorblind separation on the panel surface. */
   --color-chart-service: #e5484d;
   --color-chart-mods: #4a92d4;
-  /* Progress gauges: lit segments for "on track" borrow the mods series blue,
-     so they follow whichever palette is picked; the unlit track is graphite. */
-  --color-gauge: var(--color-chart-mods);
+  /* Progress gauges: lit segments for "on track" use the palette's "done"
+     green, so they follow whichever palette is picked; the unlit track is
+     graphite. */
+  --color-gauge: var(--color-done);
   --color-gauge-off: var(--color-graphite);
 
   /* Hairline for rows inside a panel, one step quieter than graphite. */

@@ -49,7 +49,6 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
   const reminders = rankReminders(reminderRows, car, records, {
     dueSoonPercent: settings.reminderPercent,
   });
-  const attention = reminders.filter(({ result }) => result.status !== "ok");
   const installed = carMods.filter((m) => m.status === "installed");
   const photoUrl = car.photoPath ? photos.get(car.photoPath) : null;
   const base = `/garage/${car.id}`;
@@ -85,20 +84,7 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
 
-  const lastService = records[0];
   const stats = [
-    {
-      label: "Needs attention",
-      value: attention.length === 0 ? "None" : String(attention.length),
-      note: attention.length === 0 ? "All caught up" : attention[0].reminder.task,
-      href: `${base}/reminders`,
-    },
-    {
-      label: "Last service",
-      value: lastService ? formatDate(lastService.servicedOn) : "None yet",
-      note: lastService?.title ?? "Log one to start the history",
-      href: `${base}/service`,
-    },
     {
       label: "Spent on service",
       value: money.format(sumCost(records)),
@@ -138,6 +124,27 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
               {car.builtOn && <span>Built {formatMonth(car.builtOn)}</span>}
             </p>
           )}
+          {/* What the car has cost so far, split by a hairline. */}
+          <ul className="mt-auto grid w-full grid-cols-2 gap-px overflow-hidden rounded-xl bg-graphite pt-0">
+            {stats.map((s) => (
+              <li key={s.label} className="flex">
+                <Link
+                  href={s.href}
+                  className="hover-pop group flex min-w-0 flex-1 flex-col bg-carbon p-4"
+                >
+                  <span className="flex items-center justify-between gap-2 text-sm text-steel">
+                    {s.label}
+                    <ChevronRight
+                      className="h-4 w-4 shrink-0 text-steel group-hover:text-chalk"
+                      aria-hidden
+                    />
+                  </span>
+                  <span className="readout mt-2 truncate text-xl text-chalk">{s.value}</span>
+                  <span className="mt-1 truncate text-sm text-steel">{s.note}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className={`${panelClass} min-w-0`}>
@@ -151,27 +158,6 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
               Update the odometer or log a service with its mileage to start the graph.
             </p>
           )}
-          {/* Key numbers in one strip, split by hairlines. */}
-          <ul className="mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-xl bg-graphite min-[420px]:grid-cols-2 xl:grid-cols-4">
-            {stats.map((s) => (
-              <li key={s.label} className="flex">
-                <Link
-                  href={s.href}
-                  className="hover-pop group flex min-w-0 flex-1 flex-col bg-carbon p-4 sm:p-5"
-                >
-                  <span className="flex items-center justify-between gap-2 text-sm text-steel">
-                    {s.label}
-                    <ChevronRight
-                      className="h-4 w-4 shrink-0 text-steel group-hover:text-chalk"
-                      aria-hidden
-                    />
-                  </span>
-                  <span className="readout mt-2 truncate text-xl text-chalk 2xl:text-2xl">{s.value}</span>
-                  <span className="mt-1 truncate text-sm text-steel">{s.note}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
         </section>
       </div>
 
