@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { ChevronRight } from "lucide-react";
+import { Gauge } from "@/components/gauges";
 import { MileageChart } from "@/components/mileage-chart";
 import { StatusBadge } from "@/components/status-badge";
 import { carTimeline } from "@/lib/car-timeline";
@@ -10,7 +11,7 @@ import { modCategoryLabel } from "@/lib/mod-categories";
 import { listMods } from "@/lib/mods";
 import { signedPhotoUrls, signedThumbUrls } from "@/lib/photos";
 import { listReminders } from "@/lib/reminder-store";
-import { describeDue, rankReminders } from "@/lib/reminders";
+import { describeDue, intervalUsed, rankReminders } from "@/lib/reminders";
 import { categoryLabel } from "@/lib/service-categories";
 import { listServiceRecords } from "@/lib/service-records";
 import { listServiceTypes } from "@/lib/service-types";
@@ -48,7 +49,6 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
   const reminders = rankReminders(reminderRows, car, records, {
     dueSoonPercent: settings.reminderPercent,
   });
-  const attention = reminders.filter(({ result }) => result.status !== "ok");
   const installed = carMods.filter((m) => m.status === "installed");
   const photoUrl = car.photoPath ? photos.get(car.photoPath) : null;
   const base = `/garage/${car.id}`;
@@ -84,20 +84,7 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
 
-  const lastService = records[0];
   const stats = [
-    {
-      label: "Needs attention",
-      value: attention.length === 0 ? "None" : String(attention.length),
-      note: attention.length === 0 ? "All caught up" : attention[0].reminder.task,
-      href: `${base}/reminders`,
-    },
-    {
-      label: "Last service",
-      value: lastService ? formatDate(lastService.servicedOn) : "None yet",
-      note: lastService?.title ?? "Log one to start the history",
-      href: `${base}/service`,
-    },
     {
       label: "Spent on service",
       value: money.format(sumCost(records)),
@@ -114,8 +101,8 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[20rem_1fr] lg:items-start">
-        <div className="flex flex-col items-start gap-2">
+      <div className="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
+        <section className={`${panelClass} flex flex-col items-start gap-2`}>
           <ProfilePhoto
             src={photoUrl ?? null}
             thumb={car.photoPath ? thumbs.get(car.photoPath) : undefined}
@@ -128,7 +115,7 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
             canUpload={canUpload}
           />
           {(car.vin || car.builtOn) && (
-            <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-steel">
+            <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-steel">
               {car.vin && (
                 <span>
                   VIN <span className="font-mono text-chalk/80">{car.vin}</span>
@@ -137,44 +124,42 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
               {car.builtOn && <span>Built {formatMonth(car.builtOn)}</span>}
             </p>
           )}
-        </div>
+          {/* What the car has cost so far, split by a hairline. */}
+          <ul className="mt-auto grid w-full grid-cols-2 gap-px overflow-hidden rounded-xl bg-graphite pt-0">
+            {stats.map((s) => (
+              <li key={s.label} className="flex">
+                <Link
+                  href={s.href}
+                  className="hover-pop group flex min-w-0 flex-1 flex-col bg-carbon p-4"
+                >
+                  <span className="flex items-center justify-between gap-2 text-sm text-steel">
+                    {s.label}
+                    <ChevronRight
+                      className="h-4 w-4 shrink-0 text-steel group-hover:text-chalk"
+                      aria-hidden
+                    />
+                  </span>
+                  <span className="readout mt-2 truncate text-xl text-chalk">{s.value}</span>
+                  <span className="mt-1 truncate text-sm text-steel">{s.note}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-        <ul className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
-          {stats.map((s) => (
-            <li key={s.label} className="flex">
-              <Link
-                href={s.href}
-                className="lift group flex min-w-0 flex-1 flex-col rounded-2xl border border-graphite bg-panel p-4 hover:border-steel sm:p-5"
-              >
-                <span className="flex items-center justify-between gap-2 text-sm text-steel">
-                  {s.label}
-                  <ChevronRight
-                    className="h-4 w-4 shrink-0 text-steel group-hover:text-chalk"
-                    aria-hidden
-                  />
-                </span>
-                <span className="readout mt-2 truncate text-2xl text-chalk sm:text-3xl">
-                  {s.value}
-                </span>
-                <span className="mt-1 truncate text-sm text-steel">{s.note}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <section className={`${panelClass} min-w-0`}>
+          <h2 className={headingClass}>Mileage</h2>
+          {timeline ? (
+            <div className="mt-4">
+              <MileageChart timeline={timeline} />
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-steel">
+              Update the odometer or log a service with its mileage to start the graph.
+            </p>
+          )}
+        </section>
       </div>
-
-      <section className={`${panelClass} mt-6`}>
-        <h2 className={headingClass}>Mileage</h2>
-        {timeline ? (
-          <div className="mt-4">
-            <MileageChart timeline={timeline} />
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-steel">
-            Update the odometer or log a service with its mileage to start the graph.
-          </p>
-        )}
-      </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section className={panelClass}>
@@ -190,12 +175,20 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
           ) : (
             <ul className="mt-4 divide-y divide-rule">
               {reminders.slice(0, 4).map(({ reminder: r, result }) => (
-                <li key={r.id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold">{r.task}</p>
-                    <p className="mt-0.5 text-sm text-steel">{describeDue(result)}</p>
-                  </div>
-                  <StatusBadge status={result.status} />
+                <li key={r.id}>
+                  <Link
+                    href={`${base}/reminders`}
+                    className="hover-pop -mx-3 flex items-center justify-between gap-4 rounded-xl px-3 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{r.task}</p>
+                      <p className="mt-0.5 text-sm text-steel">{describeDue(result)}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <Gauge used={intervalUsed(r, result)} status={result.status} />
+                      <StatusBadge status={result.status} />
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -220,7 +213,10 @@ async function Overview({ params }: Pick<PageProps<"/garage/[id]">, "params">) {
             <ul className="mt-4 divide-y divide-rule">
               {activity.map((a) => (
                 <li key={a.key}>
-                  <Link href={a.href} className="flex items-baseline gap-4 py-3 hover:text-chalk">
+                  <Link
+                    href={a.href}
+                    className="hover-pop -mx-3 flex items-baseline gap-4 rounded-xl px-3 py-3"
+                  >
                     <span className="w-24 shrink-0 text-sm text-steel tabular-nums">
                       {formatDate(a.date)}
                     </span>
@@ -256,15 +252,10 @@ function SectionHead({ title, href, link }: { title: string; href: string; link:
 function OverviewSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading car">
-      <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
-        <div className="skeleton aspect-[4/3] w-full" />
-        <div className="grid grid-cols-2 gap-3">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="skeleton h-28" />
-          ))}
-        </div>
+      <div className="grid gap-6 lg:grid-cols-[22rem_1fr]">
+        <div className="skeleton h-80 rounded-2xl" />
+        <div className="skeleton h-96 rounded-2xl" />
       </div>
-      <div className="skeleton mt-6 h-80" />
     </div>
   );
 }

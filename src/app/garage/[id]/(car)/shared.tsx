@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { Gauge } from "@/components/gauges";
+import type { ReminderStatus } from "@/lib/reminders";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { ChevronDown, Copy, Pencil } from "lucide-react";
 import { PhotoStrip, type StripPhoto } from "@/components/photo-strip";
-import { cardClass, RecordStats } from "@/components/record-stats";
 import { requireUser } from "@/lib/auth";
 import { listPhotosForVehicle, PHOTO_LIMITS } from "@/lib/gallery";
 import type { listPartsForVehicle } from "@/lib/parts";
@@ -78,7 +79,7 @@ export function TabHead({
 
 // A one-line row: the same card, drawn tighter.
 export const smallCardClass =
-  "rounded-lg border border-graphite bg-carbon/50 px-3 py-2 transition-colors hover:bg-graphite/30";
+  "hover-pop rounded-lg border border-graphite bg-carbon/50 px-3 py-2";
 
 // The row size the user picked for one of the car lists.
 export async function getRowSize(list: RowList): Promise<RowSize> {
@@ -179,6 +180,26 @@ export function DetailsHint({
 
 // One service record: date, title, and numbers, opening to notes, parts,
 // receipts, and its edit buttons.
+// The countdown a service record starts: the reminder it resets, and how much
+// of that reminder's interval has gone by since.
+export type Countdown = {
+  task: string;
+  used: number | null;
+  status: ReminderStatus;
+  due: string;
+};
+
+export function CountdownBar({ countdown: c }: { countdown: Countdown }) {
+  return (
+    <span className="mt-3 flex w-fit max-w-full flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-carbon px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--color-graphite)]">
+      <Gauge used={c.used} status={c.status} />
+      <span className="text-sm text-steel">
+        {c.task}: {c.due.charAt(0).toLowerCase() + c.due.slice(1)}
+      </span>
+    </span>
+  );
+}
+
 export function ServiceRow({
   vehicleId,
   record: r,
@@ -186,6 +207,7 @@ export function ServiceRow({
   parts,
   photos,
   size = "medium",
+  countdown,
 }: {
   vehicleId: string;
   record: ServiceRecord;
@@ -193,6 +215,7 @@ export function ServiceRow({
   parts: Part[];
   photos: StripPhoto[];
   size?: RowSize;
+  countdown?: Countdown;
 }) {
   if (size === "small") {
     return (
@@ -233,23 +256,32 @@ export function ServiceRow({
       </li>
     );
   }
+  const chips = [
+    categoryLabel(r.category, customTypes),
+    r.mileage != null && `${r.mileage.toLocaleString("en-US")} mi`,
+    r.shop,
+    parts.length > 0 && `${parts.length} ${parts.length === 1 ? "part" : "parts"}`,
+    photos.length > 0 && `${photos.length} ${photos.length === 1 ? "photo" : "photos"}`,
+  ].filter(Boolean) as string[];
+  // One line of the log: date on the left, the work and its details in the
+  // middle, the cost on the right. Rows are split by hairlines, not boxed.
   return (
-    <li className={`${cardClass} flex flex-col gap-1 @md:flex-row @md:gap-4`}>
-      <div className={dateClass}>{formatDate(r.servicedOn)}</div>
-      <details className="group min-w-0 flex-1">
+    <li className="hover-pop -mx-3 grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 gap-y-1 rounded-xl px-3 py-5 @md:grid-cols-[8rem_minmax(0,1fr)_auto]">
+      <div className="col-span-2 font-display text-sm text-steel tabular-nums @md:col-span-1 @md:pt-0.5">
+        {formatDate(r.servicedOn)}
+      </div>
+      <details className="group min-w-0">
         <summary className={summaryClass}>
-          <div className="flex flex-wrap items-baseline gap-x-2">
-            <p className="font-semibold">{r.title}</p>
-            <p className="text-sm text-steel">
-              {categoryLabel(r.category, customTypes)}
-            </p>
-          </div>
-          <RecordStats miles={r.mileage} cost={r.cost} extra={[r.shop]} />
-          <DetailsHint
-            notes={!!r.notes}
-            parts={parts.length}
-            photos={photos.length}
-          />
+          <p className="font-semibold">{r.title}</p>
+          <p className="mt-2 flex flex-wrap gap-1.5">
+            {chips.map((c) => (
+              <span key={c} className="rounded-md bg-graphite/70 px-2 py-0.5 text-sm text-steel">
+                {c}
+              </span>
+            ))}
+          </p>
+          {countdown && <CountdownBar countdown={countdown} />}
+          <DetailsHint notes={!!r.notes} parts={0} photos={0} />
         </summary>
         <ServiceDetails
           vehicleId={vehicleId}
@@ -258,6 +290,9 @@ export function ServiceRow({
           photos={photos}
         />
       </details>
+      <span className="readout text-right text-xl text-chalk">
+        {r.cost ? money.format(Number(r.cost)) : ""}
+      </span>
     </li>
   );
 }

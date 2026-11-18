@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { DraggableMod, ModDropZone } from "../../mod-drag";
+import { Gauge } from "@/components/gauges";
 import { Suspense } from "react";
 import { Plus, Share2, Sparkles } from "lucide-react";
 import { PhotoStrip } from "@/components/photo-strip";
-import { cardClass, RecordStats } from "@/components/record-stats";
 import { RowSizeToggle } from "@/components/row-size-toggle";
 import { DeletePostButton } from "@/app/community/delete-post-button";
 import { getBuildPostId } from "@/lib/community";
@@ -116,6 +117,10 @@ async function Build({
         </div>
       )}
 
+      {installed.length + planned.length > 0 && (
+        <BuildProgress installed={installed} planned={planned} />
+      )}
+
       {mods.length === 0 ? (
         <section className={`${panelClass} mt-6 py-10 text-center`}>
           <Sparkles className="mx-auto h-8 w-8 text-steel" aria-hidden />
@@ -131,12 +136,18 @@ async function Build({
           </Link>
         </section>
       ) : (
-        GROUPS.map((group) => {
+        <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start">
+          {GROUPS.map((group) => {
           const list = mods.filter((m) => m.status === group.status);
           if (list.length === 0 && !group.empty) return null;
           const cost = sumCost(list);
           return (
-            <section key={group.status} className={`${panelClass} mt-6`}>
+            <ModDropZone
+              key={group.status}
+              vehicleId={car.id}
+              status={group.status}
+              className={`${panelClass} ${group.status === "removed" ? "lg:col-span-2" : ""}`}
+            >
               <h3 className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <span className="flex items-baseline gap-2 font-display text-xl font-semibold">
                   {group.title}
@@ -151,10 +162,12 @@ async function Build({
                 )}
               </h3>
               {list.length === 0 ? (
-                <p className="mt-3 text-sm text-steel">{group.empty}</p>
+                <p className="mt-3 text-sm text-steel">
+                  {group.empty} Or drag a mod here from the other list.
+                </p>
               ) : (
                 <ul
-                  className={`mt-4 ${size === "small" ? "space-y-1.5" : "space-y-2"}`}
+                  className={`mt-2 ${size === "small" ? "mt-4 space-y-1.5" : "divide-y divide-rule"}`}
                 >
                   {list.map((m) => (
                     <ModCard
@@ -168,9 +181,10 @@ async function Build({
                   ))}
                 </ul>
               )}
-            </section>
+            </ModDropZone>
           );
-        })
+        })}
+        </div>
       )}
     </>
   );
@@ -203,7 +217,7 @@ function ModCard({
 
   if (size === "small") {
     return (
-      <li className={`${smallCardClass} flex items-start gap-2`}>
+      <DraggableMod modId={m.id} status={m.status} className={`${smallCardClass} flex items-start gap-2`}>
         <details className="group min-w-0 flex-1">
           <summary
             className={`${summaryClass} flex min-h-9 items-center gap-3`}
@@ -272,7 +286,7 @@ function ModCard({
         <div className="hidden shrink-0 @md:block">
           <ModControls vehicleId={vehicleId} modId={m.id} status={m.status} />
         </div>
-      </li>
+      </DraggableMod>
     );
   }
   const summary = (
@@ -282,20 +296,36 @@ function ModCard({
       >
         {name}
       </p>
-      <RecordStats
-        miles={m.installedMileage}
-        cost={m.cost}
-        extra={[
+      <p className="mt-0.5 text-sm text-steel">
+        {[
           modCategoryLabel(m.category),
           m.installedOn && formatDate(m.installedOn),
-        ]}
-      />
+          m.installedMileage != null && `${m.installedMileage.toLocaleString("en-US")} mi`,
+          m.notes && m.status === "planned" && m.notes,
+        ]
+          .filter(Boolean)
+          .join(", ")}
+      </p>
     </>
   );
   return (
-    <li className={`${cardClass} flex flex-col gap-2 @md:flex-row @md:gap-4`}>
+    <DraggableMod
+      modId={m.id}
+      status={m.status}
+      className="hover-pop -mx-3 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1 rounded-xl px-3 py-4"
+    >
+      <span
+        className={`mt-1.5 h-2.5 w-2.5 rounded-full ${
+          m.status === "installed"
+            ? "bg-done"
+            : m.status === "planned"
+              ? "shadow-[inset_0_0_0_2px_var(--color-edge)]"
+              : "bg-graphite"
+        }`}
+        aria-hidden
+      />
       {m.notes || parts.length > 0 || photos.length > 0 ? (
-        <details className="group min-w-0 flex-1">
+        <details className="group min-w-0">
           <summary className={summaryClass}>
             {summary}
             <DetailsHint
@@ -327,12 +357,62 @@ function ModCard({
           )}
         </details>
       ) : (
-        <div className="min-w-0 flex-1">{summary}</div>
+        <div className="min-w-0">{summary}</div>
       )}
-      <div className="-ml-1 flex items-center gap-1 @md:ml-0 @md:flex-col @md:items-end">
+      <span className="readout text-right text-xl text-chalk">
+        {m.cost ? money.format(Number(m.cost)) : ""}
+      </span>
+      <div className="col-start-2 col-end-4 -ml-1 flex flex-wrap items-center gap-1">
         <ModControls vehicleId={vehicleId} modId={m.id} status={m.status} />
         {share}
       </div>
-    </li>
+    </DraggableMod>
+  );
+}
+
+// How far the plan has come: mods in versus planned, and money in versus the
+// whole plan's cost.
+function BuildProgress({ installed, planned }: { installed: Mod[]; planned: Mod[] }) {
+  const count = installed.length + planned.length;
+  const spent = sumCost(installed);
+  const total = spent + sumCost(planned);
+  return (
+    <section className={`${panelClass} mt-6 grid gap-6 sm:grid-cols-2`}>
+      <div>
+        <p className="flex items-baseline justify-between gap-3 text-sm text-steel">
+          Build plan
+          <span className="readout text-2xl text-chalk">
+            {installed.length} <span className="text-base text-steel">of {count} in</span>
+          </span>
+        </p>
+        <div className="mt-3">
+          <Gauge
+            used={installed.length / count}
+            status="ok"
+            wide
+            label={`${installed.length} of ${count} mods installed`}
+          />
+        </div>
+      </div>
+      {total > 0 && (
+        <div>
+          <p className="flex items-baseline justify-between gap-3 text-sm text-steel">
+            Invested
+            <span className="readout text-2xl text-chalk">
+              {money.format(spent)}{" "}
+              <span className="text-base text-steel">of {money.format(total)}</span>
+            </span>
+          </p>
+          <div className="mt-3">
+            <Gauge
+              used={spent / total}
+              status="ok"
+              wide
+              label={`${money.format(spent)} of ${money.format(total)} spent`}
+            />
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
