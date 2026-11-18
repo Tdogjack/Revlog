@@ -44,14 +44,18 @@ export function DraggableMod({
 
 // One status list. Dropping a mod from another list moves it here; while a
 // mod is over it, the list outlines in the accent so the target is clear.
+// The real garage saves through the server; the demo passes `onMove` to
+// change its in-memory cars instead.
 export function ModDropZone({
   vehicleId,
   status,
+  onMove,
   className = "",
   children,
 }: {
   vehicleId: string;
   status: ModStatus;
+  onMove?: (modId: string, status: ModStatus) => void;
   className?: string;
   children: ReactNode;
 }) {
@@ -78,6 +82,10 @@ export function ModDropZone({
         e.preventDefault();
         const { modId, status: from } = JSON.parse(e.dataTransfer.getData(MOD_TYPE)) as Payload;
         if (from === status) return;
+        if (onMove) {
+          onMove(modId, status);
+          return;
+        }
         const form = new FormData();
         form.set("status", status);
         startTransition(() => changeModStatus(vehicleId, modId, form));
